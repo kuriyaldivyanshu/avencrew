@@ -1,0 +1,67 @@
+# Local credentials and environment configuration
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+*.pem
+*.key
+.aws/
+.ssh/
+
+# Python environments and caches
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+*.egg-info/
+
+# JavaScript / TypeScript dependencies and generated output
+node_modules/
+.next/
+.nuxt/
+.turbo/
+*.tsbuildinfo
+
+# Rust build output
+target/
+
+# Shared build output and logs
+build/
+dist/
+coverage/
+*.log
+
+# Local databases
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+
+# Editor and operating system files
+.DS_Store
+._*
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Exported project archives
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+# Nested Git metadata from copied archives
+**/.git/
+/archive
+/docs
+/plan
