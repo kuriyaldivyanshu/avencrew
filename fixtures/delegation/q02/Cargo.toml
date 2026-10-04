@@ -1,0 +1,15 @@
+[package]
+name = "avencrew-qualification-q02"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.89.0"
+publish = false
+autotests = false
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+
+[lints.rust]
+unsafe_code = "forbid"
