@@ -29,8 +29,11 @@ export RUSTUP_HOME="$AVENCREW_MANAGED_ROOT/rustup"
 export CARGO_HOME="$AVENCREW_MANAGED_ROOT/cargo"
 export PNPM_HOME="$AVENCREW_MANAGED_ROOT/toolchain/node_modules"
 export AVENCREW_TOOLCHAIN="$RUSTUP_HOME/toolchains/${_RUST_VERSION}-${_RUST_HOST}/bin"
+# build/native/sqlite/<target>/ — the target alone, matching build-sqlite.sh.
+# Not versioned: the recipe already pins one source and one toolchain, and P1-02-R
+# rebuilds on any source/flags/compiler/SDK change rather than reusing by path.
+export AVENCREW_SQLITE_DIR="$_DEV_ROOT/build/native/sqlite/$_RUST_HOST"
 export AVENCREW_ENV_ACTIVE=1
-export AVENCREW_ENV_VARS="RUSTUP_HOME CARGO_HOME PNPM_HOME AVENCREW_MANAGED_ROOT AVENCREW_TOOLCHAIN AVENCREW_ENV_ACTIVE AVENCREW_ENV_VARS"
 
 if [ ! -d "$AVENCREW_TOOLCHAIN" ]; then
   echo "dev-env: managed toolchain missing at $AVENCREW_TOOLCHAIN" >&2
@@ -43,6 +46,48 @@ case ":$PATH:" in
   *":$AVENCREW_TOOLCHAIN:"*) ;;
   *) export PATH="$AVENCREW_TOOLCHAIN:$AVENCREW_MANAGED_ROOT/node/bin:$AVENCREW_MANAGED_ROOT/toolchain/bin:$PATH" ;;
 esac
+
+# ---- controlled native SQLite environment ----------------------------------
+# Canonical absolute paths into THIS project's native build, plus the settings
+# that stop libsqlite3-sys from discovering a host library. build.rs in
+# crates/store-sqlite re-validates all of this and fails clearly when absent.
+export SQLITE3_INCLUDE_DIR="$AVENCREW_SQLITE_DIR/include"
+export SQLITE3_LIB_DIR="$AVENCREW_SQLITE_DIR/lib"
+export SQLITE3_STATIC=1
+export SQLITE3_NO_PKG_CONFIG=1
+export LIBSQLITE3_SYS_USE_PKG_CONFIG=0
+export AVENCREW_SQLITE_VERSION="$(python3 "$_PINS" --tool-version sqlite)"
+
+# Binding inputs must come from the same selected developer toolchain as the C
+# recipe, never an inherited libclang/header override.
+for _override in CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH \
+                 LIBSQLITE3_FLAGS LIBSQLITE3_SYS_BUNDLING SQLCIPHER_LIB_DIR \
+                 SQLCIPHER_INCLUDE_DIR SQLCIPHER_STATIC; do
+  if [ -n "${!_override:-}" ]; then
+    echo "dev-env: clear inherited $_override before using the controlled native recipe" >&2
+    return 2 2>/dev/null || exit 2
+  fi
+done
+_CLANG="$(xcrun --find clang)" || return 2 2>/dev/null || exit 2
+_SDK="$(xcrun --show-sdk-path)" || return 2 2>/dev/null || exit 2
+export LIBCLANG_PATH="$(cd "$(dirname "$_CLANG")/../lib" && pwd)"
+[ -f "$LIBCLANG_PATH/libclang.dylib" ] || {
+  echo "dev-env: selected developer toolchain has no libclang.dylib" >&2
+  return 2 2>/dev/null || exit 2
+}
+_SQLITE_FLAGS="$(python3 "$_PINS" --field sqlite common_c_flags)" || return 2 2>/dev/null || exit 2
+_MACOS_MIN="$(python3 "$_PINS" --field sqlite macos_min_version)" || return 2 2>/dev/null || exit 2
+export BINDGEN_EXTRA_CLANG_ARGS="--target=$_RUST_HOST -isysroot \"$_SDK\" -mmacosx-version-min=$_MACOS_MIN $_SQLITE_FLAGS"
+# bindgen also accepts target-specific overrides; reject those rather than
+# allowing them to take precedence over the selected arguments above.
+for _override in BINDGEN_EXTRA_CLANG_ARGS_aarch64_apple_darwin; do
+  if [ -n "${!_override:-}" ]; then
+    echo "dev-env: clear inherited $_override before building" >&2
+    return 2 2>/dev/null || exit 2
+  fi
+done
+
+export AVENCREW_ENV_VARS="RUSTUP_HOME CARGO_HOME PNPM_HOME AVENCREW_MANAGED_ROOT AVENCREW_TOOLCHAIN AVENCREW_SQLITE_DIR AVENCREW_ENV_ACTIVE AVENCREW_ENV_VARS SQLITE3_INCLUDE_DIR SQLITE3_LIB_DIR SQLITE3_STATIC SQLITE3_NO_PKG_CONFIG LIBSQLITE3_SYS_USE_PKG_CONFIG LIBCLANG_PATH BINDGEN_EXTRA_CLANG_ARGS AVENCREW_SQLITE_VERSION"
 
 if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
   [ "$#" -gt 0 ] || { echo "usage: dev-env.sh <command> [args...]" >&2; exit 2; }

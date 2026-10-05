@@ -28,6 +28,18 @@ Install (re-runnable; verifies every digest each time):
 bash tools/bootstrap/bootstrap.sh
 ```
 
+Before building the Rust workspace, prepare its selected native SQLite engine:
+
+```sh
+bash tools/bootstrap/build-sqlite.sh
+tools/bootstrap/dev-env.sh cargo build --workspace --locked
+tools/bootstrap/dev-env.sh cargo run -p avencrew-store-sqlite --example engine_check --locked
+```
+
+The native recipe currently supports the verified macOS ARM64 profile. Linux
+execution remains unverified and is rejected by the Rust prerequisite guard.
+Native sources, archives and diagnostics stay under ignored `build/` output.
+
 Use the tools for one command:
 
 ```sh

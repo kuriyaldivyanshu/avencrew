@@ -34,6 +34,8 @@ REQUIRED_FIELDS = {
     'esbuild': ['version', 'wrapper_url', 'wrapper_sha512', 'native_package',
                 'native_url', 'native_sha512'],
     'electron': ['version', 'wrapper_url', 'wrapper_sha512', 'binary_url', 'binary_sha256'],
+    'sqlite': ['version', 'version_number', 'source_id', 'amalgamation_url',
+               'amalgamation_sha3_256', 'common_c_flags', 'macos_min_version'],
 }
 
 
