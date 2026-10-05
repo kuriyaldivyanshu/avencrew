@@ -1,0 +1,19 @@
+[package]
+name = "avencrew-store-sqlite"
+description = "Local supervisor journal adapter for Avencrew."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Direction: store-sqlite -> contracts only.
+#
+# No SQLx, no libsqlite3-sys, no bundled engine in this batch. The controlled
+# SQLite 3.53.4 packaging decision is P1-02-D/I/R work; linking a different
+# engine here would silently contradict the selected version.
+avencrew-contracts.workspace = true

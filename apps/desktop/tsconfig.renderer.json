@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    // Browser only. `types: []` is what keeps Node globals out of the renderer:
+    // process, Buffer and the node:* modules are not visible here, so a renderer
+    // file cannot accidentally reach one.
+    "types": [],
+    "jsx": "react-jsx",
+    "outDir": "dist/renderer"
+  },
+  "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx", "src/shared/**/*.ts"]
+}

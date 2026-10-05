@@ -1,0 +1,23 @@
+# Explicit toolchain selection for the Avencrew workspace (P1-02).
+#
+# Channel and components must stay identical to tools/bootstrap/pins.json.
+# pins.json is what bootstrap.sh actually installs; this file makes rustup
+# select the same toolchain rather than whatever the default happens to be.
+#
+# `minimal` avoids pulling in docs/clippy/llvm-tools nobody uses here.
+# No cross target is listed: only the host target is needed until the P4 guest
+# recipe requires aarch64-unknown-linux-gnu.
+#
+# Scope note: rustup installs a toolchain into whichever RUSTUP_HOME is active
+# and does NOT change the default toolchain. Building this workspace through
+# tools/bootstrap/dev-env.sh keeps that install inside build/dev-toolchain/.
+# Running bare `cargo` outside it would fetch 1.99.0 into your personal rustup
+# home; that adds a toolchain but leaves your default untouched.
+#
+# This file is tracked, so a clean checkout gets the same selection without any
+# private design document.
+
+[toolchain]
+channel = "1.99.0"
+profile = "minimal"
+components = ["rustfmt", "clippy"]

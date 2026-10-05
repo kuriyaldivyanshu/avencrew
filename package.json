@@ -1,0 +1,19 @@
+{
+  "name": "avencrew",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Avencrew \u2014 shared workspace for people and AI workers.",
+  "engines": {
+    "node": "24.21.0",
+    "pnpm": "12.9.1"
+  },
+  "scripts": {
+    "typecheck": "pnpm --filter @avencrew/desktop typecheck",
+    "build": "pnpm --filter @avencrew/desktop build",
+    "dev": "pnpm --filter @avencrew/desktop dev",
+    "rust:fmt": "cargo fmt --all -- --check",
+    "rust:clippy": "cargo clippy --workspace --all-targets -- -D warnings",
+    "rust:build": "cargo build --workspace --locked",
+    "check": "pnpm typecheck && pnpm build"
+  }
+}

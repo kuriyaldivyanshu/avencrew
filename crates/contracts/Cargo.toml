@@ -1,0 +1,15 @@
+[package]
+name = "avencrew-contracts"
+description = "Shared, dependency-free contract surface for the Avencrew runtime."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+# Intentionally empty: this crate is the bottom of the dependency graph and is
+# the only place a shared type is allowed to live.
+[dependencies]

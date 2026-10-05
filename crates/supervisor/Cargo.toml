@@ -1,0 +1,22 @@
+[package]
+name = "avencrew-supervisor"
+description = "Per-user Avencrew coordinator process."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "avencrew-supervisor"
+path = "src/main.rs"
+
+[dependencies]
+# Direction: supervisor -> all three. This is the only crate that sees every
+# component, which is what makes it the place that can report whole-build state.
+avencrew-contracts.workspace = true
+avencrew-harness.workspace = true
+avencrew-store-sqlite.workspace = true

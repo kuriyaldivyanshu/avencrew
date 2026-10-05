@@ -1,0 +1,17 @@
+packages:
+  - 'apps/desktop'
+
+# Package lifecycle scripts: default-deny, with explicit per-package decisions.
+#
+# esbuild and Electron both ship install scripts that download native binaries.
+# This batch does not use them:
+#   - esbuild resolves @esbuild/darwin-arm64 from the dependency tree
+#   - TypeScript resolves @typescript/typescript-darwin-arm64 the same way
+#   - Electron's Darwin ARM64 archive is fetched separately and checked against
+#     the SHA-256 recorded in docs/implementation/p0-release-selection-v1.json
+#     before extraction
+# Allowing these scripts would fetch second, unverified copies of native
+# binaries. `false` is a reviewed denial, not an omission.
+allowBuilds:
+  esbuild: false
+  electron: false

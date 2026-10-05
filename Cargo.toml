@@ -1,0 +1,35 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/contracts",
+    "crates/harness",
+    "crates/store-sqlite",
+    "crates/supervisor",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.99.0"
+license = "UNLICENSED"
+publish = false
+
+# Deny unsafe code workspace-wide. The harness executes model-directed and
+# shell-directed activity, so an unsafe escape hatch is not a scaffold nicety.
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+# Dependency direction is enforced by Cargo, not by convention:
+#
+#   contracts  <- no internal dependencies at all
+#   harness       -> contracts
+#   store-sqlite  -> contracts
+#   supervisor    -> contracts, harness, store-sqlite
+#
+# `contracts` cannot reach provider, Electron, harness or storage types because it
+# depends on nothing. `harness` cannot reach the SQLite adapter because
+# `store-sqlite` is not in its dependency list. Cycles are impossible.
+[workspace.dependencies]
+avencrew-contracts = { path = "crates/contracts" }
+avencrew-harness = { path = "crates/harness" }
+avencrew-store-sqlite = { path = "crates/store-sqlite" }
