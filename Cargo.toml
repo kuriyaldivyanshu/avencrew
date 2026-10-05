@@ -27,9 +27,16 @@ unsafe_code = "forbid"
 #   supervisor    -> contracts, harness, store-sqlite
 #
 # `contracts` cannot reach provider, Electron, harness or storage types because it
-# depends on nothing. `harness` cannot reach the SQLite adapter because
+# has no internal dependencies. `harness` cannot reach the SQLite adapter because
 # `store-sqlite` is not in its dependency list. Cycles are impossible.
 [workspace.dependencies]
+serde = { version = "=1.0.229", default-features = false, features = ["std", "derive"] }
+serde_json = { version = "=1.0.151", default-features = false, features = ["std"] }
+uuid = { version = "=1.27.0", default-features = false, features = ["std", "serde"] }
+chrono = { version = "=0.4.45", default-features = false, features = ["std", "serde"] }
+schemars = { version = "=1.2.2", default-features = false, features = ["std", "derive"] }
+ts-rs = { version = "=12.0.1", default-features = false, features = ["serde-compat"] }
+jsonschema = { version = "=0.58.5", default-features = false }
 # Consumed local-journal boundary (P1-02). Exact pins, no default features.
 # `sqlite-unbundled` describes SQLx's linkage path: it enables
 # libsqlite3-sys/buildtime_bindgen and makes the wrapper link the engine we build
