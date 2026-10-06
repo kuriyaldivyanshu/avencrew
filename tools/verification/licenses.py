@@ -4,6 +4,12 @@
 Stdlib only. Run through dev-env.sh after dependency installation. Outputs are
 ignored build artifacts, not a service or a replacement dependency resolver.
 """
+import sys
+
+if sys.version_info < (3, 12):
+    print("licenses: Python 3.12+ is required; select it as python3 on PATH", file=sys.stderr)
+    raise SystemExit(2)
+
 import hashlib
 import io
 import json
@@ -121,7 +127,7 @@ def main():
                                      for p in sorted((folder / subdir).rglob('*')) if p.is_file())
                 if not texts and package['name'].startswith(('@biomejs/cli-', '@esbuild/')):
                     wrapper_name = '@biomejs/biome' if package['name'].startswith('@biomejs/cli-') else 'esbuild'
-                    wrappers = list((ROOT / 'node_modules/.pnpm').glob(f'{wrapper_name.replace('/', '+')}@{package['version']}/node_modules/{wrapper_name}'))
+                    wrappers = list((ROOT / 'node_modules/.pnpm').glob(f"{wrapper_name.replace('/', '+')}@{package['version']}/node_modules/{wrapper_name}"))
                     if len(wrappers) != 1:
                         raise RuntimeError(f'missing matching wrapper for {package["name"]}')
                     wrapper = wrappers[0]

@@ -33,6 +33,8 @@ say "prerequisites"
 for tool in python3 curl shasum openssl tar uname file; do
   command -v "$tool" >/dev/null 2>&1 || die "required tool '$tool' is not on PATH. Install it and re-run; this script does not install system packages."
 done
+python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 12) else "Python 3.12+ is required; select it as python3 on PATH")' || { return 2 2>/dev/null || exit 2; }
+
 [ -f "$PINS" ] || die "missing $PINS"
 [ -f "$BOOTSTRAP/safe_extract.py" ] || die "missing $BOOTSTRAP/safe_extract.py"
 echo "prerequisites: ok"

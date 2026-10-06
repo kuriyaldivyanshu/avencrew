@@ -12,6 +12,8 @@ case "$LANE" in
   rust|desktop|contracts|fixtures|licenses|all) ;;
   *) echo "check: unknown lane '$LANE'" >&2; exit 2 ;;
 esac
+python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 12) else "Python 3.12+ is required; select it as python3 on PATH")' || { return 2 2>/dev/null || exit 2; }
+
 case "$(uname -s)/$(uname -m)" in
   Darwin/arm64|Linux/aarch64) ;;
   *) echo 'check: UNVERIFIED profile; no substitute is admitted' >&2; exit 2 ;;

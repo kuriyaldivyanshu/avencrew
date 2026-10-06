@@ -21,6 +21,8 @@ if ! command -v python3 >/dev/null 2>&1; then
   return 2 2>/dev/null || exit 2
 fi
 
+python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 12) else "Python 3.12+ is required; select it as python3 on PATH")' || { return 2 2>/dev/null || exit 2; }
+
 _RUST_VERSION="$(python3 "$_PINS" --tool-version rust)" || return 2 2>/dev/null || exit 2
 _RUST_HOST="$(python3 "$_PINS" --field rust host)"
 
@@ -93,7 +95,7 @@ else
     echo 'dev-env: no native compiler profile for this platform' >&2; return 2 2>/dev/null || exit 2
   }
   unset LIBCLANG_PATH
-  for _dir in /usr/lib/llvm-*/lib /usr/lib/aarch64-linux-gnu; do
+  for _dir in /usr/lib/llvm-*/lib /usr/lib64/llvm/lib /usr/lib/aarch64-linux-gnu; do
     if [ -f "$_dir/libclang.so" ] || [ -f "$_dir/libclang.so.1" ]; then
       export LIBCLANG_PATH="$_dir"; break
     fi

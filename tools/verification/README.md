@@ -32,7 +32,7 @@ upload occurs.
 The workflow uses clean standard `macos-15` and `ubuntu-24.04-arm` ARM64 runners, an immutable
 checkout v6 commit, read-only repository permission and no persisted Git
 credential. Managed tool archives are checked by the existing bootstrap;
-package installation is frozen with lifecycle scripts disabled by `.npmrc`.
+package installation is frozen with lifecycle scripts disabled by `pnpm-workspace.yaml`.
 There is no compiled-binary cache to mask a clean-build failure. Concurrent
 runs of the same branch/PR are cancelled, and execution is bounded to 45 minutes.
 
@@ -81,3 +81,7 @@ The inventory prints and records a **redistribution blocker**, retaining the
 source declaration without inventing attribution. Resolve upstream notice
 before distributing the application. An unknown missing license or text fails
 the lane; this version-specific exception does not grant release acceptance.
+
+Python 3.12 or newer must be available as `python3` on PATH for setup and
+verification. CI selects Python 3.12 explicitly. Local setup checks the version
+before installing tools; no global interpreter or shell profile is changed.

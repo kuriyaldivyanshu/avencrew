@@ -16,3 +16,8 @@ packages:
 allowBuilds:
   esbuild: false
   electron: false
+
+# pnpm 11+ reads non-registry configuration from the workspace file.
+# Script commands must never install dependencies or rewrite the lockfile.
+verifyDepsBeforeRun: false
+ignoreScripts: true

@@ -11,6 +11,8 @@ activity. Task admission, the coordinator and the harness are separate phases.
 
 ## Requirements
 
+macOS ARM64 is the development launch profile. GNU/Linux ARM64 CI builds
+bundles but does not fetch or launch a Linux Electron distribution.
 Use the project-managed toolchain. From the repository root:
 
 ```sh
@@ -39,7 +41,7 @@ Do **not** wrap it in a `package.json` script. Two traps combine: pnpm parses a
 script named `install:anything` as the `install` command plus an argument, and
 `pnpm run` auto-installs unfrozen before the script body. Together, a "frozen"
 install would rewrite the lockfile and then pass against what it had just
-written. `.npmrc` sets `verify-deps-before-run=false` to close the second trap.
+written. `pnpm-workspace.yaml` sets `verifyDepsBeforeRun: false` to close the second trap.
 
 Two things worth knowing:
 
@@ -47,7 +49,7 @@ Two things worth knowing:
   and TypeScript resolve their platform packages from the dependency tree.
 - **Electron's binary is fetched by `tools/bootstrap/fetch-electron.sh`**, which
   checks the archive's SHA-256 against
-  `docs/implementation/p0-release-selection-v1.json` *before* unpacking, then
+  tracked `tools/bootstrap/pins.json` *before* unpacking, then
   places it in the layout `electron/index.js` expects. Re-run it after any
   `rm -rf node_modules`.
 

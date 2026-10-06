@@ -22,6 +22,10 @@ guesswork.** A clean checkout needs no private design document to build.
 
 ## Usage
 
+Prerequisite: Python 3.12+ must be selected as `python3` on PATH, alongside
+`rustup` and the documented native tools. Select an existing compatible Python
+installation in your shell; bootstrap does not replace your global interpreter.
+
 Install (re-runnable; verifies every digest each time):
 
 ```sh
