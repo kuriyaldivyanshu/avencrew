@@ -75,8 +75,8 @@ case "$PROFILE" in
     command -v ar >/dev/null 2>&1 || die "no ar on PATH"
     CLANG="$(command -v cc)"
     LIBCLANG_PATH=""
-    for candidate in /usr/lib/llvm-*/lib /usr/lib64/llvm/lib /usr/lib/x86_64-linux-gnu; do
-      [ -f "$candidate/libclang.so" ] && { LIBCLANG_PATH="$(cd "$candidate" && pwd)"; break; }
+    for candidate in /usr/lib/llvm-*/lib /usr/lib64/llvm/lib /usr/lib/aarch64-linux-gnu; do
+      { [ -f "$candidate/libclang.so" ] || [ -f "$candidate/libclang.so.1" ]; } && { LIBCLANG_PATH="$(cd "$candidate" && pwd)"; break; }
     done
     [ -n "$LIBCLANG_PATH" ] || die "libclang.so not found; bindgen needs a real libclang"
     CLANG_VERSION="$("$CLANG" --version | head -1)"

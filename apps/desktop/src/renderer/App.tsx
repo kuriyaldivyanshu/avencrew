@@ -46,16 +46,14 @@ export function App() {
 
       <main className="app-main">
         <EmptyArea title="Local workspace">
-          This window is a development scaffold. No workspace has been opened and
-          no server is connected.
+          This window is a development scaffold. No workspace has been opened and no server is
+          connected.
         </EmptyArea>
         <EmptyArea title="Tasks">
-          None. Task admission, the coordinator and the harness are not implemented
-          yet.
+          None. Task admission, the coordinator and the harness are not implemented yet.
         </EmptyArea>
         <EmptyArea title="Activity">
-          Nothing is scheduled or executing. There is no idle worker or agent
-          watching anything.
+          Nothing is scheduled or executing. There is no idle worker or agent watching anything.
         </EmptyArea>
       </main>
     </div>

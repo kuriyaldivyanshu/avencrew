@@ -30,7 +30,7 @@ die() { printf 'bootstrap: %s\n' "$*" >&2; exit 2; }
 
 # ---- prerequisites ---------------------------------------------------------
 say "prerequisites"
-for tool in python3 curl shasum openssl ditto tar uname; do
+for tool in python3 curl shasum openssl tar uname file; do
   command -v "$tool" >/dev/null 2>&1 || die "required tool '$tool' is not on PATH. Install it and re-run; this script does not install system packages."
 done
 [ -f "$PINS" ] || die "missing $PINS"
@@ -86,13 +86,13 @@ echo "rustup binary: $RUSTUP_BIN"
 
 # ---- 2. Node ---------------------------------------------------------------
 say "node $NODE_VERSION"
-NODE_TGZ="node-v$NODE_VERSION-darwin-arm64.tar.xz"
+NODE_TGZ="$(basename "$(python3 "$PINS" --field node archive_url)")"
 fetch "$(python3 "$PINS" --field node archive_url)" "$DL/$NODE_TGZ"
 expect "node archive sha256" "$(python3 "$PINS" --field node archive_sha256)" "$(sha256_of "$DL/$NODE_TGZ")"
 echo "node archive bytes: $(wc -c < "$DL/$NODE_TGZ" | tr -d ' ')"
 rm -rf "$STAGE/node" "$MANAGED/node"
 python3 "$BOOTSTRAP/safe_extract.py" "$DL/$NODE_TGZ" tar.xz "$STAGE/node" >/dev/null
-mv "$STAGE/node/node-v$NODE_VERSION-darwin-arm64" "$MANAGED/node"
+mv "$STAGE/node/${NODE_TGZ%.tar.xz}" "$MANAGED/node"
 [ -f "$MANAGED/node/LICENSE" ] || die "node LICENSE missing after extraction; refusing an incomplete install"
 echo "node license: present"
 
@@ -147,9 +147,9 @@ for tool_name in pnpm typescript esbuild; do
 done
 
 # The native pnpm ships as a Mach-O executable at the package root (no bin/ field).
-shim pnpm "$NM/@pnpm/exe.darwin-arm64/pnpm"
+shim pnpm "$NM/$(python3 "$PINS" --field pnpm native_package)/pnpm"
 shim tsc "$NM/typescript/bin/tsc"
-shim esbuild "$NM/@esbuild/darwin-arm64/bin/esbuild"
+shim esbuild "$NM/$(python3 "$PINS" --field esbuild native_package)/bin/esbuild"
 
 # ---- 4. acceptance ---------------------------------------------------------
 # Rust components live in the managed RUSTUP_HOME toolchain. cargo resolves
@@ -167,9 +167,16 @@ expect "esbuild"  "$(python3 "$PINS" --tool-version esbuild)"    "$(esbuild --ve
 rustfmt --version
 cargo clippy --version
 
-say "native payload provenance (must be Darwin arm64 Mach-O)"
-file -b "$NM/@pnpm/exe.darwin-arm64/pnpm"
-file -b "$NM/@typescript/typescript-darwin-arm64/lib/tsc"
-file -b "$NM/@esbuild/darwin-arm64/bin/esbuild"
+say "native payload provenance"
+for spec in pnpm:pnpm typescript:lib/tsc esbuild:bin/esbuild; do
+  tool_name="${spec%%:*}"; binary="${spec#*:}"
+  native="$NM/$(python3 "$PINS" --field "$tool_name" native_package)/$binary"
+  identity="$(file -b "$native")"
+  printf '%s: %s\n' "$tool_name" "$identity"
+  case "$(uname -s)" in
+    Darwin) [[ "$identity" == *Mach-O*arm64* ]] || die "wrong native architecture for $tool_name" ;;
+    Linux) [[ "$identity" == *ELF*"ARM aarch64"* ]] || die "wrong native architecture for $tool_name" ;;
+  esac
+done
 
 say "bootstrap complete"

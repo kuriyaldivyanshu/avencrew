@@ -10,7 +10,7 @@
   ],
   "schema_version": "1.0",
   "platform": "darwin-arm64",
-  "platform_note": "Only Apple Silicon macOS is supported by this configuration; other platforms are rejected with a clear error.",
+  "platform_note": "Apple Silicon macOS desktop and native GNU/Linux ARM64 portable build profiles; no Windows, Intel or musl fallback.",
   "tools": {
     "rust": {
       "version": "1.99.0",
@@ -67,6 +67,32 @@
       "amalgamation_sha3_256": "628a44cfe82c66aed1ccbbe85a562d2e33ebe64b3288981ed76285612227934e",
       "common_c_flags": "-O2 -fPIC -DSQLITE_THREADSAFE=1 -DSQLITE_ENABLE_FTS5 -DSQLITE_ENABLE_COLUMN_METADATA -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_DEFAULT_FOREIGN_KEYS=1 -DSQLITE_DEFAULT_SYNCHRONOUS=2 -DSQLITE_DEFAULT_WAL_SYNCHRONOUS=2",
       "macos_min_version": "14.0"
+    }
+  },
+  "platform_overrides": {
+    "linux-arm64": {
+      "rust": {
+        "host": "aarch64-unknown-linux-gnu"
+      },
+      "node": {
+        "archive_url": "https://nodejs.org/dist/v24.21.0/node-v24.21.0-linux-arm64.tar.xz",
+        "archive_sha256": "6ad1325edbdb5649c379b75a237147a666c95d4f9ae8d340fef2d1575d289ad2"
+      },
+      "pnpm": {
+        "native_package": "@pnpm/exe.linux-arm64",
+        "native_url": "https://registry.npmjs.org/@pnpm/exe.linux-arm64/-/exe.linux-arm64-12.9.1.tgz",
+        "native_sha512": "sha512-cx+uF6xqwEtm7B8NV+1ve0xBg9gcuzQZ5R+0WgOWvKG/h978UljS6BgWs1ipIGuGgUdeVhm3PKmBltXIcczLXA=="
+      },
+      "typescript": {
+        "native_package": "@typescript/typescript-linux-arm64",
+        "native_url": "https://registry.npmjs.org/@typescript/typescript-linux-arm64/-/typescript-linux-arm64-7.0.2.tgz",
+        "native_sha512": "sha512-Qh4eU4/y3yDjnfjjyPYihMj5/ODIlmt+Bzu17OI+fiSRDW57QmU5SiN63exPRNJPKUzcc1INa1NXdrJ+MqHjUQ=="
+      },
+      "esbuild": {
+        "native_package": "@esbuild/linux-arm64",
+        "native_url": "https://registry.npmjs.org/@esbuild/linux-arm64/-/linux-arm64-0.28.2.tgz",
+        "native_sha512": "sha512-pW4AC0P3it8c7do9MVM4p51FzHzdM/TZrerurgRcHJ2WTa1VQ1CIq18xncfpBJw4ojkiZZrKW2yIBWBP92j6Ug=="
+      }
     }
   }
 }

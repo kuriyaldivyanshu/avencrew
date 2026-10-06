@@ -21,7 +21,7 @@ from pathlib import Path
 
 PINS = Path(__file__).resolve().parent / 'pins.json'
 SUPPORTED_SCHEMA = '1.0'
-SUPPORTED_PLATFORM = 'darwin-arm64'
+SUPPORTED_PLATFORMS = {'darwin-arm64', 'linux-arm64'}
 
 REQUIRED_FIELDS = {
     'rust': ['version', 'host', 'channel_manifest_url', 'channel_manifest_sha256',
@@ -61,25 +61,29 @@ def load() -> dict:
     return data
 
 
+def host_platform() -> str:
+    system, machine = platform.system().lower(), platform.machine().lower()
+    if system == 'linux' and machine == 'aarch64':
+        machine = 'arm64'
+    return f'{system}-{machine}'
+
+
 def check_platform(data: dict) -> None:
-    """Reject anything but the single platform this configuration pins."""
-    wanted = data.get('platform')
-    if wanted != SUPPORTED_PLATFORM:
-        fail(f'pins.json declares unsupported platform {wanted!r}.')
-    actual = f'{platform.system().lower()}-{platform.machine().lower()}'
-    if actual != wanted:
-        fail(
-            f'unsupported platform {actual}; this configuration pins {wanted}.\n'
-            f'  No substitute version is selected automatically. Linux guest, '
-            f'Windows and Intel macOS toolchains are separate later tasks.'
-        )
+    actual = host_platform()
+    if actual not in SUPPORTED_PLATFORMS:
+        fail(f'unsupported platform {actual}; no substitute toolchain is selected.')
+    if actual != data.get('platform'):
+        if actual not in data.get('platform_overrides', {}):
+            fail(f'missing explicit acquisition profile for {actual}')
+
 
 
 def tool(data: dict, name: str) -> dict:
     tools = data.get('tools', {})
     if name not in tools:
         fail(f'unknown tool {name!r}; known tools: {", ".join(sorted(tools))}')
-    entry = tools[name]
+    entry = dict(tools[name])
+    entry.update(data.get('platform_overrides', {}).get(host_platform(), {}).get(name, {}))
     missing = [field for field in REQUIRED_FIELDS.get(name, []) if field not in entry]
     if missing:
         fail(f'pins.json tool {name!r} is missing required field(s): {", ".join(missing)}')
@@ -91,7 +95,7 @@ def main(argv: list[str]) -> int:
 
     if argv[:1] == ['--platform']:
         check_platform(data)
-        print(f'{data["platform"]} supported')
+        print(f'{host_platform()} supported')
         return 0
 
     if argv[:1] == ['--list']:

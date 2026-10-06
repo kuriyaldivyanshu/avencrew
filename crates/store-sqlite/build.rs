@@ -130,8 +130,11 @@ fn main() {
 
     // 2. Canonical in-project header and library paths.
     let target = env::var("TARGET").unwrap_or_else(|_| fail("Cargo TARGET is missing"));
-    if target != "aarch64-apple-darwin" {
-        fail("only the macOS ARM64 native profile is currently verified; Linux remains deferred");
+    if !matches!(
+        target.as_str(),
+        "aarch64-apple-darwin" | "aarch64-unknown-linux-gnu"
+    ) {
+        fail("only the reviewed macOS ARM64 and native GNU/Linux ARM64 recipes are admitted");
     }
     let selected = project_root().join("build/native/sqlite").join(&target);
     let include_dir = require_project_relative(

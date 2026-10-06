@@ -17,8 +17,8 @@
 // bundling), and emit a fixed preamble. Same Rust input -> byte-identical output.
 
 import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -50,22 +50,37 @@ const { buildSync } = require('esbuild');
 // occurrences of the named definitions. Keep aligned with scalars/semantics.rs.
 const portableRules = {
   counter: function counter(s) {
-    return typeof s === 'string' && /^(0|[1-9][0-9]{0,18})$/.test(s)
-      && BigInt(s) <= 9223372036854775807n;
+    return (
+      typeof s === 'string' && /^(0|[1-9][0-9]{0,18})$/.test(s) && BigInt(s) <= 9223372036854775807n
+    );
   },
   instant: function instant(s) {
-    if (typeof s !== 'string' || !/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}Z$/.test(s)) return false;
-    const y = Number(s.slice(0, 4)), m = Number(s.slice(5, 7)), d = Number(s.slice(8, 10));
+    if (
+      typeof s !== 'string' ||
+      !/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}Z$/.test(s)
+    )
+      return false;
+    const y = Number(s.slice(0, 4)),
+      m = Number(s.slice(5, 7)),
+      d = Number(s.slice(8, 10));
     const leap = y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0);
     const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    return m >= 1 && m <= 12 && d >= 1 && d <= days[m - 1]
-      && Number(s.slice(11, 13)) < 24 && Number(s.slice(14, 16)) < 60
-      && Number(s.slice(17, 19)) < 60;
+    return (
+      m >= 1 &&
+      m <= 12 &&
+      d >= 1 &&
+      d <= days[m - 1] &&
+      Number(s.slice(11, 13)) < 24 &&
+      Number(s.slice(14, 16)) < 60 &&
+      Number(s.slice(17, 19)) < 60
+    );
   },
   lease: function lease(v) {
     if (v === null || typeof v !== 'object' || Array.isArray(v)) return false;
-    return (v.environment_id === null) === (v.generation === null)
-      && !(v.authority === 'local' && v.placement === 'cloud');
+    return (
+      (v.environment_id === null) === (v.generation === null) &&
+      !(v.authority === 'local' && v.placement === 'cloud')
+    );
   },
   context: function context(v) {
     if (v === null || typeof v !== 'object' || Array.isArray(v)) return false;
@@ -73,27 +88,37 @@ const portableRules = {
   },
   checkpoint: function checkpoint(v) {
     if (v === null || typeof v !== 'object' || Array.isArray(v)) return false;
-    return typeof v.applied_seq === 'string' && typeof v.accepted_seq === 'string'
-      && /^(0|[1-9][0-9]{0,18})$/.test(v.applied_seq)
-      && /^(0|[1-9][0-9]{0,18})$/.test(v.accepted_seq)
-      && BigInt(v.applied_seq) <= BigInt(v.accepted_seq);
+    return (
+      typeof v.applied_seq === 'string' &&
+      typeof v.accepted_seq === 'string' &&
+      /^(0|[1-9][0-9]{0,18})$/.test(v.applied_seq) &&
+      /^(0|[1-9][0-9]{0,18})$/.test(v.accepted_seq) &&
+      BigInt(v.applied_seq) <= BigInt(v.accepted_seq)
+    );
   },
   snapshot: function snapshot(v) {
     if (v === null || typeof v !== 'object' || Array.isArray(v)) return false;
-    return !(v.authority === 'local' && v.placement === 'cloud')
-      && typeof v.applied_seq === 'string' && typeof v.accepted_seq === 'string'
-      && /^(0|[1-9][0-9]{0,18})$/.test(v.applied_seq)
-      && /^(0|[1-9][0-9]{0,18})$/.test(v.accepted_seq)
-      && BigInt(v.applied_seq) <= BigInt(v.accepted_seq);
+    return (
+      !(v.authority === 'local' && v.placement === 'cloud') &&
+      typeof v.applied_seq === 'string' &&
+      typeof v.accepted_seq === 'string' &&
+      /^(0|[1-9][0-9]{0,18})$/.test(v.applied_seq) &&
+      /^(0|[1-9][0-9]{0,18})$/.test(v.accepted_seq) &&
+      BigInt(v.applied_seq) <= BigInt(v.accepted_seq)
+    );
   },
   transfer: function transfer(v) {
     if (v === null || typeof v !== 'object' || Array.isArray(v)) return false;
     if (v.disposition !== 'committed') return true;
-    return v.authority === 'server' && v.receipt_ref != null
-      && typeof v.source_epoch === 'string' && typeof v.destination_epoch === 'string'
-      && /^[1-9][0-9]{0,18}$/.test(v.source_epoch)
-      && /^[1-9][0-9]{0,18}$/.test(v.destination_epoch)
-      && BigInt(v.destination_epoch) === BigInt(v.source_epoch) + 1n;
+    return (
+      v.authority === 'server' &&
+      v.receipt_ref != null &&
+      typeof v.source_epoch === 'string' &&
+      typeof v.destination_epoch === 'string' &&
+      /^[1-9][0-9]{0,18}$/.test(v.source_epoch) &&
+      /^[1-9][0-9]{0,18}$/.test(v.destination_epoch) &&
+      BigInt(v.destination_epoch) === BigInt(v.source_epoch) + 1n
+    );
   },
 };
 
@@ -111,9 +136,11 @@ function validatorSource(schemaJson) {
     if (Array.isArray(node.oneOf)) {
       for (const name of ['message_kind', 'operation', 'kind', 'status']) {
         const tags = node.oneOf.map((branch) => branch.properties?.[name]?.const);
-        if (tags.every((tag) => typeof tag === 'string')
-          && new Set(tags).size === tags.length
-          && node.oneOf.every((branch) => branch.required?.includes(name))) {
+        if (
+          tags.every((tag) => typeof tag === 'string') &&
+          new Set(tags).size === tags.length &&
+          node.oneOf.every((branch) => branch.required?.includes(name))
+        ) {
           node.discriminator = { propertyName: name };
           node.type = 'object';
           break;
@@ -124,22 +151,33 @@ function validatorSource(schemaJson) {
   }
   tagUnions(schema);
   const annotations = {
-    Counter: 'counter', PositiveCounter: 'counter', Instant: 'instant',
-    Lease: 'lease', TrustedContext: 'context', Checkpoint: 'checkpoint',
-    TaskSnapshot: 'snapshot', TransferReceipt: 'transfer',
+    Counter: 'counter',
+    PositiveCounter: 'counter',
+    Instant: 'instant',
+    Lease: 'lease',
+    TrustedContext: 'context',
+    Checkpoint: 'checkpoint',
+    TaskSnapshot: 'snapshot',
+    TransferReceipt: 'transfer',
   };
   for (const [name, rule] of Object.entries(annotations)) {
     if (!schema.$defs[name]) throw new Error(`missing portable-rule definition: ${name}`);
     schema.$defs[name].avencrewPortable = rule;
   }
   const ajv = new Ajv2020({
-    strict: true, allErrors: false, inlineRefs: false, ownProperties: true,
+    strict: true,
+    allErrors: false,
+    inlineRefs: false,
+    ownProperties: true,
     discriminator: true,
-    coerceTypes: false, useDefaults: false, removeAdditional: false,
+    coerceTypes: false,
+    useDefaults: false,
+    removeAdditional: false,
     code: { source: true, esm: true, optimize: true },
   });
   ajv.addKeyword({
-    keyword: 'avencrewPortable', schemaType: 'string',
+    keyword: 'avencrewPortable',
+    schemaType: 'string',
     code(cxt) {
       const rule = portableRules[cxt.schema];
       if (!rule) throw new Error(`unknown portable rule: ${cxt.schema}`);
@@ -153,12 +191,22 @@ function validatorSource(schemaJson) {
   // Its ucs2length helper retains an inert `.code` string mentioning require.
   const result = buildSync({
     stdin: { contents: source, resolveDir: OUT_DIR, sourcefile: 'wire-validator.generated.mjs' },
-    bundle: true, platform: 'browser', format: 'esm', target: 'es2022',
-    write: false, legalComments: 'inline', minify: true,
-    banner: { js: '// GENERATED from canonical Rust wire schema; DO NOT EDIT.\n// Ajv 8.20.0 (MIT); regenerate with tools/contracts/generate.mjs.' },
+    bundle: true,
+    platform: 'browser',
+    format: 'esm',
+    target: 'es2022',
+    write: false,
+    legalComments: 'inline',
+    minify: true,
+    banner: {
+      js: '// GENERATED from canonical Rust wire schema; DO NOT EDIT.\n// Ajv 8.20.0 (MIT); regenerate with tools/contracts/generate.mjs.',
+    },
   }).outputFiles[0].text;
   if (/\beval\s*\(|\bnew\s+Function\b|\bnode:/.test(result)) {
-    throw new Error('generated validator violates the browser runtime boundary: ' + result.match(/.{0,60}(?:\beval\s*\(|\bnew\s+Function\b|\bnode:).{0,60}/)?.[0]);
+    throw new Error(
+      'generated validator violates the browser runtime boundary: ' +
+        result.match(/.{0,60}(?:\beval\s*\(|\bnew\s+Function\b|\bnode:).{0,60}/)?.[0],
+    );
   }
   return result;
 }
@@ -177,10 +225,7 @@ function extractBody(source) {
   const lines = source.split('\n');
   const start = lines.findIndex((line) => line.startsWith('export type'));
   if (start === -1) throw new Error('no exported type found');
-  return lines
-    .slice(start)
-    .join('\n')
-    .trimEnd();
+  return lines.slice(start).join('\n').trimEnd();
 }
 
 function exportNameOf(source) {
@@ -193,10 +238,30 @@ function main() {
   const scratch = mkdtempSync(join(tmpdir(), 'avencrew-contracts-'));
   try {
     // 1. Export from Rust. These are the existing reviewed examples.
-    cargo(['run', '-q', '-p', 'avencrew-contracts', '--example', 'export_typescript',
-      '--features', 'typescript-export', '--locked', '--', scratch]);
-    const schemaJson = cargo(['run', '-q', '-p', 'avencrew-contracts', '--example', 'export_schema',
-      '--features', 'schema-export', '--locked']);
+    cargo([
+      'run',
+      '-q',
+      '-p',
+      'avencrew-contracts',
+      '--example',
+      'export_typescript',
+      '--features',
+      'typescript-export',
+      '--locked',
+      '--',
+      scratch,
+    ]);
+    const schemaJson = cargo([
+      'run',
+      '-q',
+      '-p',
+      'avencrew-contracts',
+      '--example',
+      'export_schema',
+      '--features',
+      'schema-export',
+      '--locked',
+    ]);
 
     // 2. Bundle the per-type modules into one file, ordered by export name.
     const modules = readdirSync(scratch)
@@ -205,7 +270,10 @@ function main() {
 
     const seen = new Set();
     const ordered = modules
-      .map((module) => ({ body: extractBody(module.source), exported: exportNameOf(module.source) }))
+      .map((module) => ({
+        body: extractBody(module.source),
+        exported: exportNameOf(module.source),
+      }))
       .sort((a, b) => (a.exported < b.exported ? -1 : a.exported > b.exported ? 1 : 0));
     for (const entry of ordered) {
       if (seen.has(entry.exported)) throw new Error(`duplicate export name ${entry.exported}`);

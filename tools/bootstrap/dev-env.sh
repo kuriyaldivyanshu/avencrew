@@ -88,6 +88,24 @@ if [ "$(uname -s)" = Darwin ]; then
       return 2 2>/dev/null || exit 2
     fi
   done
+else
+  [ "$(uname -s)/$(uname -m)" = Linux/aarch64 ] || {
+    echo 'dev-env: no native compiler profile for this platform' >&2; return 2 2>/dev/null || exit 2
+  }
+  unset LIBCLANG_PATH
+  for _dir in /usr/lib/llvm-*/lib /usr/lib/aarch64-linux-gnu; do
+    if [ -f "$_dir/libclang.so" ] || [ -f "$_dir/libclang.so.1" ]; then
+      export LIBCLANG_PATH="$_dir"; break
+    fi
+  done
+  [ -n "${LIBCLANG_PATH:-}" ] || {
+    echo 'dev-env: libclang prerequisite missing; install libclang-dev' >&2; return 2 2>/dev/null || exit 2
+  }
+  export BINDGEN_EXTRA_CLANG_ARGS="--target=$_RUST_HOST $(python3 "$_PINS" --field sqlite common_c_flags)"
+  [ -z "${BINDGEN_EXTRA_CLANG_ARGS_aarch64_unknown_linux_gnu:-}" ] || {
+    echo 'dev-env: clear inherited target-specific bindgen arguments' >&2; return 2 2>/dev/null || exit 2
+  }
+
 fi
 
 export AVENCREW_ENV_VARS="RUSTUP_HOME CARGO_HOME PNPM_HOME AVENCREW_MANAGED_ROOT AVENCREW_TOOLCHAIN AVENCREW_SQLITE_DIR AVENCREW_ENV_ACTIVE AVENCREW_ENV_VARS SQLITE3_INCLUDE_DIR SQLITE3_LIB_DIR SQLITE3_STATIC SQLITE3_NO_PKG_CONFIG LIBSQLITE3_SYS_USE_PKG_CONFIG LIBCLANG_PATH BINDGEN_EXTRA_CLANG_ARGS AVENCREW_SQLITE_VERSION"

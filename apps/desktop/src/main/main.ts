@@ -17,7 +17,7 @@
  */
 import { fileURLToPath } from 'node:url';
 
-import { BrowserWindow, app, shell } from 'electron';
+import { app, BrowserWindow, shell } from 'electron';
 
 /** Built renderer document. Fixed at build time; never user or network input. */
 const RENDERER_HTML = fileURLToPath(new URL('../renderer/index.html', import.meta.url));

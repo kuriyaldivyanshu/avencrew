@@ -20,7 +20,15 @@
  */
 
 import { createHash } from 'node:crypto';
-import { lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+import {
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+} from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -77,8 +85,7 @@ function assertSafeDataRoot(candidate) {
   }
   const resolved = canonicalPath(original);
   const temporary = realpathSync(tmpdir());
-  const forbidden = [REPO_ROOT, homedir(), process.env.APPDATA]
-    .filter(Boolean).map(canonicalPath);
+  const forbidden = [REPO_ROOT, homedir(), process.env.APPDATA].filter(Boolean).map(canonicalPath);
   if (forbidden.some((root) => within(resolved, root))) {
     throw new Error(`refusing a real application data root: ${resolved}`);
   }
@@ -96,18 +103,27 @@ function seed(dataRoot) {
     const bytes = readFileSync(join(REPO_ROOT, source));
     const path = `fixtures/${source.split('/').pop()}`;
     contents.set(path, bytes);
-    return { path, source, bytes: bytes.length,
-      sha256: createHash('sha256').update(bytes).digest('hex') };
+    return {
+      path,
+      source,
+      bytes: bytes.length,
+      sha256: createHash('sha256').update(bytes).digest('hex'),
+    };
   }).sort((a, b) => a.path.localeCompare(b.path, 'en'));
   const manifest = {
-    kind: 'avencrew-fixture-seed', schema_version: '1',
+    kind: 'avencrew-fixture-seed',
+    schema_version: '1',
     note: 'Synthetic development fixtures. Not real data, not a database, and not evidence that any run succeeded.',
     files,
   };
   contents.set('manifest.json', Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`));
-  contents.set(MARKER, Buffer.from(
-    'This directory holds synthetic Avencrew development fixtures.\n' +
-    'It is not application data. Delete it freely.\n'));
+  contents.set(
+    MARKER,
+    Buffer.from(
+      'This directory holds synthetic Avencrew development fixtures.\n' +
+        'It is not application data. Delete it freely.\n',
+    ),
+  );
 
   const rootStat = statIfPresent(dataRoot);
   if (rootStat && !rootStat.isDirectory()) throw new Error('data root is not a directory');

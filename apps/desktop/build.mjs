@@ -7,9 +7,10 @@
 //
 // No dev server and no watch mode: `dev` is a build plus a normal launch, so a
 // stale bundle can never be mistaken for current code.
-import { build } from 'esbuild';
-import { readFile, mkdir, copyFile } from 'node:fs/promises';
+
+import { copyFile, mkdir, readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { build } from 'esbuild';
 
 const here = new URL('./', import.meta.url);
 const pkg = JSON.parse(await readFile(new URL('./package.json', here), 'utf8'));

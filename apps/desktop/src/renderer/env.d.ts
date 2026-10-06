@@ -11,5 +11,3 @@ declare global {
     readonly avencrewBuild: AppBuildMetadata;
   }
 }
-
-export {};

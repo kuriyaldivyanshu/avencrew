@@ -8,8 +8,9 @@
  *
  * Run: node --experimental-strip-types examples/consume.ts
  */
-import type { CommandReceipt } from '../src/wire.ts';
+
 import { validateCommandReceiptPayload } from '../src/validate.ts';
+import type { CommandReceipt } from '../src/wire.ts';
 
 // An `applied` receipt: disposition_ref is required and non-null in this variant.
 const applied: CommandReceipt = {

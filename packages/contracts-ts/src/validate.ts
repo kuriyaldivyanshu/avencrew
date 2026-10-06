@@ -80,7 +80,11 @@ function needCounter(
  * as `23:59:60` are rejected, matching chrono round-trip in
  * `crates/contracts/src/scalars.rs`.
  */
-function needInstant(value: unknown, path: string, violations: WireViolation[]): string | undefined {
+function needInstant(
+  value: unknown,
+  path: string,
+  violations: WireViolation[],
+): string | undefined {
   const SHAPE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/;
   const text = needString(value, path, SHAPE, 'invalid-instant', violations);
   if (text === undefined) return undefined;
@@ -118,10 +122,20 @@ function needInstant(value: unknown, path: string, violations: WireViolation[]):
 }
 
 const CLIENT_OPERATIONS = new Set([
-  'handshake', 'describe_capabilities', 'submit_task', 'submit_command',
-  'get_task_snapshot', 'subscribe', 'answer_clarification', 'review_artifact',
-  'decide_action', 'get_artifact', 'prepare_transfer', 'query_transfer',
-  'request_transfer_abort', 'get_usage',
+  'handshake',
+  'describe_capabilities',
+  'submit_task',
+  'submit_command',
+  'get_task_snapshot',
+  'subscribe',
+  'answer_clarification',
+  'review_artifact',
+  'decide_action',
+  'get_artifact',
+  'prepare_transfer',
+  'query_transfer',
+  'request_transfer_abort',
+  'get_usage',
 ]);
 
 export interface ValidateOptions {
@@ -137,17 +151,22 @@ export interface ValidateOptions {
 export function validateMessage(input: unknown, options: ValidateOptions = {}): ValidationResult {
   if (!validateWire(input)) return fail([{ path: '', code: 'invalid-wire-shape' }]);
   const envelope = input as { message_kind: string; payload: Record<string, unknown> };
-  if (options.surface === 'client' && (envelope.message_kind !== 'rpc_request'
-    || typeof envelope.payload.operation !== 'string'
-    || !CLIENT_OPERATIONS.has(envelope.payload.operation))) {
+  if (
+    options.surface === 'client' &&
+    (envelope.message_kind !== 'rpc_request' ||
+      typeof envelope.payload.operation !== 'string' ||
+      !CLIENT_OPERATIONS.has(envelope.payload.operation))
+  ) {
     return fail([{ path: 'message_kind', code: 'operation-not-on-client-surface' }]);
   }
   // The model's normalized tool arguments have an additional UTF-8 byte limit.
   if (envelope.message_kind === 'normalized_model_response') {
     const items = envelope.payload.items as Array<Record<string, unknown>>;
     for (const item of items) {
-      if (item.kind === 'tool_proposal'
-        && new TextEncoder().encode(JSON.stringify(item.arguments)).byteLength > 262144) {
+      if (
+        item.kind === 'tool_proposal' &&
+        new TextEncoder().encode(JSON.stringify(item.arguments)).byteLength > 262144
+      ) {
         return fail([{ path: 'payload.items', code: 'tool-argument-byte-limit' }]);
       }
     }
@@ -156,7 +175,10 @@ export function validateMessage(input: unknown, options: ValidateOptions = {}): 
 }
 
 /** Single JSON ingress path: bounded parsing, duplicates, then full validation. */
-export function parseWireMessage(text: string, options: ValidateOptions = {}): ValidationResult & { readonly value?: unknown } {
+export function parseWireMessage(
+  text: string,
+  options: ValidateOptions = {},
+): ValidationResult & { readonly value?: unknown } {
   const parsed = parseStrictJson(text);
   if (!parsed.ok) return parsed;
   const checked = validateMessage(parsed.value, options);
@@ -217,7 +239,7 @@ function scanForDuplicateKeys(text: string): unknown {
         if (text[after] === ':') {
           const key = decoded;
           const current = stack[stack.length - 1];
-          if (current !== undefined && current.has(key)) {
+          if (current?.has(key)) {
             throw new JsonIngressError('duplicate-key');
           }
           current?.add(key);
@@ -234,7 +256,9 @@ function scanForDuplicateKeys(text: string): unknown {
       depth -= 1;
       stack.pop();
     } else if (char === '-' || /[0-9]/.test(char)) {
-      const token = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/.exec(text.slice(index))?.[0];
+      const token = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/.exec(
+        text.slice(index),
+      )?.[0];
       if (token !== undefined) {
         if (token === '-0' || (/[.eE]/.test(token) && Number.isInteger(Number(token)))) {
           throw new JsonIngressError('ambiguous-json-integer');
@@ -255,12 +279,15 @@ function scanForDuplicateKeys(text: string): unknown {
   const pending: unknown[] = [value];
   while (pending.length > 0) {
     const item = pending.pop();
-    if (typeof item === 'number' && (!Number.isFinite(item)
-      || (Number.isInteger(item) && !Number.isSafeInteger(item)))) {
+    if (
+      typeof item === 'number' &&
+      (!Number.isFinite(item) || (Number.isInteger(item) && !Number.isSafeInteger(item)))
+    ) {
       throw new JsonIngressError('unsafe-json-number');
     }
-    if (Array.isArray(item)) { for (const child of item) pending.push(child); }
-    else if (item !== null && typeof item === 'object') {
+    if (Array.isArray(item)) {
+      for (const child of item) pending.push(child);
+    } else if (item !== null && typeof item === 'object') {
       for (const child of Object.values(item)) pending.push(child);
     }
   }
@@ -275,7 +302,11 @@ function skipWhitespace(text: string, from: number): number {
 
 /** Validate a decoded `CommandReceipt`, for consumers that handle receipts alone. */
 export function validateCommandReceiptPayload(input: unknown): ValidationResult {
-  return validateMessage({ schema_version: '1.0', message_kind: 'command_receipt', payload: input });
+  return validateMessage({
+    schema_version: '1.0',
+    message_kind: 'command_receipt',
+    payload: input,
+  });
 }
 
 /** Validate a counter string on its own. Exposed for scalar-level tests. */

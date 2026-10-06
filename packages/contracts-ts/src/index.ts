@@ -6,5 +6,5 @@
  * ingress and surface checks. Rust remains authoritative.
  */
 
-export * from './wire.ts';
 export * from './validate.ts';
+export * from './wire.ts';

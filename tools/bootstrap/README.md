@@ -11,10 +11,10 @@ your global configuration.
 | rustc / cargo | 1.99.0 | existing `rustup` binary, project-managed `RUSTUP_HOME`/`CARGO_HOME` |
 | rustfmt | 1.10.0-stable (component of 1.99.0) | `--component rustfmt` |
 | clippy | 0.1.99 (component of 1.99.0) | `--component clippy` |
-| Node | 24.21.0 | official darwin-arm64 archive |
-| pnpm | 12.9.1 | npm wrapper + `@pnpm/exe.darwin-arm64` native binary |
-| TypeScript | 7.0.2 | npm wrapper + `@typescript/typescript-darwin-arm64` native compiler |
-| esbuild | 0.28.2 | npm wrapper + `@esbuild/darwin-arm64` native binary |
+| Node | 24.21.0 | official ARM64 archive for the selected host |
+| pnpm | 12.9.1 | npm wrapper + platform-matched `@pnpm/exe.*-arm64` native binary |
+| TypeScript | 7.0.2 | npm wrapper + platform-matched TypeScript ARM64 native compiler |
+| esbuild | 0.28.2 | npm wrapper + platform-matched esbuild ARM64 native binary |
 
 Versions, URLs and digests come from [`pins.json`](pins.json), which is tracked
 and self-contained. **No version is resolved as `latest`, a range, or by
@@ -36,8 +36,9 @@ tools/bootstrap/dev-env.sh cargo build --workspace --locked
 tools/bootstrap/dev-env.sh cargo run -p avencrew-store-sqlite --example engine_check --locked
 ```
 
-The native recipe currently supports the verified macOS ARM64 profile. Linux
-execution remains unverified and is rejected by the Rust prerequisite guard.
+The recipe admits macOS ARM64 and native GNU/Linux ARM64 profiles. Linux needs
+`libclang-dev`, a C compiler and `ar`; macOS needs Xcode Command Line Tools.
+CI runs each on its actual host. This does not establish Linux Electron packaging.
 Native sources, archives and diagnostics stay under ignored `build/` output.
 
 Use the tools for one command:
@@ -67,10 +68,10 @@ Every artifact is checked **before** extraction or execution:
   SHA-256 and byte count, then rustup verifies each component's own hashes. This
   is a hash comparison against the primary source, **not** an independently
   verified publisher signature.
-- Node: archive SHA-256 against `6239d4cf…`.
+- Node: host archive SHA-256 against its explicit pin.
 - pnpm / TypeScript / esbuild and each native payload: npm SHA-512 integrity
   against the manifest, plus the package's own `version` field.
-- Native payloads are confirmed to be Mach-O arm64, not merely present.
+- Native payloads must be Mach-O arm64 on macOS or ELF AArch64 on Linux.
 
 `safe_extract.py` refuses absolute member paths, `..` traversal, links that escape
 the archive root, and unexpected member types (device nodes, fifos). It accepts

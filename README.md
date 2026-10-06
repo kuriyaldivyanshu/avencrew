@@ -28,7 +28,7 @@ The previous Team-Workspace project is retained in `archive/Team-Workspace/` as 
 
 New Avencrew plans should live in `docs/`, separate from the old project archive.
 
-## Fixture development (macOS ARM64)
+## Fixture development (macOS ARM64 and GNU/Linux ARM64)
 
 Use the [managed toolchain setup](tools/bootstrap/README.md) first. Install
 workspace dependencies and cache the contract test dependencies once:
@@ -59,14 +59,15 @@ bash tools/bootstrap/fetch-electron.sh
 bash tools/bootstrap/dev-env.sh pnpm dev
 ```
 
-The desktop does not consume fixture seeds yet. Linux ARM64 remains unverified.
+The desktop does not consume fixture seeds yet. Electron distribution and launch
+are macOS-only; the Linux CI lane builds portable Rust/contracts and bundles.
 
 ## Continuous integration
 
 [Scaffold checks](.github/workflows/scaffold.yml) run on pushes to `main` and
 `setup/initial-foundation`, PRs targeting `main`, and manual dispatch. The
-workflow uses one standard macOS ARM64 runner and the tracked toolchain/native
-recipes. Rust, desktop, contracts and fixture checks have separate steps.
+workflow uses standard macOS and Linux ARM64 runners and the tracked toolchain/native
+recipes. Rust, desktop, contracts, fixtures and dependency inventory have separate steps.
 
 Run the same checks locally after dependency setup:
 
@@ -75,6 +76,12 @@ bash tools/verification/check.sh all
 ```
 
 See [verification scope and prerequisites](tools/verification/README.md).
-Linux ARM64, desktop launch and runtime recovery/isolation are not established
-by a passing scaffold job. This public-repository workflow skips private repos
+Linux Electron distribution, desktop launch and runtime recovery/isolation are
+not established by a passing scaffold matrix. This public-repository workflow skips private repos
 rather than automatically switching to billed execution.
+
+Formatting: `bash tools/bootstrap/dev-env.sh pnpm format`; checking:
+`bash tools/bootstrap/dev-env.sh pnpm format:check` and
+`bash tools/bootstrap/dev-env.sh pnpm lint`. Generated contracts stay
+generator-owned. Dependency inventories and known redistribution limitations
+are described in the verification guide.

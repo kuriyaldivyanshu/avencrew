@@ -16,6 +16,12 @@
     "rust:fmt": "cargo fmt --all -- --check",
     "rust:clippy": "cargo clippy --workspace --all-targets -- -D warnings",
     "rust:build": "cargo build --workspace --locked",
-    "check": "pnpm typecheck && pnpm build"
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm build",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome lint --error-on-warnings ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15"
   }
 }

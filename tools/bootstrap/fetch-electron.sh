@@ -11,6 +11,7 @@
 # checkout needs no private design document.
 
 set -euo pipefail
+[ "$(uname -s)/$(uname -m)" = Darwin/arm64 ] || { echo "fetch-electron: desktop distribution supports macOS ARM64 only" >&2; exit 2; }
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BOOTSTRAP="$ROOT/tools/bootstrap"
