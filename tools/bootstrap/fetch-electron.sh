@@ -66,8 +66,8 @@ python3 - "$STAGE/electron" <<'PY'
 import os, sys
 root = os.path.realpath(sys.argv[1])
 bad = []
-for base, _dirs, files in os.walk(root):
-    for name in files:
+for base, dirs, files in os.walk(root):
+    for name in dirs + files:
         path = os.path.join(base, name)
         if os.path.islink(path):
             target = os.path.realpath(path)

@@ -1,0 +1,2196 @@
+[
+  {
+    "name": "command/1",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "command",
+      "payload": {
+        "command_id": "019a5500-0000-7000-8000-000000000001",
+        "run_id": "019a5500-0000-7000-8000-000000000001",
+        "idempotency_key": "x",
+        "kind": "steer",
+        "payload": {
+          "text": "x",
+          "expected_revision": "1"
+        }
+      }
+    }
+  },
+  {
+    "name": "command/2",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "command",
+      "payload": {
+        "command_id": "019a5500-0000-7000-8000-000000000001",
+        "run_id": "019a5500-0000-7000-8000-000000000001",
+        "idempotency_key": "x",
+        "kind": "revise_objective",
+        "payload": {
+          "objective_version_id": "019a5500-0000-7000-8000-000000000001",
+          "check_refs": [],
+          "expected_revision": "1"
+        }
+      }
+    }
+  },
+  {
+    "name": "command/3",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "command",
+      "payload": {
+        "command_id": "019a5500-0000-7000-8000-000000000001",
+        "run_id": "019a5500-0000-7000-8000-000000000001",
+        "idempotency_key": "x",
+        "kind": "pause",
+        "payload": {
+          "expected_revision": "1",
+          "reason": "x"
+        }
+      }
+    }
+  },
+  {
+    "name": "command/4",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "command",
+      "payload": {
+        "command_id": "019a5500-0000-7000-8000-000000000001",
+        "run_id": "019a5500-0000-7000-8000-000000000001",
+        "idempotency_key": "x",
+        "kind": "resume",
+        "payload": {
+          "expected_revision": "1",
+          "checkpoint_id": "019a5500-0000-7000-8000-000000000001"
+        }
+      }
+    }
+  },
+  {
+    "name": "command/5",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "command",
+      "payload": {
+        "command_id": "019a5500-0000-7000-8000-000000000001",
+        "run_id": "019a5500-0000-7000-8000-000000000001",
+        "idempotency_key": "x",
+        "kind": "stop",
+        "payload": {
+          "reason": "x"
+        }
+      }
+    }
+  },
+  {
+    "name": "command/6",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "command",
+      "payload": {
+        "command_id": "019a5500-0000-7000-8000-000000000001",
+        "run_id": "019a5500-0000-7000-8000-000000000001",
+        "idempotency_key": "x",
+        "kind": "answer_clarification",
+        "payload": {
+          "request_id": "019a5500-0000-7000-8000-000000000001",
+          "request_revision": "1",
+          "answers": []
+        }
+      }
+    }
+  },
+  {
+    "name": "command/7",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "command",
+      "payload": {
+        "command_id": "019a5500-0000-7000-8000-000000000001",
+        "run_id": "019a5500-0000-7000-8000-000000000001",
+        "idempotency_key": "x",
+        "kind": "review_artifact",
+        "payload": {
+          "request_id": "019a5500-0000-7000-8000-000000000001",
+          "request_revision": "1",
+          "artifact_id": "019a5500-0000-7000-8000-000000000001",
+          "version_id": "019a5500-0000-7000-8000-000000000001",
+          "check_refs": [],
+          "response": "accept"
+        }
+      }
+    }
+  },
+  {
+    "name": "command/8",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "command",
+      "payload": {
+        "command_id": "019a5500-0000-7000-8000-000000000001",
+        "run_id": "019a5500-0000-7000-8000-000000000001",
+        "idempotency_key": "x",
+        "kind": "decide_action",
+        "payload": {
+          "decision_id": "019a5500-0000-7000-8000-000000000001",
+          "decision_revision": "1",
+          "invocation_id": "019a5500-0000-7000-8000-000000000001",
+          "target_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "response": "approve"
+        }
+      }
+    }
+  },
+  {
+    "name": "command_receipt/1",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "command_receipt",
+      "payload": {
+        "kind": "pending",
+        "command_id": "019a5500-0000-7000-8000-000000000001",
+        "authority": "local",
+        "reason": "unsent"
+      }
+    }
+  },
+  {
+    "name": "command_receipt/2",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "command_receipt",
+      "payload": {
+        "kind": "accepted",
+        "command_id": "019a5500-0000-7000-8000-000000000001",
+        "authority": "local",
+        "run_id": "019a5500-0000-7000-8000-000000000001",
+        "accepted_seq": "1",
+        "event_seq": "1",
+        "row_version": "1",
+        "disposition_ref": null,
+        "task_id": "019a5500-0000-7000-8000-000000000001",
+        "task_revision_id": "019a5500-0000-7000-8000-000000000001"
+      }
+    }
+  },
+  {
+    "name": "command_receipt/3",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "command_receipt",
+      "payload": {
+        "kind": "rejected",
+        "command_id": "019a5500-0000-7000-8000-000000000001",
+        "run_id": "019a5500-0000-7000-8000-000000000001",
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        },
+        "current_revision": null
+      }
+    }
+  },
+  {
+    "name": "command_receipt/4",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "command_receipt",
+      "payload": {
+        "kind": "terminal",
+        "command_id": "019a5500-0000-7000-8000-000000000001",
+        "run_id": "019a5500-0000-7000-8000-000000000001",
+        "state": "completed",
+        "row_version": "1"
+      }
+    }
+  },
+  {
+    "name": "lease/1",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "lease",
+      "payload": {
+        "run_id": "019a5500-0000-7000-8000-000000000001",
+        "attempt_id": "019a5500-0000-7000-8000-000000000001",
+        "epoch": "1",
+        "placement": "local",
+        "authority": "local",
+        "environment_id": null,
+        "generation": null,
+        "expires_at": "2026-10-06T00:00:00.123456Z",
+        "boot_id": "019a5500-0000-7000-8000-000000000001",
+        "monotonic_deadline_ns": "1",
+        "receipt_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    }
+  },
+  {
+    "name": "step_binding/1",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "step_binding",
+      "payload": {
+        "step_id": "019a5500-0000-7000-8000-000000000001",
+        "model_profile_id": "019a5500-0000-7000-8000-000000000001",
+        "model_adapter_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "prompt_schema_version": "1.0",
+        "catalog_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tool_binding_ids": [],
+        "instruction_digests": [],
+        "context_manifest_id": "019a5500-0000-7000-8000-000000000001",
+        "environment_capability_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "permission_generation": "1",
+        "deletion_generation": "0",
+        "sealed_at": "2026-10-06T00:00:00.123456Z"
+      }
+    }
+  },
+  {
+    "name": "trusted_context/1",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "trusted_context",
+      "payload": {
+        "workspace_id": "019a5500-0000-7000-8000-000000000001",
+        "project_id": null,
+        "run_id": "019a5500-0000-7000-8000-000000000001",
+        "attempt_id": "019a5500-0000-7000-8000-000000000001",
+        "step_id": "019a5500-0000-7000-8000-000000000001",
+        "principal_id": "019a5500-0000-7000-8000-000000000001",
+        "epoch": "1",
+        "environment_id": null,
+        "generation": null,
+        "binding_id": "019a5500-0000-7000-8000-000000000001",
+        "catalog_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "budget_hold_refs": [],
+        "approval_ref": null
+      }
+    }
+  },
+  {
+    "name": "run_spec/1",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "run_spec",
+      "payload": {
+        "task_id": "019a5500-0000-7000-8000-000000000001",
+        "task_revision_id": "019a5500-0000-7000-8000-000000000001",
+        "run_id": "019a5500-0000-7000-8000-000000000001",
+        "session_id": "019a5500-0000-7000-8000-000000000001",
+        "branch_id": "019a5500-0000-7000-8000-000000000001",
+        "workspace_id": "019a5500-0000-7000-8000-000000000001",
+        "project_id": null,
+        "worker_id": null,
+        "responsibility_id": null,
+        "requester_id": "019a5500-0000-7000-8000-000000000001",
+        "owner_id": "019a5500-0000-7000-8000-000000000001",
+        "acting_principal_id": "019a5500-0000-7000-8000-000000000001",
+        "audience_policy_id": "019a5500-0000-7000-8000-000000000001",
+        "execution_policy_id": "019a5500-0000-7000-8000-000000000001",
+        "objective_version_id": "019a5500-0000-7000-8000-000000000001",
+        "check_refs": [],
+        "instruction_digests": [],
+        "model_profile_id": "019a5500-0000-7000-8000-000000000001",
+        "environment_recipe_version_id": null,
+        "budget_period_refs": [],
+        "deadline": null,
+        "placement": "local",
+        "accepted_input_seq": "1"
+      }
+    }
+  },
+  {
+    "name": "event/1",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "event",
+      "payload": {
+        "schema_version": "1.0",
+        "event_id": "019a5500-0000-7000-8000-000000000001",
+        "workspace_id": "019a5500-0000-7000-8000-000000000001",
+        "run_id": "019a5500-0000-7000-8000-000000000001",
+        "attempt_id": null,
+        "turn_id": null,
+        "epoch": "1",
+        "seq": "1",
+        "event_type": "artifact.committed",
+        "command_id": null,
+        "invocation_id": null,
+        "causal_id": null,
+        "occurred_at": "2026-10-06T00:00:00.123456Z",
+        "recorded_at": "2026-10-06T00:00:00.123456Z",
+        "actor_id": "019a5500-0000-7000-8000-000000000001",
+        "payload_ref": null
+      }
+    }
+  },
+  {
+    "name": "tool_result/1",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "tool_result",
+      "payload": {
+        "invocation_id": "019a5500-0000-7000-8000-000000000001",
+        "schema_version": "1.0",
+        "artifact_refs": [],
+        "receipt_ref": null,
+        "truncated": false,
+        "next_cursor": null,
+        "usage_refs": [],
+        "status": "succeeded",
+        "data": {
+          "binding_id": "019a5500-0000-7000-8000-000000000001",
+          "value": {
+            "verified": "content"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "tool_result/2",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "tool_result",
+      "payload": {
+        "invocation_id": "019a5500-0000-7000-8000-000000000001",
+        "schema_version": "1.0",
+        "artifact_refs": [],
+        "receipt_ref": null,
+        "truncated": false,
+        "next_cursor": null,
+        "usage_refs": [],
+        "status": "running",
+        "data": {
+          "handle": {
+            "environment_id": "019a5500-0000-7000-8000-000000000001",
+            "generation": "1",
+            "handle": "x"
+          },
+          "stdout_cursor": null,
+          "stderr_cursor": null
+        }
+      }
+    }
+  },
+  {
+    "name": "tool_result/3",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "tool_result",
+      "payload": {
+        "invocation_id": "019a5500-0000-7000-8000-000000000001",
+        "schema_version": "1.0",
+        "artifact_refs": [],
+        "receipt_ref": null,
+        "truncated": false,
+        "next_cursor": null,
+        "usage_refs": [],
+        "status": "awaiting_input",
+        "data": {
+          "request_id": "019a5500-0000-7000-8000-000000000001",
+          "wait_id": "019a5500-0000-7000-8000-000000000001",
+          "request_kind": "clarification"
+        }
+      }
+    }
+  },
+  {
+    "name": "tool_result/4",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "tool_result",
+      "payload": {
+        "invocation_id": "019a5500-0000-7000-8000-000000000001",
+        "schema_version": "1.0",
+        "artifact_refs": [],
+        "receipt_ref": null,
+        "truncated": false,
+        "next_cursor": null,
+        "usage_refs": [],
+        "status": "denied",
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        },
+        "data": null
+      }
+    }
+  },
+  {
+    "name": "tool_result/5",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "tool_result",
+      "payload": {
+        "invocation_id": "019a5500-0000-7000-8000-000000000001",
+        "schema_version": "1.0",
+        "artifact_refs": [],
+        "receipt_ref": null,
+        "truncated": false,
+        "next_cursor": null,
+        "usage_refs": [],
+        "status": "conflict",
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        },
+        "data": null
+      }
+    }
+  },
+  {
+    "name": "tool_result/6",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "tool_result",
+      "payload": {
+        "invocation_id": "019a5500-0000-7000-8000-000000000001",
+        "schema_version": "1.0",
+        "artifact_refs": [],
+        "receipt_ref": null,
+        "truncated": false,
+        "next_cursor": null,
+        "usage_refs": [],
+        "status": "timed_out",
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        },
+        "data": null
+      }
+    }
+  },
+  {
+    "name": "tool_result/7",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "tool_result",
+      "payload": {
+        "invocation_id": "019a5500-0000-7000-8000-000000000001",
+        "schema_version": "1.0",
+        "artifact_refs": [],
+        "receipt_ref": null,
+        "truncated": false,
+        "next_cursor": null,
+        "usage_refs": [],
+        "status": "cancelled",
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        },
+        "data": null
+      }
+    }
+  },
+  {
+    "name": "tool_result/8",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "tool_result",
+      "payload": {
+        "invocation_id": "019a5500-0000-7000-8000-000000000001",
+        "schema_version": "1.0",
+        "artifact_refs": [],
+        "receipt_ref": null,
+        "truncated": false,
+        "next_cursor": null,
+        "usage_refs": [],
+        "status": "lost",
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        },
+        "data": null
+      }
+    }
+  },
+  {
+    "name": "tool_result/9",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "tool_result",
+      "payload": {
+        "invocation_id": "019a5500-0000-7000-8000-000000000001",
+        "schema_version": "1.0",
+        "artifact_refs": [],
+        "receipt_ref": null,
+        "truncated": false,
+        "next_cursor": null,
+        "usage_refs": [],
+        "status": "unknown",
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        },
+        "data": null
+      }
+    }
+  },
+  {
+    "name": "tool_result/10",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "tool_result",
+      "payload": {
+        "invocation_id": "019a5500-0000-7000-8000-000000000001",
+        "schema_version": "1.0",
+        "artifact_refs": [],
+        "receipt_ref": null,
+        "truncated": false,
+        "next_cursor": null,
+        "usage_refs": [],
+        "status": "failed",
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        },
+        "data": null
+      }
+    }
+  },
+  {
+    "name": "wait_spec/1",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "wait_spec",
+      "payload": {
+        "wait_id": "019a5500-0000-7000-8000-000000000001",
+        "mode": "all",
+        "conditions": [
+          {
+            "kind": "human",
+            "request_id": "019a5500-0000-7000-8000-000000000001",
+            "request_revision": "1"
+          }
+        ],
+        "watermark": "1",
+        "deadline": null
+      }
+    }
+  },
+  {
+    "name": "checkpoint/1",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "checkpoint",
+      "payload": {
+        "schema_version": "1.0",
+        "checkpoint_id": "019a5500-0000-7000-8000-000000000001",
+        "run_id": "019a5500-0000-7000-8000-000000000001",
+        "attempt_id": "019a5500-0000-7000-8000-000000000001",
+        "epoch": "1",
+        "event_seq": "1",
+        "accepted_seq": "1",
+        "applied_seq": "1",
+        "task_revision_id": "019a5500-0000-7000-8000-000000000001",
+        "session_id": "019a5500-0000-7000-8000-000000000001",
+        "branch_id": "019a5500-0000-7000-8000-000000000001",
+        "plan_version_id": null,
+        "graph_version_id": null,
+        "pending_decision_ids": [],
+        "unresolved_invocation_ids": [],
+        "committed_model_result_refs": [],
+        "source_memory_version_refs": [],
+        "manifest_id": "019a5500-0000-7000-8000-000000000001",
+        "manifest_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "file_coverage": "coherent_snapshot",
+        "file_gap_description": null,
+        "process_disposition_refs": [],
+        "environment_recipe_digest": null,
+        "permission_generation": "1",
+        "deletion_generation": "0",
+        "usage_refs": [],
+        "next_continuation_ref": "019a5500-0000-7000-8000-000000000001"
+      }
+    }
+  },
+  {
+    "name": "turn_outcome/1",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "turn_outcome",
+      "payload": {
+        "kind": "candidate_result",
+        "objective_version_id": "019a5500-0000-7000-8000-000000000001",
+        "artifact_refs": [],
+        "check_result_refs": [],
+        "checkpoint_id": "019a5500-0000-7000-8000-000000000001"
+      }
+    }
+  },
+  {
+    "name": "turn_outcome/2",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "turn_outcome",
+      "payload": {
+        "kind": "wait_requested",
+        "wait": {
+          "wait_id": "019a5500-0000-7000-8000-000000000001",
+          "mode": "all",
+          "conditions": [
+            {
+              "kind": "human",
+              "request_id": "019a5500-0000-7000-8000-000000000001",
+              "request_revision": "1"
+            }
+          ],
+          "watermark": "1",
+          "deadline": null
+        },
+        "checkpoint_id": "019a5500-0000-7000-8000-000000000001"
+      }
+    }
+  },
+  {
+    "name": "turn_outcome/3",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "turn_outcome",
+      "payload": {
+        "kind": "yielded",
+        "reason": "turn_limit",
+        "checkpoint_id": "019a5500-0000-7000-8000-000000000001"
+      }
+    }
+  },
+  {
+    "name": "turn_outcome/4",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "turn_outcome",
+      "payload": {
+        "kind": "cancelled",
+        "checkpoint_id": null,
+        "cleanup_refs": [],
+        "unresolved_receipt_refs": []
+      }
+    }
+  },
+  {
+    "name": "turn_outcome/5",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "turn_outcome",
+      "payload": {
+        "kind": "failed",
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        },
+        "retry_class": "safe_read",
+        "checkpoint_id": null
+      }
+    }
+  },
+  {
+    "name": "rpc_request/1",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "handshake",
+        "body": {
+          "supported_versions": [],
+          "client_kind": "electron_main",
+          "build_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "nonce": "x",
+          "challenge_response": "x",
+          "requested_workspace_id": null
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_request/2",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "describe_capabilities",
+        "body": {}
+      }
+    }
+  },
+  {
+    "name": "rpc_request/3",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "submit_task",
+        "body": {
+          "objective": "x",
+          "project_id": null,
+          "source_refs": [],
+          "check_template_ids": [],
+          "requested_placement": "local",
+          "profile_id": "x",
+          "lower_limits": {
+            "model_steps": 1,
+            "active_wall_ms": 1,
+            "output_bytes": 1
+          },
+          "idempotency_key": "x"
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_request/4",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "submit_command",
+        "body": {
+          "command_id": "019a5500-0000-7000-8000-000000000001",
+          "run_id": "019a5500-0000-7000-8000-000000000001",
+          "idempotency_key": "x",
+          "kind": "steer",
+          "payload": {
+            "text": "x",
+            "expected_revision": "1"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_request/5",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "get_task_snapshot",
+        "body": {
+          "run_id": "019a5500-0000-7000-8000-000000000001"
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_request/6",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "subscribe",
+        "body": {
+          "run_id": "019a5500-0000-7000-8000-000000000001",
+          "after_sequence": "1",
+          "provisional_cursor": null
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_request/7",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "answer_clarification",
+        "body": {
+          "command_id": "019a5500-0000-7000-8000-000000000001",
+          "run_id": "019a5500-0000-7000-8000-000000000001",
+          "idempotency_key": "x",
+          "kind": "answer_clarification",
+          "payload": {
+            "request_id": "019a5500-0000-7000-8000-000000000001",
+            "request_revision": "1",
+            "answers": []
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_request/8",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "review_artifact",
+        "body": {
+          "command_id": "019a5500-0000-7000-8000-000000000001",
+          "run_id": "019a5500-0000-7000-8000-000000000001",
+          "idempotency_key": "x",
+          "kind": "review_artifact",
+          "payload": {
+            "request_id": "019a5500-0000-7000-8000-000000000001",
+            "request_revision": "1",
+            "artifact_id": "019a5500-0000-7000-8000-000000000001",
+            "version_id": "019a5500-0000-7000-8000-000000000001",
+            "check_refs": [],
+            "response": "accept"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_request/9",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "decide_action",
+        "body": {
+          "command_id": "019a5500-0000-7000-8000-000000000001",
+          "run_id": "019a5500-0000-7000-8000-000000000001",
+          "idempotency_key": "x",
+          "kind": "decide_action",
+          "payload": {
+            "decision_id": "019a5500-0000-7000-8000-000000000001",
+            "decision_revision": "1",
+            "invocation_id": "019a5500-0000-7000-8000-000000000001",
+            "target_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "response": "approve"
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_request/10",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "get_artifact",
+        "body": {
+          "artifact_id": "019a5500-0000-7000-8000-000000000001",
+          "version_id": "019a5500-0000-7000-8000-000000000001",
+          "cursor": null,
+          "max_bytes": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_request/11",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "prepare_transfer",
+        "body": {
+          "run_id": "019a5500-0000-7000-8000-000000000001",
+          "expected_revision": "1",
+          "target_profile_id": "x",
+          "selected_manifest_id": "019a5500-0000-7000-8000-000000000001",
+          "idempotency_key": "x"
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_request/12",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "query_transfer",
+        "body": {
+          "transfer_id": "019a5500-0000-7000-8000-000000000001"
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_request/13",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "request_transfer_abort",
+        "body": {
+          "transfer_id": "019a5500-0000-7000-8000-000000000001",
+          "idempotency_key": "x"
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_request/14",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "get_usage",
+        "body": {
+          "scope_id": "019a5500-0000-7000-8000-000000000001",
+          "starts_at": "2026-10-06T00:00:00.123456Z",
+          "ends_at": "2026-10-06T00:00:00.123456Z"
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_request/15",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.describe_capabilities",
+        "body": {}
+      }
+    }
+  },
+  {
+    "name": "rpc_request/16",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.start_turn",
+        "body": {
+          "run_spec": {
+            "task_id": "019a5500-0000-7000-8000-000000000001",
+            "task_revision_id": "019a5500-0000-7000-8000-000000000001",
+            "run_id": "019a5500-0000-7000-8000-000000000001",
+            "session_id": "019a5500-0000-7000-8000-000000000001",
+            "branch_id": "019a5500-0000-7000-8000-000000000001",
+            "workspace_id": "019a5500-0000-7000-8000-000000000001",
+            "project_id": null,
+            "worker_id": null,
+            "responsibility_id": null,
+            "requester_id": "019a5500-0000-7000-8000-000000000001",
+            "owner_id": "019a5500-0000-7000-8000-000000000001",
+            "acting_principal_id": "019a5500-0000-7000-8000-000000000001",
+            "audience_policy_id": "019a5500-0000-7000-8000-000000000001",
+            "execution_policy_id": "019a5500-0000-7000-8000-000000000001",
+            "objective_version_id": "019a5500-0000-7000-8000-000000000001",
+            "check_refs": [],
+            "instruction_digests": [],
+            "model_profile_id": "019a5500-0000-7000-8000-000000000001",
+            "environment_recipe_version_id": null,
+            "budget_period_refs": [],
+            "deadline": null,
+            "placement": "local",
+            "accepted_input_seq": "1"
+          },
+          "lease": {
+            "run_id": "019a5500-0000-7000-8000-000000000001",
+            "attempt_id": "019a5500-0000-7000-8000-000000000001",
+            "epoch": "1",
+            "placement": "local",
+            "authority": "local",
+            "environment_id": null,
+            "generation": null,
+            "expires_at": "2026-10-06T00:00:00.123456Z",
+            "boot_id": "019a5500-0000-7000-8000-000000000001",
+            "monotonic_deadline_ns": "1",
+            "receipt_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "turn_id": "019a5500-0000-7000-8000-000000000001",
+          "accepted_input_cut": "1",
+          "checkpoint_id": null,
+          "limits": {
+            "model_steps": 1,
+            "active_wall_ms": 1,
+            "output_bytes": 1
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_request/17",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.submit_input",
+        "body": {
+          "run_id": "019a5500-0000-7000-8000-000000000001",
+          "attempt_id": "019a5500-0000-7000-8000-000000000001",
+          "command_id": "019a5500-0000-7000-8000-000000000001",
+          "accepted_seq": "1",
+          "payload_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_request/18",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.request_pause",
+        "body": {
+          "run_id": "019a5500-0000-7000-8000-000000000001",
+          "attempt_id": "019a5500-0000-7000-8000-000000000001",
+          "pause_command_id": "019a5500-0000-7000-8000-000000000001"
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_request/19",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.cancel",
+        "body": {
+          "run_id": "019a5500-0000-7000-8000-000000000001",
+          "attempt_id": "019a5500-0000-7000-8000-000000000001",
+          "cancel_command_id": "019a5500-0000-7000-8000-000000000001"
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_request/20",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.prepare_checkpoint",
+        "body": {
+          "run_id": "019a5500-0000-7000-8000-000000000001",
+          "attempt_id": "019a5500-0000-7000-8000-000000000001",
+          "event_cut": "1",
+          "accepted_cut": "1",
+          "coverage": "coherent_snapshot",
+          "reason": "turn_limit"
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_request/21",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.resume_turn",
+        "body": {
+          "run_spec": {
+            "task_id": "019a5500-0000-7000-8000-000000000001",
+            "task_revision_id": "019a5500-0000-7000-8000-000000000001",
+            "run_id": "019a5500-0000-7000-8000-000000000001",
+            "session_id": "019a5500-0000-7000-8000-000000000001",
+            "branch_id": "019a5500-0000-7000-8000-000000000001",
+            "workspace_id": "019a5500-0000-7000-8000-000000000001",
+            "project_id": null,
+            "worker_id": null,
+            "responsibility_id": null,
+            "requester_id": "019a5500-0000-7000-8000-000000000001",
+            "owner_id": "019a5500-0000-7000-8000-000000000001",
+            "acting_principal_id": "019a5500-0000-7000-8000-000000000001",
+            "audience_policy_id": "019a5500-0000-7000-8000-000000000001",
+            "execution_policy_id": "019a5500-0000-7000-8000-000000000001",
+            "objective_version_id": "019a5500-0000-7000-8000-000000000001",
+            "check_refs": [],
+            "instruction_digests": [],
+            "model_profile_id": "019a5500-0000-7000-8000-000000000001",
+            "environment_recipe_version_id": null,
+            "budget_period_refs": [],
+            "deadline": null,
+            "placement": "local",
+            "accepted_input_seq": "1"
+          },
+          "lease": {
+            "run_id": "019a5500-0000-7000-8000-000000000001",
+            "attempt_id": "019a5500-0000-7000-8000-000000000001",
+            "epoch": "1",
+            "placement": "local",
+            "authority": "local",
+            "environment_id": null,
+            "generation": null,
+            "expires_at": "2026-10-06T00:00:00.123456Z",
+            "boot_id": "019a5500-0000-7000-8000-000000000001",
+            "monotonic_deadline_ns": "1",
+            "receipt_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "turn_id": "019a5500-0000-7000-8000-000000000001",
+          "checkpoint_id": "019a5500-0000-7000-8000-000000000001",
+          "accepted_input_cut": "1",
+          "limits": {
+            "model_steps": 1,
+            "active_wall_ms": 1,
+            "output_bytes": 1
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_request/22",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_request",
+      "payload": {
+        "frame_kind": "request",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.subscribe",
+        "body": {
+          "run_id": "019a5500-0000-7000-8000-000000000001",
+          "after_sequence": "1",
+          "provisional_cursor": null
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/1",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "handshake",
+        "ok": true,
+        "result": {
+          "selected_version": "1.0",
+          "supervisor_generation": "1",
+          "schema_min": "x",
+          "schema_max": "x",
+          "capability_manifest_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "max_frame_bytes": 1048576,
+          "authenticated_scope_id": "019a5500-0000-7000-8000-000000000001"
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/2",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "handshake",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/3",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "describe_capabilities",
+        "ok": true,
+        "result": {
+          "protocol_version": "1.0",
+          "build_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "schema_versions": [],
+          "operation_names": [],
+          "profiles": [],
+          "capability_manifest_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/4",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "describe_capabilities",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/5",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "get_task_snapshot",
+        "ok": true,
+        "result": {
+          "task_id": "019a5500-0000-7000-8000-000000000001",
+          "task_revision_id": "019a5500-0000-7000-8000-000000000001",
+          "run_id": "019a5500-0000-7000-8000-000000000001",
+          "row_version": "1",
+          "state": "queued",
+          "authority": "local",
+          "placement": "local",
+          "accepted_seq": "1",
+          "applied_seq": "1",
+          "last_event_seq": "1",
+          "cancellation_requested": false,
+          "artifact_refs": [],
+          "check_refs": [],
+          "receipt_refs": [],
+          "wait_refs": [],
+          "coverage_manifest_ref": null
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/6",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "get_task_snapshot",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/7",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "subscribe",
+        "ok": true,
+        "result": {
+          "subscription_id": "019a5500-0000-7000-8000-000000000001",
+          "snapshot": {
+            "task_id": "019a5500-0000-7000-8000-000000000001",
+            "task_revision_id": "019a5500-0000-7000-8000-000000000001",
+            "run_id": "019a5500-0000-7000-8000-000000000001",
+            "row_version": "1",
+            "state": "queued",
+            "authority": "local",
+            "placement": "local",
+            "accepted_seq": "1",
+            "applied_seq": "1",
+            "last_event_seq": "1",
+            "cancellation_requested": false,
+            "artifact_refs": [],
+            "check_refs": [],
+            "receipt_refs": [],
+            "wait_refs": [],
+            "coverage_manifest_ref": null
+          },
+          "replay_after": "1",
+          "resync_required": false
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/8",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "subscribe",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/9",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "get_artifact",
+        "ok": true,
+        "result": {
+          "artifact": {
+            "artifact_id": "019a5500-0000-7000-8000-000000000001",
+            "version_id": "019a5500-0000-7000-8000-000000000001",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "byte_size": "1"
+          },
+          "media_type": "x",
+          "content_handle": null,
+          "next_cursor": null,
+          "truncated": false
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/10",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "get_artifact",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/11",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "get_usage",
+        "ok": true,
+        "result": {
+          "scope_id": "019a5500-0000-7000-8000-000000000001",
+          "currency": "USD",
+          "segments": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/12",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "get_usage",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/13",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.describe_capabilities",
+        "ok": true,
+        "result": {
+          "protocol_version": "1.0",
+          "build_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "schema_versions": [],
+          "operation_names": [],
+          "profiles": [],
+          "capability_manifest_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/14",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.describe_capabilities",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/15",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.start_turn",
+        "ok": true,
+        "result": {
+          "turn_id": "019a5500-0000-7000-8000-000000000001",
+          "accepted": true
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/16",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.start_turn",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/17",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.resume_turn",
+        "ok": true,
+        "result": {
+          "turn_id": "019a5500-0000-7000-8000-000000000001",
+          "accepted": true
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/18",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.resume_turn",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/19",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.prepare_checkpoint",
+        "ok": true,
+        "result": {
+          "schema_version": "1.0",
+          "checkpoint_id": "019a5500-0000-7000-8000-000000000001",
+          "run_id": "019a5500-0000-7000-8000-000000000001",
+          "attempt_id": "019a5500-0000-7000-8000-000000000001",
+          "epoch": "1",
+          "event_seq": "1",
+          "accepted_seq": "1",
+          "applied_seq": "1",
+          "task_revision_id": "019a5500-0000-7000-8000-000000000001",
+          "session_id": "019a5500-0000-7000-8000-000000000001",
+          "branch_id": "019a5500-0000-7000-8000-000000000001",
+          "plan_version_id": null,
+          "graph_version_id": null,
+          "pending_decision_ids": [],
+          "unresolved_invocation_ids": [],
+          "committed_model_result_refs": [],
+          "source_memory_version_refs": [],
+          "manifest_id": "019a5500-0000-7000-8000-000000000001",
+          "manifest_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "file_coverage": "coherent_snapshot",
+          "file_gap_description": null,
+          "process_disposition_refs": [],
+          "environment_recipe_digest": null,
+          "permission_generation": "1",
+          "deletion_generation": "1",
+          "usage_refs": [],
+          "next_continuation_ref": "019a5500-0000-7000-8000-000000000001"
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/20",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.prepare_checkpoint",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/21",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.subscribe",
+        "ok": true,
+        "result": {
+          "subscription_id": "019a5500-0000-7000-8000-000000000001",
+          "snapshot": {
+            "task_id": "019a5500-0000-7000-8000-000000000001",
+            "task_revision_id": "019a5500-0000-7000-8000-000000000001",
+            "run_id": "019a5500-0000-7000-8000-000000000001",
+            "row_version": "1",
+            "state": "queued",
+            "authority": "local",
+            "placement": "local",
+            "accepted_seq": "1",
+            "applied_seq": "1",
+            "last_event_seq": "1",
+            "cancellation_requested": false,
+            "artifact_refs": [],
+            "check_refs": [],
+            "receipt_refs": [],
+            "wait_refs": [],
+            "coverage_manifest_ref": null
+          },
+          "replay_after": "1",
+          "resync_required": false
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/22",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.subscribe",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/23",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.request_pause",
+        "ok": true,
+        "result": {
+          "kind": "paused",
+          "reason": "turn_limit",
+          "checkpoint_id": "019a5500-0000-7000-8000-000000000001"
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/24",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.request_pause",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/25",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.cancel",
+        "ok": true,
+        "result": {
+          "kind": "cancelled",
+          "checkpoint_id": null,
+          "cleanup_refs": [],
+          "unresolved_receipt_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/26",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.cancel",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/27",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.submit_input",
+        "ok": true,
+        "result": {
+          "command_id": "019a5500-0000-7000-8000-000000000001",
+          "accepted_seq": "1",
+          "disposition": "applied",
+          "boundary_ref": "019a5500-0000-7000-8000-000000000001"
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/28",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "harness.submit_input",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/29",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "submit_task",
+        "ok": true,
+        "result": {
+          "kind": "pending",
+          "command_id": "019a5500-0000-7000-8000-000000000001",
+          "authority": "local",
+          "reason": "unsent"
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/30",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "submit_task",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/31",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "submit_command",
+        "ok": true,
+        "result": {
+          "kind": "pending",
+          "command_id": "019a5500-0000-7000-8000-000000000001",
+          "authority": "local",
+          "reason": "unsent"
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/32",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "submit_command",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/33",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "answer_clarification",
+        "ok": true,
+        "result": {
+          "kind": "pending",
+          "command_id": "019a5500-0000-7000-8000-000000000001",
+          "authority": "local",
+          "reason": "unsent"
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/34",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "answer_clarification",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/35",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "review_artifact",
+        "ok": true,
+        "result": {
+          "kind": "pending",
+          "command_id": "019a5500-0000-7000-8000-000000000001",
+          "authority": "local",
+          "reason": "unsent"
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/36",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "review_artifact",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/37",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "decide_action",
+        "ok": true,
+        "result": {
+          "kind": "pending",
+          "command_id": "019a5500-0000-7000-8000-000000000001",
+          "authority": "local",
+          "reason": "unsent"
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/38",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "decide_action",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/39",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "prepare_transfer",
+        "ok": true,
+        "result": {
+          "transfer_id": "019a5500-0000-7000-8000-000000000001",
+          "run_id": "019a5500-0000-7000-8000-000000000001",
+          "disposition": "preflight",
+          "authority": "local",
+          "source_epoch": "1",
+          "destination_epoch": null,
+          "accepted_seq": "1",
+          "receipt_ref": null,
+          "gap_codes": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/40",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "prepare_transfer",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/41",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "query_transfer",
+        "ok": true,
+        "result": {
+          "transfer_id": "019a5500-0000-7000-8000-000000000001",
+          "run_id": "019a5500-0000-7000-8000-000000000001",
+          "disposition": "preflight",
+          "authority": "local",
+          "source_epoch": "1",
+          "destination_epoch": null,
+          "accepted_seq": "1",
+          "receipt_ref": null,
+          "gap_codes": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/42",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "query_transfer",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/43",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "request_transfer_abort",
+        "ok": true,
+        "result": {
+          "transfer_id": "019a5500-0000-7000-8000-000000000001",
+          "run_id": "019a5500-0000-7000-8000-000000000001",
+          "disposition": "preflight",
+          "authority": "local",
+          "source_epoch": "1",
+          "destination_epoch": null,
+          "accepted_seq": "1",
+          "receipt_ref": null,
+          "gap_codes": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_response/44",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_response",
+      "payload": {
+        "frame_kind": "response",
+        "request_id": "019a5500-0000-7000-8000-000000000001",
+        "operation": "request_transfer_abort",
+        "ok": false,
+        "error": {
+          "code": "INVALID_MESSAGE",
+          "message": "x",
+          "evidence_refs": []
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_event/1",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_event",
+      "payload": {
+        "frame_kind": "event",
+        "subscription_id": "019a5500-0000-7000-8000-000000000001",
+        "durability": "committed",
+        "event": {
+          "schema_version": "1.0",
+          "event_id": "019a5500-0000-7000-8000-000000000001",
+          "workspace_id": "019a5500-0000-7000-8000-000000000001",
+          "run_id": "019a5500-0000-7000-8000-000000000001",
+          "attempt_id": null,
+          "turn_id": null,
+          "epoch": "1",
+          "seq": "1",
+          "event_type": "artifact.committed",
+          "command_id": null,
+          "invocation_id": null,
+          "causal_id": null,
+          "occurred_at": "2026-10-06T00:00:00.123456Z",
+          "recorded_at": "2026-10-06T00:00:00.123456Z",
+          "actor_id": "019a5500-0000-7000-8000-000000000001",
+          "payload_ref": null
+        }
+      }
+    }
+  },
+  {
+    "name": "rpc_event/2",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "rpc_event",
+      "payload": {
+        "frame_kind": "event",
+        "subscription_id": "019a5500-0000-7000-8000-000000000001",
+        "durability": "provisional",
+        "run_id": "019a5500-0000-7000-8000-000000000001",
+        "cursor": "x",
+        "kind": "model_text",
+        "text": "x",
+        "truncated": false
+      }
+    }
+  },
+  {
+    "name": "normalized_model_response/1",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "normalized_model_response",
+      "payload": {
+        "model_call_id": "019a5500-0000-7000-8000-000000000001",
+        "step_id": "019a5500-0000-7000-8000-000000000001",
+        "items": [],
+        "finish": "tools",
+        "usage_refs": [],
+        "diagnostic_error": null
+      }
+    }
+  },
+  {
+    "name": "context_manifest/1",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "context_manifest",
+      "payload": {
+        "manifest_id": "019a5500-0000-7000-8000-000000000001",
+        "run_id": "019a5500-0000-7000-8000-000000000001",
+        "task_revision_id": "019a5500-0000-7000-8000-000000000001",
+        "accepted_seq": "1",
+        "acting_principal_id": "019a5500-0000-7000-8000-000000000001",
+        "audience_policy_id": "019a5500-0000-7000-8000-000000000001",
+        "permission_generation": "1",
+        "deletion_generation": "0",
+        "members": [],
+        "omission_codes": [],
+        "input_token_count": 0,
+        "reserved_output_tokens": 1,
+        "assembled_at": "2026-10-06T00:00:00.123456Z"
+      }
+    }
+  },
+  {
+    "name": "turn_outcome/paused",
+    "message": {
+      "schema_version": "1.0",
+      "message_kind": "turn_outcome",
+      "payload": {
+        "kind": "paused",
+        "reason": "turn_limit",
+        "checkpoint_id": "019a5500-0000-7000-8000-000000000001"
+      }
+    }
+  }
+]

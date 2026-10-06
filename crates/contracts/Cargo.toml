@@ -32,3 +32,8 @@ required-features = ["schema-export"]
 [[example]]
 name = "export_typescript"
 required-features = ["typescript-export"]
+
+# P1-04 cross-language conformance oracle: emits Rust's authoritative verdict
+# per synthetic example so the TypeScript package can be compared against it.
+[[example]]
+name = "export_verdicts"

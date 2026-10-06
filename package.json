@@ -11,6 +11,8 @@
     "typecheck": "pnpm --filter @avencrew/desktop typecheck",
     "build": "pnpm --filter @avencrew/desktop build",
     "dev": "pnpm --filter @avencrew/desktop dev",
+    "dev:fixture": "bash tools/dev/dev.sh",
+    "dev:fixture:seed": "node tools/dev/seed.mjs",
     "rust:fmt": "cargo fmt --all -- --check",
     "rust:clippy": "cargo clippy --workspace --all-targets -- -D warnings",
     "rust:build": "cargo build --workspace --locked",

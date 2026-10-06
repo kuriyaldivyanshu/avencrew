@@ -19,7 +19,6 @@
 
     "skipLibCheck": true,
     "noEmit": true,
-    "composite": true,
-    "tsBuildInfoFile": "dist/.tsbuildinfo"
+    "composite": true
   }
 }

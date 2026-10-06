@@ -1,0 +1,6716 @@
+{
+  "$id": "urn:avencrew:wire:1.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WireMessage",
+  "$comment": "Structural schema. Also enforce signed-64 counter bounds, valid UTC calendar instants, environment/generation pairs, cursor order, committed transfer consistency, duplicate-key rejection and transport/client authority boundaries.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "message_kind": {
+          "type": "string",
+          "const": "command"
+        },
+        "payload": {
+          "$ref": "#/$defs/Command"
+        },
+        "schema_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "message_kind",
+        "schema_version",
+        "payload"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "message_kind": {
+          "type": "string",
+          "const": "command_receipt"
+        },
+        "payload": {
+          "$ref": "#/$defs/CommandReceipt"
+        },
+        "schema_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "message_kind",
+        "schema_version",
+        "payload"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "message_kind": {
+          "type": "string",
+          "const": "lease"
+        },
+        "payload": {
+          "$ref": "#/$defs/Lease"
+        },
+        "schema_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "message_kind",
+        "schema_version",
+        "payload"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "message_kind": {
+          "type": "string",
+          "const": "step_binding"
+        },
+        "payload": {
+          "$ref": "#/$defs/StepBinding"
+        },
+        "schema_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "message_kind",
+        "schema_version",
+        "payload"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "message_kind": {
+          "type": "string",
+          "const": "trusted_context"
+        },
+        "payload": {
+          "$ref": "#/$defs/TrustedContext"
+        },
+        "schema_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "message_kind",
+        "schema_version",
+        "payload"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "message_kind": {
+          "type": "string",
+          "const": "run_spec"
+        },
+        "payload": {
+          "$ref": "#/$defs/RunSpec"
+        },
+        "schema_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "message_kind",
+        "schema_version",
+        "payload"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "message_kind": {
+          "type": "string",
+          "const": "event"
+        },
+        "payload": {
+          "$ref": "#/$defs/Event"
+        },
+        "schema_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "message_kind",
+        "schema_version",
+        "payload"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "message_kind": {
+          "type": "string",
+          "const": "tool_result"
+        },
+        "payload": {
+          "$ref": "#/$defs/ToolResult"
+        },
+        "schema_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "message_kind",
+        "schema_version",
+        "payload"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "message_kind": {
+          "type": "string",
+          "const": "wait_spec"
+        },
+        "payload": {
+          "$ref": "#/$defs/WaitSpec"
+        },
+        "schema_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "message_kind",
+        "schema_version",
+        "payload"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "message_kind": {
+          "type": "string",
+          "const": "checkpoint"
+        },
+        "payload": {
+          "$ref": "#/$defs/Checkpoint"
+        },
+        "schema_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "message_kind",
+        "schema_version",
+        "payload"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "message_kind": {
+          "type": "string",
+          "const": "turn_outcome"
+        },
+        "payload": {
+          "$ref": "#/$defs/TurnOutcome"
+        },
+        "schema_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "message_kind",
+        "schema_version",
+        "payload"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "message_kind": {
+          "type": "string",
+          "const": "rpc_request"
+        },
+        "payload": {
+          "$ref": "#/$defs/RpcRequest"
+        },
+        "schema_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "message_kind",
+        "schema_version",
+        "payload"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "message_kind": {
+          "type": "string",
+          "const": "rpc_response"
+        },
+        "payload": {
+          "$ref": "#/$defs/RpcResponse"
+        },
+        "schema_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "message_kind",
+        "schema_version",
+        "payload"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "message_kind": {
+          "type": "string",
+          "const": "rpc_event"
+        },
+        "payload": {
+          "$ref": "#/$defs/RpcEvent"
+        },
+        "schema_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "message_kind",
+        "schema_version",
+        "payload"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "message_kind": {
+          "type": "string",
+          "const": "normalized_model_response"
+        },
+        "payload": {
+          "$ref": "#/$defs/NormalizedModelResponse"
+        },
+        "schema_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "message_kind",
+        "schema_version",
+        "payload"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "message_kind": {
+          "type": "string",
+          "const": "context_manifest"
+        },
+        "payload": {
+          "$ref": "#/$defs/ContextManifest"
+        },
+        "schema_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "message_kind",
+        "schema_version",
+        "payload"
+      ]
+    }
+  ],
+  "$defs": {
+    "ArtifactReadResult": {
+      "type": "object",
+      "properties": {
+        "artifact": {
+          "$ref": "#/$defs/ArtifactRef"
+        },
+        "content_handle": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "media_type": {
+          "$ref": "#/$defs/Text_0_128"
+        },
+        "next_cursor": {
+          "$ref": "#/$defs/Nullable_Text_0_2048"
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "artifact",
+        "media_type",
+        "content_handle",
+        "next_cursor",
+        "truncated"
+      ]
+    },
+    "ArtifactRef": {
+      "type": "object",
+      "properties": {
+        "artifact_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "byte_size": {
+          "$ref": "#/$defs/Counter"
+        },
+        "sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "version_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "version_id",
+        "sha256",
+        "byte_size"
+      ]
+    },
+    "Authority": {
+      "type": "string",
+      "enum": [
+        "local",
+        "server",
+        "transfer_staging"
+      ]
+    },
+    "BoundData": {
+      "type": "object",
+      "properties": {
+        "binding_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "value": true
+      },
+      "additionalProperties": false,
+      "required": [
+        "binding_id",
+        "value"
+      ]
+    },
+    "CapabilityDescription": {
+      "type": "object",
+      "properties": {
+        "build_digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "capability_manifest_digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "operation_names": {
+          "$ref": "#/$defs/List_Text_0_128_0_100"
+        },
+        "profiles": {
+          "$ref": "#/$defs/List_CapabilityDescriptionProfilesItem_0_100"
+        },
+        "protocol_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        },
+        "schema_versions": {
+          "$ref": "#/$defs/List_Text_0_128_0_100"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "build_digest",
+        "schema_versions",
+        "operation_names",
+        "profiles",
+        "capability_manifest_digest"
+      ]
+    },
+    "CapabilityDescriptionProfilesItem": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "id": {
+          "$ref": "#/$defs/Text_0_128"
+        },
+        "reason": {
+          "$ref": "#/$defs/Nullable_Text_0_1024"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "enabled",
+        "reason"
+      ]
+    },
+    "Checkpoint": {
+      "type": "object",
+      "properties": {
+        "accepted_seq": {
+          "$ref": "#/$defs/Counter"
+        },
+        "applied_seq": {
+          "$ref": "#/$defs/Counter"
+        },
+        "attempt_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "branch_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "checkpoint_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "committed_model_result_refs": {
+          "$ref": "#/$defs/List_DomainId_0_1000"
+        },
+        "deletion_generation": {
+          "$ref": "#/$defs/Counter"
+        },
+        "environment_recipe_digest": {
+          "$ref": "#/$defs/Nullable_Digest"
+        },
+        "epoch": {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        "event_seq": {
+          "$ref": "#/$defs/Counter"
+        },
+        "file_coverage": {
+          "$ref": "#/$defs/FileCoverage"
+        },
+        "file_gap_description": {
+          "$ref": "#/$defs/Nullable_Text_0_2048"
+        },
+        "graph_version_id": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "manifest_digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "manifest_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "next_continuation_ref": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "pending_decision_ids": {
+          "$ref": "#/$defs/List_DomainId_0_100"
+        },
+        "permission_generation": {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        "plan_version_id": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "process_disposition_refs": {
+          "$ref": "#/$defs/List_DomainId_0_100"
+        },
+        "run_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "schema_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        },
+        "session_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "source_memory_version_refs": {
+          "$ref": "#/$defs/List_DomainId_0_1000"
+        },
+        "task_revision_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "unresolved_invocation_ids": {
+          "$ref": "#/$defs/List_DomainId_0_100"
+        },
+        "usage_refs": {
+          "$ref": "#/$defs/List_DomainId_0_100"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "checkpoint_id",
+        "run_id",
+        "attempt_id",
+        "epoch",
+        "event_seq",
+        "accepted_seq",
+        "applied_seq",
+        "task_revision_id",
+        "session_id",
+        "branch_id",
+        "plan_version_id",
+        "graph_version_id",
+        "pending_decision_ids",
+        "unresolved_invocation_ids",
+        "committed_model_result_refs",
+        "source_memory_version_refs",
+        "manifest_id",
+        "manifest_digest",
+        "file_coverage",
+        "file_gap_description",
+        "process_disposition_refs",
+        "environment_recipe_digest",
+        "permission_generation",
+        "deletion_generation",
+        "usage_refs",
+        "next_continuation_ref"
+      ]
+    },
+    "Command": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "command_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "idempotency_key": {
+              "$ref": "#/$defs/Text_1_128"
+            },
+            "kind": {
+              "type": "string",
+              "const": "steer"
+            },
+            "payload": {
+              "$ref": "#/$defs/CommandSteerPayload"
+            },
+            "run_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command_id",
+            "run_id",
+            "idempotency_key",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "command_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "idempotency_key": {
+              "$ref": "#/$defs/Text_1_128"
+            },
+            "kind": {
+              "type": "string",
+              "const": "revise_objective"
+            },
+            "payload": {
+              "$ref": "#/$defs/CommandReviseObjectivePayload"
+            },
+            "run_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command_id",
+            "run_id",
+            "idempotency_key",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "command_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "idempotency_key": {
+              "$ref": "#/$defs/Text_1_128"
+            },
+            "kind": {
+              "type": "string",
+              "const": "pause"
+            },
+            "payload": {
+              "$ref": "#/$defs/CommandPausePayload"
+            },
+            "run_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command_id",
+            "run_id",
+            "idempotency_key",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "command_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "idempotency_key": {
+              "$ref": "#/$defs/Text_1_128"
+            },
+            "kind": {
+              "type": "string",
+              "const": "resume"
+            },
+            "payload": {
+              "$ref": "#/$defs/CommandResumePayload"
+            },
+            "run_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command_id",
+            "run_id",
+            "idempotency_key",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "command_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "idempotency_key": {
+              "$ref": "#/$defs/Text_1_128"
+            },
+            "kind": {
+              "type": "string",
+              "const": "stop"
+            },
+            "payload": {
+              "$ref": "#/$defs/CommandStopPayload"
+            },
+            "run_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command_id",
+            "run_id",
+            "idempotency_key",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "command_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "idempotency_key": {
+              "$ref": "#/$defs/Text_1_128"
+            },
+            "kind": {
+              "type": "string",
+              "const": "answer_clarification"
+            },
+            "payload": {
+              "$ref": "#/$defs/CommandAnswerClarificationPayload"
+            },
+            "run_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command_id",
+            "run_id",
+            "idempotency_key",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "command_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "idempotency_key": {
+              "$ref": "#/$defs/Text_1_128"
+            },
+            "kind": {
+              "type": "string",
+              "const": "review_artifact"
+            },
+            "payload": {
+              "$ref": "#/$defs/CommandReviewArtifactPayload"
+            },
+            "run_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command_id",
+            "run_id",
+            "idempotency_key",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "command_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "idempotency_key": {
+              "$ref": "#/$defs/Text_1_128"
+            },
+            "kind": {
+              "type": "string",
+              "const": "decide_action"
+            },
+            "payload": {
+              "$ref": "#/$defs/CommandDecideActionPayload"
+            },
+            "run_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command_id",
+            "run_id",
+            "idempotency_key",
+            "payload"
+          ]
+        }
+      ]
+    },
+    "CommandAnswerClarificationPayload": {
+      "type": "object",
+      "properties": {
+        "answers": {
+          "$ref": "#/$defs/List_CommandAnswerClarificationPayloadAnswersItem_0_3"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "request_revision": {
+          "$ref": "#/$defs/PositiveCounter"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "request_id",
+        "request_revision",
+        "answers"
+      ]
+    },
+    "CommandAnswerClarificationPayloadAnswersItem": {
+      "type": "object",
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/Text_0_8192"
+        },
+        "question_id": {
+          "$ref": "#/$defs/Text_0_128"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "question_id",
+        "answer"
+      ]
+    },
+    "CommandDecideActionPayload": {
+      "type": "object",
+      "properties": {
+        "decision_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "decision_revision": {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        "invocation_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "payload_digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "response": {
+          "$ref": "#/$defs/CommandDecideActionPayloadResponse"
+        },
+        "target_digest": {
+          "$ref": "#/$defs/Digest"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "decision_id",
+        "decision_revision",
+        "invocation_id",
+        "target_digest",
+        "payload_digest",
+        "response"
+      ]
+    },
+    "CommandDecideActionPayloadResponse": {
+      "type": "string",
+      "enum": [
+        "approve",
+        "reject"
+      ]
+    },
+    "CommandPausePayload": {
+      "type": "object",
+      "properties": {
+        "expected_revision": {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        "reason": {
+          "$ref": "#/$defs/Text_0_1024"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "expected_revision",
+        "reason"
+      ]
+    },
+    "CommandReceipt": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "authority": {
+              "$ref": "#/$defs/Authority"
+            },
+            "command_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "kind": {
+              "type": "string",
+              "const": "pending"
+            },
+            "reason": {
+              "$ref": "#/$defs/PendingReason"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command_id",
+            "authority",
+            "reason"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "accepted_seq": {
+              "$ref": "#/$defs/Counter"
+            },
+            "authority": {
+              "$ref": "#/$defs/Authority"
+            },
+            "command_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "disposition_ref": {
+              "$ref": "#/$defs/Nullable_DomainId"
+            },
+            "event_seq": {
+              "$ref": "#/$defs/Counter"
+            },
+            "kind": {
+              "type": "string",
+              "const": "accepted"
+            },
+            "row_version": {
+              "$ref": "#/$defs/PositiveCounter"
+            },
+            "run_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "task_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "task_revision_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command_id",
+            "authority",
+            "run_id",
+            "accepted_seq",
+            "event_seq",
+            "row_version",
+            "disposition_ref",
+            "task_id",
+            "task_revision_id"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "accepted_seq": {
+              "$ref": "#/$defs/Counter"
+            },
+            "authority": {
+              "$ref": "#/$defs/Authority"
+            },
+            "command_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "disposition_ref": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "event_seq": {
+              "$ref": "#/$defs/Counter"
+            },
+            "kind": {
+              "type": "string",
+              "const": "applied"
+            },
+            "row_version": {
+              "$ref": "#/$defs/PositiveCounter"
+            },
+            "run_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "task_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "task_revision_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command_id",
+            "authority",
+            "run_id",
+            "accepted_seq",
+            "event_seq",
+            "row_version",
+            "disposition_ref",
+            "task_id",
+            "task_revision_id"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "accepted_seq": {
+              "$ref": "#/$defs/Counter"
+            },
+            "authority": {
+              "$ref": "#/$defs/Authority"
+            },
+            "command_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "disposition_ref": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "event_seq": {
+              "$ref": "#/$defs/Counter"
+            },
+            "kind": {
+              "type": "string",
+              "const": "deferred"
+            },
+            "row_version": {
+              "$ref": "#/$defs/PositiveCounter"
+            },
+            "run_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "task_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "task_revision_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command_id",
+            "authority",
+            "run_id",
+            "accepted_seq",
+            "event_seq",
+            "row_version",
+            "disposition_ref",
+            "task_id",
+            "task_revision_id"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "accepted_seq": {
+              "$ref": "#/$defs/Counter"
+            },
+            "authority": {
+              "$ref": "#/$defs/Authority"
+            },
+            "command_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "disposition_ref": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "event_seq": {
+              "$ref": "#/$defs/Counter"
+            },
+            "kind": {
+              "type": "string",
+              "const": "superseded"
+            },
+            "row_version": {
+              "$ref": "#/$defs/PositiveCounter"
+            },
+            "run_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "task_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "task_revision_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command_id",
+            "authority",
+            "run_id",
+            "accepted_seq",
+            "event_seq",
+            "row_version",
+            "disposition_ref",
+            "task_id",
+            "task_revision_id"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "command_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "current_revision": {
+              "$ref": "#/$defs/Nullable_Counter"
+            },
+            "error": {
+              "$ref": "#/$defs/SafeError"
+            },
+            "kind": {
+              "type": "string",
+              "const": "rejected"
+            },
+            "run_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command_id",
+            "run_id",
+            "error",
+            "current_revision"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "command_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "current_revision": {
+              "$ref": "#/$defs/Nullable_Counter"
+            },
+            "error": {
+              "$ref": "#/$defs/SafeError"
+            },
+            "kind": {
+              "type": "string",
+              "const": "conflict"
+            },
+            "run_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command_id",
+            "run_id",
+            "error",
+            "current_revision"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "command_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "kind": {
+              "type": "string",
+              "const": "terminal"
+            },
+            "row_version": {
+              "$ref": "#/$defs/PositiveCounter"
+            },
+            "run_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "state": {
+              "$ref": "#/$defs/TerminalRunState"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command_id",
+            "run_id",
+            "state",
+            "row_version"
+          ]
+        }
+      ]
+    },
+    "CommandResumePayload": {
+      "type": "object",
+      "properties": {
+        "checkpoint_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "expected_revision": {
+          "$ref": "#/$defs/PositiveCounter"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "expected_revision",
+        "checkpoint_id"
+      ]
+    },
+    "CommandReviewArtifactPayload": {
+      "type": "object",
+      "properties": {
+        "artifact_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "check_refs": {
+          "$ref": "#/$defs/List_DomainId_0_100"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "request_revision": {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        "response": {
+          "$ref": "#/$defs/CommandReviewArtifactPayloadResponse"
+        },
+        "version_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "request_id",
+        "request_revision",
+        "artifact_id",
+        "version_id",
+        "check_refs",
+        "response"
+      ]
+    },
+    "CommandReviewArtifactPayloadResponse": {
+      "type": "string",
+      "enum": [
+        "accept",
+        "reject",
+        "revise"
+      ]
+    },
+    "CommandReviseObjectivePayload": {
+      "type": "object",
+      "properties": {
+        "check_refs": {
+          "$ref": "#/$defs/List_DomainId_0_100"
+        },
+        "expected_revision": {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        "objective_version_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "objective_version_id",
+        "check_refs",
+        "expected_revision"
+      ]
+    },
+    "CommandSteerPayload": {
+      "type": "object",
+      "properties": {
+        "expected_revision": {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        "text": {
+          "$ref": "#/$defs/Text_0_8192"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "text",
+        "expected_revision"
+      ]
+    },
+    "CommandStopPayload": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "$ref": "#/$defs/Text_0_1024"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "reason"
+      ]
+    },
+    "ContextManifest": {
+      "type": "object",
+      "properties": {
+        "accepted_seq": {
+          "$ref": "#/$defs/Counter"
+        },
+        "acting_principal_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "assembled_at": {
+          "$ref": "#/$defs/Instant"
+        },
+        "audience_policy_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "deletion_generation": {
+          "$ref": "#/$defs/Counter"
+        },
+        "input_token_count": {
+          "$ref": "#/$defs/Integer_0_1000000"
+        },
+        "manifest_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "members": {
+          "$ref": "#/$defs/List_ContextManifestMembersItem_0_1000"
+        },
+        "omission_codes": {
+          "$ref": "#/$defs/List_Text_0_128_0_100"
+        },
+        "permission_generation": {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        "reserved_output_tokens": {
+          "$ref": "#/$defs/Integer_1_1000000"
+        },
+        "run_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "task_revision_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "manifest_id",
+        "run_id",
+        "task_revision_id",
+        "accepted_seq",
+        "acting_principal_id",
+        "audience_policy_id",
+        "permission_generation",
+        "deletion_generation",
+        "members",
+        "omission_codes",
+        "input_token_count",
+        "reserved_output_tokens",
+        "assembled_at"
+      ]
+    },
+    "ContextManifestMembersItem": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/ContextManifestMembersItemKind"
+        },
+        "sha256": {
+          "$ref": "#/$defs/Digest"
+        },
+        "token_count": {
+          "$ref": "#/$defs/Integer_0_1000000"
+        },
+        "version_ref": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "version_ref",
+        "sha256",
+        "token_count"
+      ]
+    },
+    "ContextManifestMembersItemKind": {
+      "type": "string",
+      "enum": [
+        "instruction",
+        "accepted_input",
+        "exact_state",
+        "skill",
+        "memory",
+        "source",
+        "history"
+      ]
+    },
+    "Counter": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,18})$"
+    },
+    "Digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "DomainId": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "ErrorCode": {
+      "type": "string",
+      "enum": [
+        "INVALID_MESSAGE",
+        "INVALID_ARGUMENT",
+        "UNSUPPORTED",
+        "INCOMPATIBLE",
+        "UNAUTHENTICATED",
+        "DENIED",
+        "NOT_FOUND_OR_DENIED",
+        "CONFLICT",
+        "IDEMPOTENCY_MISMATCH",
+        "STALE_AUTHORITY",
+        "CANCELLED",
+        "TIMEOUT",
+        "LOST",
+        "UNKNOWN_OUTCOME",
+        "RESOURCE_LIMIT",
+        "IO_FAILURE",
+        "RATE_LIMITED",
+        "UNAVAILABLE",
+        "NEEDS_RECONCILIATION"
+      ]
+    },
+    "Event": {
+      "type": "object",
+      "properties": {
+        "actor_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "attempt_id": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "causal_id": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "command_id": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "epoch": {
+          "$ref": "#/$defs/Counter"
+        },
+        "event_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "event_type": {
+          "$ref": "#/$defs/EventType"
+        },
+        "invocation_id": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "occurred_at": {
+          "$ref": "#/$defs/Instant"
+        },
+        "payload_ref": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "recorded_at": {
+          "$ref": "#/$defs/Instant"
+        },
+        "run_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "schema_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        },
+        "seq": {
+          "$ref": "#/$defs/Counter"
+        },
+        "turn_id": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "workspace_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "event_id",
+        "workspace_id",
+        "run_id",
+        "attempt_id",
+        "turn_id",
+        "epoch",
+        "seq",
+        "event_type",
+        "command_id",
+        "invocation_id",
+        "causal_id",
+        "occurred_at",
+        "recorded_at",
+        "actor_id",
+        "payload_ref"
+      ]
+    },
+    "EventType": {
+      "type": "string",
+      "enum": [
+        "artifact.committed",
+        "attempt.claimed",
+        "attempt.lost",
+        "check.completed",
+        "checkpoint.committed",
+        "checkpoint.rejected",
+        "control.accepted",
+        "control.applied",
+        "control.deferred",
+        "control.superseded",
+        "decision.recorded",
+        "decision.requested",
+        "handoff.aborted",
+        "handoff.committed",
+        "handoff.prepared",
+        "input.accepted",
+        "model.completed",
+        "model.interrupted",
+        "model.requested",
+        "observation.accepted",
+        "process.exited",
+        "process.lost",
+        "process.output_gap",
+        "process.started",
+        "run.accepted",
+        "run.cancelled",
+        "run.completed",
+        "run.failed",
+        "run.transitioned",
+        "tool.authorized",
+        "tool.dispatched",
+        "tool.proposed",
+        "tool.settled",
+        "usage.recorded",
+        "wait.registered",
+        "wait.resolved"
+      ]
+    },
+    "ExecutionAuthority": {
+      "type": "string",
+      "enum": [
+        "local",
+        "server"
+      ]
+    },
+    "FileCoverage": {
+      "type": "string",
+      "enum": [
+        "coherent_snapshot",
+        "verified_per_file",
+        "no_files"
+      ]
+    },
+    "InputDisposition": {
+      "type": "object",
+      "properties": {
+        "accepted_seq": {
+          "$ref": "#/$defs/Counter"
+        },
+        "boundary_ref": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "command_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "disposition": {
+          "$ref": "#/$defs/InputDispositionDisposition"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "command_id",
+        "accepted_seq",
+        "disposition",
+        "boundary_ref"
+      ]
+    },
+    "InputDispositionDisposition": {
+      "type": "string",
+      "enum": [
+        "applied",
+        "deferred",
+        "superseded",
+        "rejected"
+      ]
+    },
+    "Instant": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z$"
+    },
+    "Integer_0_1000000": {
+      "type": "integer",
+      "maximum": 1000000,
+      "minimum": 0
+    },
+    "Integer_1000_120000": {
+      "type": "integer",
+      "maximum": 120000,
+      "minimum": 1000
+    },
+    "Integer_1048576_1048576": {
+      "type": "integer",
+      "maximum": 1048576,
+      "minimum": 1048576
+    },
+    "Integer_1_1000000": {
+      "type": "integer",
+      "maximum": 1000000,
+      "minimum": 1
+    },
+    "Integer_1_262144": {
+      "type": "integer",
+      "maximum": 262144,
+      "minimum": 1
+    },
+    "Integer_1_50": {
+      "type": "integer",
+      "maximum": 50,
+      "minimum": 1
+    },
+    "Integer_1_600000": {
+      "type": "integer",
+      "maximum": 600000,
+      "minimum": 1
+    },
+    "Lease": {
+      "type": "object",
+      "properties": {
+        "attempt_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "authority": {
+          "$ref": "#/$defs/ExecutionAuthority"
+        },
+        "boot_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "environment_id": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "epoch": {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/Instant"
+        },
+        "generation": {
+          "$ref": "#/$defs/Nullable_PositiveCounter"
+        },
+        "monotonic_deadline_ns": {
+          "$ref": "#/$defs/Counter"
+        },
+        "placement": {
+          "$ref": "#/$defs/Placement"
+        },
+        "receipt_digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "run_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "attempt_id",
+        "epoch",
+        "placement",
+        "authority",
+        "environment_id",
+        "generation",
+        "expires_at",
+        "boot_id",
+        "monotonic_deadline_ns",
+        "receipt_digest"
+      ]
+    },
+    "Limits": {
+      "type": "object",
+      "properties": {
+        "active_wall_ms": {
+          "$ref": "#/$defs/Integer_1_600000"
+        },
+        "model_steps": {
+          "$ref": "#/$defs/Integer_1_50"
+        },
+        "output_bytes": {
+          "$ref": "#/$defs/Integer_1_262144"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "model_steps",
+        "active_wall_ms",
+        "output_bytes"
+      ]
+    },
+    "List_ArtifactRef_0_100": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ArtifactRef"
+      },
+      "maxItems": 100,
+      "minItems": 0
+    },
+    "List_CapabilityDescriptionProfilesItem_0_100": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CapabilityDescriptionProfilesItem"
+      },
+      "maxItems": 100,
+      "minItems": 0
+    },
+    "List_CommandAnswerClarificationPayloadAnswersItem_0_3": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CommandAnswerClarificationPayloadAnswersItem"
+      },
+      "maxItems": 3,
+      "minItems": 0
+    },
+    "List_ContextManifestMembersItem_0_1000": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ContextManifestMembersItem"
+      },
+      "maxItems": 1000,
+      "minItems": 0
+    },
+    "List_Digest_0_100": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Digest"
+      },
+      "maxItems": 100,
+      "minItems": 0
+    },
+    "List_DomainId_0_100": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/DomainId"
+      },
+      "maxItems": 100,
+      "minItems": 0
+    },
+    "List_DomainId_0_1000": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/DomainId"
+      },
+      "maxItems": 1000,
+      "minItems": 0
+    },
+    "List_DomainId_0_20": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/DomainId"
+      },
+      "maxItems": 20,
+      "minItems": 0
+    },
+    "List_NormalizedModelResponseItemsItem_0_100": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/NormalizedModelResponseItemsItem"
+      },
+      "maxItems": 100,
+      "minItems": 0
+    },
+    "List_RpcRequestAnswerClarificationBodyPayloadAnswersItem_0_3": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/RpcRequestAnswerClarificationBodyPayloadAnswersItem"
+      },
+      "maxItems": 3,
+      "minItems": 0
+    },
+    "List_Text_0_128_0_10": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Text_0_128"
+      },
+      "maxItems": 10,
+      "minItems": 0
+    },
+    "List_Text_0_128_0_100": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Text_0_128"
+      },
+      "maxItems": 100,
+      "minItems": 0
+    },
+    "List_UsageReportSegmentsItem_0_100": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/UsageReportSegmentsItem"
+      },
+      "maxItems": 100,
+      "minItems": 0
+    },
+    "List_WaitSpecConditionsItem_1_20": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/WaitSpecConditionsItem"
+      },
+      "maxItems": 20,
+      "minItems": 1
+    },
+    "Literal_false": {
+      "const": false
+    },
+    "Literal_true": {
+      "const": true
+    },
+    "Money": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)\\.[0-9]{6}$"
+    },
+    "NormalizedModelResponse": {
+      "type": "object",
+      "properties": {
+        "diagnostic_error": {
+          "$ref": "#/$defs/Nullable_SafeError"
+        },
+        "finish": {
+          "$ref": "#/$defs/NormalizedModelResponseFinish"
+        },
+        "items": {
+          "$ref": "#/$defs/List_NormalizedModelResponseItemsItem_0_100"
+        },
+        "model_call_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "step_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "usage_refs": {
+          "$ref": "#/$defs/List_DomainId_0_100"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "model_call_id",
+        "step_id",
+        "items",
+        "finish",
+        "usage_refs",
+        "diagnostic_error"
+      ]
+    },
+    "NormalizedModelResponseFinish": {
+      "type": "string",
+      "enum": [
+        "tools",
+        "final",
+        "length",
+        "refused",
+        "interrupted",
+        "failed"
+      ]
+    },
+    "NormalizedModelResponseItemsItem": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "text"
+            },
+            "text": {
+              "$ref": "#/$defs/Text_0_262144"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "text"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "arguments": {
+              "$ref": "#/$defs/Object_128"
+            },
+            "binding_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "kind": {
+              "type": "string",
+              "const": "tool_proposal"
+            },
+            "provider_call_id": {
+              "$ref": "#/$defs/Text_0_256"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "provider_call_id",
+            "binding_id",
+            "arguments"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "blob_ref": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "compatibility_digest": {
+              "$ref": "#/$defs/Digest"
+            },
+            "kind": {
+              "type": "string",
+              "const": "opaque_continuation"
+            },
+            "provider_profile_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "provider_profile_id",
+            "compatibility_digest",
+            "blob_ref"
+          ]
+        }
+      ]
+    },
+    "Nullable_BoundData": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/BoundData"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "Nullable_Counter": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Counter"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "Nullable_Digest": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Digest"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "Nullable_DomainId": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DomainId"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "Nullable_Instant": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Instant"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "Nullable_Money": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Money"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "Nullable_PositiveCounter": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "Nullable_SafeError": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SafeError"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "Nullable_Text_0_1024": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Text_0_1024"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "Nullable_Text_0_2048": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Text_0_2048"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "Object_128": {
+      "type": "object",
+      "maxProperties": 128
+    },
+    "PendingReason": {
+      "type": "string",
+      "enum": [
+        "unsent",
+        "unacknowledged",
+        "partitioned"
+      ]
+    },
+    "Placement": {
+      "type": "string",
+      "enum": [
+        "local",
+        "cloud"
+      ]
+    },
+    "PositiveCounter": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]{0,18}$"
+    },
+    "ProtocolVersion": {
+      "type": "string",
+      "enum": [
+        "1.0"
+      ]
+    },
+    "RemoteOperationHandle": {
+      "type": "object",
+      "properties": {
+        "expires_at": {
+          "$ref": "#/$defs/Instant"
+        },
+        "installation_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "invocation_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "opaque_handle": {
+          "$ref": "#/$defs/Text_0_2048"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "installation_id",
+        "invocation_id",
+        "opaque_handle",
+        "expires_at"
+      ]
+    },
+    "RequestFrameKind": {
+      "type": "string",
+      "enum": [
+        "request"
+      ]
+    },
+    "RpcEvent": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "durability": {
+              "type": "string",
+              "const": "committed"
+            },
+            "event": {
+              "$ref": "#/$defs/Event"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RpcEventCommittedFrameKind"
+            },
+            "subscription_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "durability",
+            "frame_kind",
+            "subscription_id",
+            "event"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "cursor": {
+              "$ref": "#/$defs/Text_0_2048"
+            },
+            "durability": {
+              "type": "string",
+              "const": "provisional"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RpcEventCommittedFrameKind"
+            },
+            "kind": {
+              "$ref": "#/$defs/RpcEventProvisionalKind"
+            },
+            "run_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "subscription_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "text": {
+              "$ref": "#/$defs/Text_0_32768"
+            },
+            "truncated": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "durability",
+            "frame_kind",
+            "subscription_id",
+            "run_id",
+            "cursor",
+            "kind",
+            "text",
+            "truncated"
+          ]
+        }
+      ]
+    },
+    "RpcEventCommittedFrameKind": {
+      "type": "string",
+      "enum": [
+        "event"
+      ]
+    },
+    "RpcEventProvisionalKind": {
+      "type": "string",
+      "enum": [
+        "model_text",
+        "stdout",
+        "stderr",
+        "gap"
+      ]
+    },
+    "RpcRequest": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestHandshakeBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "handshake"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestDescribeCapabilitiesBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "describe_capabilities"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestSubmitTaskBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "submit_task"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestSubmitCommandBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "submit_command"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestGetTaskSnapshotBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "get_task_snapshot"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestSubscribeBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "subscribe"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestAnswerClarificationBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "answer_clarification"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestReviewArtifactBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "review_artifact"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestDecideActionBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "decide_action"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestGetArtifactBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "get_artifact"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestPrepareTransferBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "prepare_transfer"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestQueryTransferBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "query_transfer"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestRequestTransferAbortBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "request_transfer_abort"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestGetUsageBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "get_usage"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestHarnessDescribeCapabilitiesBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "harness.describe_capabilities"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestHarnessStartTurnBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "harness.start_turn"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestHarnessSubmitInputBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "harness.submit_input"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestHarnessRequestPauseBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "harness.request_pause"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestHarnessCancelBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "harness.cancel"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestHarnessPrepareCheckpointBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "harness.prepare_checkpoint"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestHarnessResumeTurnBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "harness.resume_turn"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "body": {
+              "$ref": "#/$defs/RpcRequestHarnessSubscribeBody"
+            },
+            "frame_kind": {
+              "$ref": "#/$defs/RequestFrameKind"
+            },
+            "operation": {
+              "type": "string",
+              "const": "harness.subscribe"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "frame_kind",
+            "request_id",
+            "body"
+          ]
+        }
+      ]
+    },
+    "RpcRequestAnswerClarificationBody": {
+      "type": "object",
+      "properties": {
+        "command_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "idempotency_key": {
+          "$ref": "#/$defs/Text_1_128"
+        },
+        "kind": {
+          "$ref": "#/$defs/RpcRequestAnswerClarificationBodyKind"
+        },
+        "payload": {
+          "$ref": "#/$defs/RpcRequestAnswerClarificationBodyPayload"
+        },
+        "run_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "command_id",
+        "run_id",
+        "idempotency_key",
+        "kind",
+        "payload"
+      ]
+    },
+    "RpcRequestAnswerClarificationBodyKind": {
+      "type": "string",
+      "enum": [
+        "answer_clarification"
+      ]
+    },
+    "RpcRequestAnswerClarificationBodyPayload": {
+      "type": "object",
+      "properties": {
+        "answers": {
+          "$ref": "#/$defs/List_RpcRequestAnswerClarificationBodyPayloadAnswersItem_0_3"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "request_revision": {
+          "$ref": "#/$defs/PositiveCounter"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "request_id",
+        "request_revision",
+        "answers"
+      ]
+    },
+    "RpcRequestAnswerClarificationBodyPayloadAnswersItem": {
+      "type": "object",
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/Text_0_8192"
+        },
+        "question_id": {
+          "$ref": "#/$defs/Text_0_128"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "question_id",
+        "answer"
+      ]
+    },
+    "RpcRequestDecideActionBody": {
+      "type": "object",
+      "properties": {
+        "command_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "idempotency_key": {
+          "$ref": "#/$defs/Text_1_128"
+        },
+        "kind": {
+          "$ref": "#/$defs/RpcRequestDecideActionBodyKind"
+        },
+        "payload": {
+          "$ref": "#/$defs/RpcRequestDecideActionBodyPayload"
+        },
+        "run_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "command_id",
+        "run_id",
+        "idempotency_key",
+        "kind",
+        "payload"
+      ]
+    },
+    "RpcRequestDecideActionBodyKind": {
+      "type": "string",
+      "enum": [
+        "decide_action"
+      ]
+    },
+    "RpcRequestDecideActionBodyPayload": {
+      "type": "object",
+      "properties": {
+        "decision_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "decision_revision": {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        "invocation_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "payload_digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "response": {
+          "$ref": "#/$defs/CommandDecideActionPayloadResponse"
+        },
+        "target_digest": {
+          "$ref": "#/$defs/Digest"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "decision_id",
+        "decision_revision",
+        "invocation_id",
+        "target_digest",
+        "payload_digest",
+        "response"
+      ]
+    },
+    "RpcRequestDescribeCapabilitiesBody": {
+      "type": "object",
+      "additionalProperties": false
+    },
+    "RpcRequestGetArtifactBody": {
+      "type": "object",
+      "properties": {
+        "artifact_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "cursor": {
+          "$ref": "#/$defs/Nullable_Text_0_2048"
+        },
+        "max_bytes": {
+          "$ref": "#/$defs/Integer_1_262144"
+        },
+        "version_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "version_id",
+        "cursor",
+        "max_bytes"
+      ]
+    },
+    "RpcRequestGetTaskSnapshotBody": {
+      "type": "object",
+      "properties": {
+        "run_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "run_id"
+      ]
+    },
+    "RpcRequestGetUsageBody": {
+      "type": "object",
+      "properties": {
+        "ends_at": {
+          "$ref": "#/$defs/Instant"
+        },
+        "scope_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "starts_at": {
+          "$ref": "#/$defs/Instant"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "scope_id",
+        "starts_at",
+        "ends_at"
+      ]
+    },
+    "RpcRequestHandshakeBody": {
+      "type": "object",
+      "properties": {
+        "build_digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "challenge_response": {
+          "$ref": "#/$defs/Text_0_512"
+        },
+        "client_kind": {
+          "$ref": "#/$defs/RpcRequestHandshakeBodyClientKind"
+        },
+        "nonce": {
+          "$ref": "#/$defs/Text_0_256"
+        },
+        "requested_workspace_id": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "supported_versions": {
+          "$ref": "#/$defs/List_Text_0_128_0_10"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "supported_versions",
+        "client_kind",
+        "build_digest",
+        "nonce",
+        "challenge_response",
+        "requested_workspace_id"
+      ]
+    },
+    "RpcRequestHandshakeBodyClientKind": {
+      "type": "string",
+      "enum": [
+        "electron_main",
+        "supervisor",
+        "harness",
+        "guest_agent"
+      ]
+    },
+    "RpcRequestHarnessCancelBody": {
+      "type": "object",
+      "properties": {
+        "attempt_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "cancel_command_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "run_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "attempt_id",
+        "cancel_command_id"
+      ]
+    },
+    "RpcRequestHarnessDescribeCapabilitiesBody": {
+      "type": "object",
+      "additionalProperties": false
+    },
+    "RpcRequestHarnessPrepareCheckpointBody": {
+      "type": "object",
+      "properties": {
+        "accepted_cut": {
+          "$ref": "#/$defs/Counter"
+        },
+        "attempt_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "coverage": {
+          "$ref": "#/$defs/FileCoverage"
+        },
+        "event_cut": {
+          "$ref": "#/$defs/Counter"
+        },
+        "reason": {
+          "$ref": "#/$defs/RpcRequestHarnessPrepareCheckpointBodyReason"
+        },
+        "run_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "attempt_id",
+        "event_cut",
+        "accepted_cut",
+        "coverage",
+        "reason"
+      ]
+    },
+    "RpcRequestHarnessPrepareCheckpointBodyReason": {
+      "type": "string",
+      "enum": [
+        "turn_limit",
+        "pause",
+        "transfer",
+        "restore",
+        "context_limit"
+      ]
+    },
+    "RpcRequestHarnessRequestPauseBody": {
+      "type": "object",
+      "properties": {
+        "attempt_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "pause_command_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "run_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "attempt_id",
+        "pause_command_id"
+      ]
+    },
+    "RpcRequestHarnessResumeTurnBody": {
+      "type": "object",
+      "properties": {
+        "accepted_input_cut": {
+          "$ref": "#/$defs/Counter"
+        },
+        "checkpoint_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "lease": {
+          "$ref": "#/$defs/Lease"
+        },
+        "limits": {
+          "$ref": "#/$defs/Limits"
+        },
+        "run_spec": {
+          "$ref": "#/$defs/RunSpec"
+        },
+        "turn_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "run_spec",
+        "lease",
+        "turn_id",
+        "checkpoint_id",
+        "accepted_input_cut",
+        "limits"
+      ]
+    },
+    "RpcRequestHarnessStartTurnBody": {
+      "type": "object",
+      "properties": {
+        "accepted_input_cut": {
+          "$ref": "#/$defs/Counter"
+        },
+        "checkpoint_id": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "lease": {
+          "$ref": "#/$defs/Lease"
+        },
+        "limits": {
+          "$ref": "#/$defs/Limits"
+        },
+        "run_spec": {
+          "$ref": "#/$defs/RunSpec"
+        },
+        "turn_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "run_spec",
+        "lease",
+        "turn_id",
+        "accepted_input_cut",
+        "checkpoint_id",
+        "limits"
+      ]
+    },
+    "RpcRequestHarnessSubmitInputBody": {
+      "type": "object",
+      "properties": {
+        "accepted_seq": {
+          "$ref": "#/$defs/Counter"
+        },
+        "attempt_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "command_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "payload_digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "run_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "attempt_id",
+        "command_id",
+        "accepted_seq",
+        "payload_digest"
+      ]
+    },
+    "RpcRequestHarnessSubscribeBody": {
+      "type": "object",
+      "properties": {
+        "after_sequence": {
+          "$ref": "#/$defs/Counter"
+        },
+        "provisional_cursor": {
+          "$ref": "#/$defs/Nullable_Text_0_2048"
+        },
+        "run_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "after_sequence",
+        "provisional_cursor"
+      ]
+    },
+    "RpcRequestPrepareTransferBody": {
+      "type": "object",
+      "properties": {
+        "expected_revision": {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        "idempotency_key": {
+          "$ref": "#/$defs/Text_0_128"
+        },
+        "run_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "selected_manifest_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "target_profile_id": {
+          "$ref": "#/$defs/Text_0_128"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "expected_revision",
+        "target_profile_id",
+        "selected_manifest_id",
+        "idempotency_key"
+      ]
+    },
+    "RpcRequestQueryTransferBody": {
+      "type": "object",
+      "properties": {
+        "transfer_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "transfer_id"
+      ]
+    },
+    "RpcRequestRequestTransferAbortBody": {
+      "type": "object",
+      "properties": {
+        "idempotency_key": {
+          "$ref": "#/$defs/Text_0_128"
+        },
+        "transfer_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "transfer_id",
+        "idempotency_key"
+      ]
+    },
+    "RpcRequestReviewArtifactBody": {
+      "type": "object",
+      "properties": {
+        "command_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "idempotency_key": {
+          "$ref": "#/$defs/Text_1_128"
+        },
+        "kind": {
+          "$ref": "#/$defs/RpcRequestReviewArtifactBodyKind"
+        },
+        "payload": {
+          "$ref": "#/$defs/RpcRequestReviewArtifactBodyPayload"
+        },
+        "run_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "command_id",
+        "run_id",
+        "idempotency_key",
+        "kind",
+        "payload"
+      ]
+    },
+    "RpcRequestReviewArtifactBodyKind": {
+      "type": "string",
+      "enum": [
+        "review_artifact"
+      ]
+    },
+    "RpcRequestReviewArtifactBodyPayload": {
+      "type": "object",
+      "properties": {
+        "artifact_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "check_refs": {
+          "$ref": "#/$defs/List_DomainId_0_100"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "request_revision": {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        "response": {
+          "$ref": "#/$defs/CommandReviewArtifactPayloadResponse"
+        },
+        "version_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "request_id",
+        "request_revision",
+        "artifact_id",
+        "version_id",
+        "check_refs",
+        "response"
+      ]
+    },
+    "RpcRequestSubmitCommandBody": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "command_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "idempotency_key": {
+              "$ref": "#/$defs/Text_1_128"
+            },
+            "kind": {
+              "type": "string",
+              "const": "steer"
+            },
+            "payload": {
+              "$ref": "#/$defs/RpcRequestSubmitCommandBodySteerPayload"
+            },
+            "run_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command_id",
+            "run_id",
+            "idempotency_key",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "command_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "idempotency_key": {
+              "$ref": "#/$defs/Text_1_128"
+            },
+            "kind": {
+              "type": "string",
+              "const": "revise_objective"
+            },
+            "payload": {
+              "$ref": "#/$defs/RpcRequestSubmitCommandBodyReviseObjectivePayload"
+            },
+            "run_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command_id",
+            "run_id",
+            "idempotency_key",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "command_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "idempotency_key": {
+              "$ref": "#/$defs/Text_1_128"
+            },
+            "kind": {
+              "type": "string",
+              "const": "pause"
+            },
+            "payload": {
+              "$ref": "#/$defs/RpcRequestSubmitCommandBodyPausePayload"
+            },
+            "run_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command_id",
+            "run_id",
+            "idempotency_key",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "command_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "idempotency_key": {
+              "$ref": "#/$defs/Text_1_128"
+            },
+            "kind": {
+              "type": "string",
+              "const": "resume"
+            },
+            "payload": {
+              "$ref": "#/$defs/RpcRequestSubmitCommandBodyResumePayload"
+            },
+            "run_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command_id",
+            "run_id",
+            "idempotency_key",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "command_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "idempotency_key": {
+              "$ref": "#/$defs/Text_1_128"
+            },
+            "kind": {
+              "type": "string",
+              "const": "stop"
+            },
+            "payload": {
+              "$ref": "#/$defs/RpcRequestSubmitCommandBodyStopPayload"
+            },
+            "run_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "command_id",
+            "run_id",
+            "idempotency_key",
+            "payload"
+          ]
+        }
+      ]
+    },
+    "RpcRequestSubmitCommandBodyPausePayload": {
+      "type": "object",
+      "properties": {
+        "expected_revision": {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        "reason": {
+          "$ref": "#/$defs/Text_0_1024"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "expected_revision",
+        "reason"
+      ]
+    },
+    "RpcRequestSubmitCommandBodyResumePayload": {
+      "type": "object",
+      "properties": {
+        "checkpoint_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "expected_revision": {
+          "$ref": "#/$defs/PositiveCounter"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "expected_revision",
+        "checkpoint_id"
+      ]
+    },
+    "RpcRequestSubmitCommandBodyReviseObjectivePayload": {
+      "type": "object",
+      "properties": {
+        "check_refs": {
+          "$ref": "#/$defs/List_DomainId_0_100"
+        },
+        "expected_revision": {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        "objective_version_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "objective_version_id",
+        "check_refs",
+        "expected_revision"
+      ]
+    },
+    "RpcRequestSubmitCommandBodySteerPayload": {
+      "type": "object",
+      "properties": {
+        "expected_revision": {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        "text": {
+          "$ref": "#/$defs/Text_0_8192"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "text",
+        "expected_revision"
+      ]
+    },
+    "RpcRequestSubmitCommandBodyStopPayload": {
+      "type": "object",
+      "properties": {
+        "reason": {
+          "$ref": "#/$defs/Text_0_1024"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "reason"
+      ]
+    },
+    "RpcRequestSubmitTaskBody": {
+      "type": "object",
+      "properties": {
+        "check_template_ids": {
+          "$ref": "#/$defs/List_DomainId_0_20"
+        },
+        "idempotency_key": {
+          "$ref": "#/$defs/Text_0_128"
+        },
+        "lower_limits": {
+          "$ref": "#/$defs/Limits"
+        },
+        "objective": {
+          "$ref": "#/$defs/Text_0_8192"
+        },
+        "profile_id": {
+          "$ref": "#/$defs/Text_0_128"
+        },
+        "project_id": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "requested_placement": {
+          "$ref": "#/$defs/Placement"
+        },
+        "source_refs": {
+          "$ref": "#/$defs/List_DomainId_0_100"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "objective",
+        "project_id",
+        "source_refs",
+        "check_template_ids",
+        "requested_placement",
+        "profile_id",
+        "lower_limits",
+        "idempotency_key"
+      ]
+    },
+    "RpcRequestSubscribeBody": {
+      "type": "object",
+      "properties": {
+        "after_sequence": {
+          "$ref": "#/$defs/Counter"
+        },
+        "provisional_cursor": {
+          "$ref": "#/$defs/Nullable_Text_0_2048"
+        },
+        "run_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "run_id",
+        "after_sequence",
+        "provisional_cursor"
+      ]
+    },
+    "RpcResponse": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RpcResponseHandshakeOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseHandshakeError"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseDescribeCapabilitiesOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseDescribeCapabilitiesError"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseGetTaskSnapshotOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseGetTaskSnapshotError"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseSubscribeOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseSubscribeError"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseGetArtifactOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseGetArtifactError"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseGetUsageOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseGetUsageError"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseHarnessDescribeCapabilitiesOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseHarnessDescribeCapabilitiesError"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseHarnessStartTurnOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseHarnessStartTurnError"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseHarnessResumeTurnOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseHarnessResumeTurnError"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseHarnessPrepareCheckpointOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseHarnessPrepareCheckpointError"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseHarnessSubscribeOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseHarnessSubscribeError"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseHarnessRequestPauseOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseHarnessRequestPauseError"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseHarnessCancelOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseHarnessCancelError"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseHarnessSubmitInputOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseHarnessSubmitInputError"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseSubmitTaskOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseSubmitTaskError"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseSubmitCommandOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseSubmitCommandError"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseAnswerClarificationOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseAnswerClarificationError"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseReviewArtifactOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseReviewArtifactError"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseDecideActionOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseDecideActionError"
+        },
+        {
+          "$ref": "#/$defs/RpcResponsePrepareTransferOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponsePrepareTransferError"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseQueryTransferOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseQueryTransferError"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseRequestTransferAbortOk"
+        },
+        {
+          "$ref": "#/$defs/RpcResponseRequestTransferAbortError"
+        }
+      ]
+    },
+    "RpcResponseAnswerClarificationError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcRequestAnswerClarificationBodyKind"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponseAnswerClarificationOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcRequestAnswerClarificationBodyKind"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/CommandReceipt"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponseDecideActionError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcRequestDecideActionBodyKind"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponseDecideActionOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcRequestDecideActionBodyKind"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/CommandReceipt"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponseDescribeCapabilitiesError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseDescribeCapabilitiesOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponseDescribeCapabilitiesOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseDescribeCapabilitiesOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/CapabilityDescription"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponseDescribeCapabilitiesOkOperation": {
+      "type": "string",
+      "enum": [
+        "describe_capabilities"
+      ]
+    },
+    "RpcResponseGetArtifactError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseGetArtifactOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponseGetArtifactOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseGetArtifactOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/ArtifactReadResult"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponseGetArtifactOkOperation": {
+      "type": "string",
+      "enum": [
+        "get_artifact"
+      ]
+    },
+    "RpcResponseGetTaskSnapshotError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseGetTaskSnapshotOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponseGetTaskSnapshotOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseGetTaskSnapshotOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/TaskSnapshot"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponseGetTaskSnapshotOkOperation": {
+      "type": "string",
+      "enum": [
+        "get_task_snapshot"
+      ]
+    },
+    "RpcResponseGetUsageError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseGetUsageOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponseGetUsageOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseGetUsageOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/UsageReport"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponseGetUsageOkOperation": {
+      "type": "string",
+      "enum": [
+        "get_usage"
+      ]
+    },
+    "RpcResponseHandshakeError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponseHandshakeOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkResult"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponseHandshakeOkFrameKind": {
+      "type": "string",
+      "enum": [
+        "response"
+      ]
+    },
+    "RpcResponseHandshakeOkOperation": {
+      "type": "string",
+      "enum": [
+        "handshake"
+      ]
+    },
+    "RpcResponseHandshakeOkResult": {
+      "type": "object",
+      "properties": {
+        "authenticated_scope_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "capability_manifest_digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "max_frame_bytes": {
+          "$ref": "#/$defs/Integer_1048576_1048576"
+        },
+        "schema_max": {
+          "$ref": "#/$defs/Text_0_128"
+        },
+        "schema_min": {
+          "$ref": "#/$defs/Text_0_128"
+        },
+        "selected_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        },
+        "supervisor_generation": {
+          "$ref": "#/$defs/PositiveCounter"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "selected_version",
+        "supervisor_generation",
+        "schema_min",
+        "schema_max",
+        "capability_manifest_digest",
+        "max_frame_bytes",
+        "authenticated_scope_id"
+      ]
+    },
+    "RpcResponseHarnessCancelError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseHarnessCancelOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponseHarnessCancelOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseHarnessCancelOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/RpcResponseHarnessCancelOkResult"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponseHarnessCancelOkOperation": {
+      "type": "string",
+      "enum": [
+        "harness.cancel"
+      ]
+    },
+    "RpcResponseHarnessCancelOkResult": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "checkpoint_id": {
+              "$ref": "#/$defs/Nullable_DomainId"
+            },
+            "cleanup_refs": {
+              "$ref": "#/$defs/List_DomainId_0_100"
+            },
+            "kind": {
+              "type": "string",
+              "const": "cancelled"
+            },
+            "unresolved_receipt_refs": {
+              "$ref": "#/$defs/List_DomainId_0_100"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "checkpoint_id",
+            "cleanup_refs",
+            "unresolved_receipt_refs"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "checkpoint_id": {
+              "$ref": "#/$defs/Nullable_DomainId"
+            },
+            "error": {
+              "$ref": "#/$defs/SafeError"
+            },
+            "kind": {
+              "type": "string",
+              "const": "failed"
+            },
+            "retry_class": {
+              "$ref": "#/$defs/TurnOutcomeFailedRetryClass"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "error",
+            "retry_class",
+            "checkpoint_id"
+          ]
+        }
+      ]
+    },
+    "RpcResponseHarnessDescribeCapabilitiesError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseHarnessDescribeCapabilitiesOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponseHarnessDescribeCapabilitiesOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseHarnessDescribeCapabilitiesOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/CapabilityDescription"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponseHarnessDescribeCapabilitiesOkOperation": {
+      "type": "string",
+      "enum": [
+        "harness.describe_capabilities"
+      ]
+    },
+    "RpcResponseHarnessPrepareCheckpointError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseHarnessPrepareCheckpointOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponseHarnessPrepareCheckpointOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseHarnessPrepareCheckpointOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/Checkpoint"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponseHarnessPrepareCheckpointOkOperation": {
+      "type": "string",
+      "enum": [
+        "harness.prepare_checkpoint"
+      ]
+    },
+    "RpcResponseHarnessRequestPauseError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseHarnessRequestPauseOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponseHarnessRequestPauseOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseHarnessRequestPauseOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/RpcResponseHarnessRequestPauseOkResult"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponseHarnessRequestPauseOkOperation": {
+      "type": "string",
+      "enum": [
+        "harness.request_pause"
+      ]
+    },
+    "RpcResponseHarnessRequestPauseOkResult": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "checkpoint_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "kind": {
+              "type": "string",
+              "const": "paused"
+            },
+            "reason": {
+              "$ref": "#/$defs/TurnOutcomeYieldedReason"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "reason",
+            "checkpoint_id"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "checkpoint_id": {
+              "$ref": "#/$defs/Nullable_DomainId"
+            },
+            "error": {
+              "$ref": "#/$defs/SafeError"
+            },
+            "kind": {
+              "type": "string",
+              "const": "failed"
+            },
+            "retry_class": {
+              "$ref": "#/$defs/TurnOutcomeFailedRetryClass"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "error",
+            "retry_class",
+            "checkpoint_id"
+          ]
+        }
+      ]
+    },
+    "RpcResponseHarnessResumeTurnError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseHarnessResumeTurnOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponseHarnessResumeTurnOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseHarnessResumeTurnOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/RpcResponseHarnessResumeTurnOkResult"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponseHarnessResumeTurnOkOperation": {
+      "type": "string",
+      "enum": [
+        "harness.resume_turn"
+      ]
+    },
+    "RpcResponseHarnessResumeTurnOkResult": {
+      "type": "object",
+      "properties": {
+        "accepted": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "turn_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "turn_id",
+        "accepted"
+      ]
+    },
+    "RpcResponseHarnessStartTurnError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseHarnessStartTurnOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponseHarnessStartTurnOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseHarnessStartTurnOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/RpcResponseHarnessStartTurnOkResult"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponseHarnessStartTurnOkOperation": {
+      "type": "string",
+      "enum": [
+        "harness.start_turn"
+      ]
+    },
+    "RpcResponseHarnessStartTurnOkResult": {
+      "type": "object",
+      "properties": {
+        "accepted": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "turn_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "turn_id",
+        "accepted"
+      ]
+    },
+    "RpcResponseHarnessSubmitInputError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseHarnessSubmitInputOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponseHarnessSubmitInputOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseHarnessSubmitInputOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/InputDisposition"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponseHarnessSubmitInputOkOperation": {
+      "type": "string",
+      "enum": [
+        "harness.submit_input"
+      ]
+    },
+    "RpcResponseHarnessSubscribeError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseHarnessSubscribeOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponseHarnessSubscribeOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseHarnessSubscribeOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/Subscription"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponseHarnessSubscribeOkOperation": {
+      "type": "string",
+      "enum": [
+        "harness.subscribe"
+      ]
+    },
+    "RpcResponsePrepareTransferError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponsePrepareTransferOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponsePrepareTransferOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponsePrepareTransferOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/TransferReceipt"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponsePrepareTransferOkOperation": {
+      "type": "string",
+      "enum": [
+        "prepare_transfer"
+      ]
+    },
+    "RpcResponseQueryTransferError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseQueryTransferOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponseQueryTransferOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseQueryTransferOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/TransferReceipt"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponseQueryTransferOkOperation": {
+      "type": "string",
+      "enum": [
+        "query_transfer"
+      ]
+    },
+    "RpcResponseRequestTransferAbortError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseRequestTransferAbortOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponseRequestTransferAbortOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseRequestTransferAbortOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/TransferReceipt"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponseRequestTransferAbortOkOperation": {
+      "type": "string",
+      "enum": [
+        "request_transfer_abort"
+      ]
+    },
+    "RpcResponseReviewArtifactError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcRequestReviewArtifactBodyKind"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponseReviewArtifactOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcRequestReviewArtifactBodyKind"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/CommandReceipt"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponseSubmitCommandError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseSubmitCommandOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponseSubmitCommandOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseSubmitCommandOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/CommandReceipt"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponseSubmitCommandOkOperation": {
+      "type": "string",
+      "enum": [
+        "submit_command"
+      ]
+    },
+    "RpcResponseSubmitTaskError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseSubmitTaskOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponseSubmitTaskOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseSubmitTaskOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/CommandReceipt"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponseSubmitTaskOkOperation": {
+      "type": "string",
+      "enum": [
+        "submit_task"
+      ]
+    },
+    "RpcResponseSubscribeError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/SafeError"
+        },
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_false"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseSubscribeOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "error"
+      ]
+    },
+    "RpcResponseSubscribeOk": {
+      "type": "object",
+      "properties": {
+        "frame_kind": {
+          "$ref": "#/$defs/RpcResponseHandshakeOkFrameKind"
+        },
+        "ok": {
+          "$ref": "#/$defs/Literal_true"
+        },
+        "operation": {
+          "$ref": "#/$defs/RpcResponseSubscribeOkOperation"
+        },
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "result": {
+          "$ref": "#/$defs/Subscription"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "frame_kind",
+        "request_id",
+        "operation",
+        "ok",
+        "result"
+      ]
+    },
+    "RpcResponseSubscribeOkOperation": {
+      "type": "string",
+      "enum": [
+        "subscribe"
+      ]
+    },
+    "RunSpec": {
+      "type": "object",
+      "properties": {
+        "accepted_input_seq": {
+          "$ref": "#/$defs/Counter"
+        },
+        "acting_principal_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "audience_policy_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "branch_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "budget_period_refs": {
+          "$ref": "#/$defs/List_DomainId_0_100"
+        },
+        "check_refs": {
+          "$ref": "#/$defs/List_DomainId_0_100"
+        },
+        "deadline": {
+          "$ref": "#/$defs/Nullable_Instant"
+        },
+        "environment_recipe_version_id": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "execution_policy_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "instruction_digests": {
+          "$ref": "#/$defs/List_Digest_0_100"
+        },
+        "model_profile_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "objective_version_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "owner_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "placement": {
+          "$ref": "#/$defs/Placement"
+        },
+        "project_id": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "requester_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "responsibility_id": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "run_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "session_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "task_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "task_revision_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "worker_id": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "workspace_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "task_id",
+        "task_revision_id",
+        "run_id",
+        "session_id",
+        "branch_id",
+        "workspace_id",
+        "project_id",
+        "worker_id",
+        "responsibility_id",
+        "requester_id",
+        "owner_id",
+        "acting_principal_id",
+        "audience_policy_id",
+        "execution_policy_id",
+        "objective_version_id",
+        "check_refs",
+        "instruction_digests",
+        "model_profile_id",
+        "environment_recipe_version_id",
+        "budget_period_refs",
+        "deadline",
+        "placement",
+        "accepted_input_seq"
+      ]
+    },
+    "RunState": {
+      "type": "string",
+      "enum": [
+        "queued",
+        "preparing",
+        "running",
+        "waiting",
+        "paused",
+        "blocked",
+        "transferring",
+        "verifying",
+        "recovering",
+        "cancelling",
+        "completed",
+        "cancelled",
+        "failed"
+      ]
+    },
+    "SafeError": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "evidence_refs": {
+          "$ref": "#/$defs/List_DomainId_0_100"
+        },
+        "message": {
+          "$ref": "#/$defs/Text_0_1024"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message",
+        "evidence_refs"
+      ]
+    },
+    "StepBinding": {
+      "type": "object",
+      "properties": {
+        "catalog_digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "context_manifest_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "deletion_generation": {
+          "$ref": "#/$defs/Counter"
+        },
+        "environment_capability_digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "instruction_digests": {
+          "$ref": "#/$defs/List_Digest_0_100"
+        },
+        "model_adapter_digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "model_profile_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "permission_generation": {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        "prompt_schema_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        },
+        "sealed_at": {
+          "$ref": "#/$defs/Instant"
+        },
+        "step_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "tool_binding_ids": {
+          "$ref": "#/$defs/List_DomainId_0_1000"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "step_id",
+        "model_profile_id",
+        "model_adapter_digest",
+        "prompt_schema_version",
+        "catalog_digest",
+        "tool_binding_ids",
+        "instruction_digests",
+        "context_manifest_id",
+        "environment_capability_digest",
+        "permission_generation",
+        "deletion_generation",
+        "sealed_at"
+      ]
+    },
+    "Subscription": {
+      "type": "object",
+      "properties": {
+        "replay_after": {
+          "$ref": "#/$defs/Counter"
+        },
+        "resync_required": {
+          "type": "boolean"
+        },
+        "snapshot": {
+          "$ref": "#/$defs/TaskSnapshot"
+        },
+        "subscription_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "subscription_id",
+        "snapshot",
+        "replay_after",
+        "resync_required"
+      ]
+    },
+    "TaskSnapshot": {
+      "type": "object",
+      "properties": {
+        "accepted_seq": {
+          "$ref": "#/$defs/Counter"
+        },
+        "applied_seq": {
+          "$ref": "#/$defs/Counter"
+        },
+        "artifact_refs": {
+          "$ref": "#/$defs/List_ArtifactRef_0_100"
+        },
+        "authority": {
+          "$ref": "#/$defs/Authority"
+        },
+        "cancellation_requested": {
+          "type": "boolean"
+        },
+        "check_refs": {
+          "$ref": "#/$defs/List_DomainId_0_100"
+        },
+        "coverage_manifest_ref": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "last_event_seq": {
+          "$ref": "#/$defs/Counter"
+        },
+        "placement": {
+          "$ref": "#/$defs/Placement"
+        },
+        "receipt_refs": {
+          "$ref": "#/$defs/List_DomainId_0_100"
+        },
+        "row_version": {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        "run_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "state": {
+          "$ref": "#/$defs/RunState"
+        },
+        "task_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "task_revision_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "wait_refs": {
+          "$ref": "#/$defs/List_DomainId_0_100"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "task_id",
+        "task_revision_id",
+        "run_id",
+        "row_version",
+        "state",
+        "authority",
+        "placement",
+        "accepted_seq",
+        "applied_seq",
+        "last_event_seq",
+        "cancellation_requested",
+        "artifact_refs",
+        "check_refs",
+        "receipt_refs",
+        "wait_refs",
+        "coverage_manifest_ref"
+      ]
+    },
+    "TerminalRunState": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "cancelled",
+        "failed"
+      ]
+    },
+    "Text_0_1024": {
+      "type": "string",
+      "maxLength": 1024,
+      "minLength": 0
+    },
+    "Text_0_128": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 0
+    },
+    "Text_0_2048": {
+      "type": "string",
+      "maxLength": 2048,
+      "minLength": 0
+    },
+    "Text_0_256": {
+      "type": "string",
+      "maxLength": 256,
+      "minLength": 0
+    },
+    "Text_0_262144": {
+      "type": "string",
+      "maxLength": 262144,
+      "minLength": 0
+    },
+    "Text_0_32768": {
+      "type": "string",
+      "maxLength": 32768,
+      "minLength": 0
+    },
+    "Text_0_512": {
+      "type": "string",
+      "maxLength": 512,
+      "minLength": 0
+    },
+    "Text_0_8192": {
+      "type": "string",
+      "maxLength": 8192,
+      "minLength": 0
+    },
+    "Text_1_128": {
+      "type": "string",
+      "maxLength": 128,
+      "minLength": 1
+    },
+    "ToolResult": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "artifact_refs": {
+              "$ref": "#/$defs/List_ArtifactRef_0_100"
+            },
+            "data": {
+              "$ref": "#/$defs/BoundData"
+            },
+            "invocation_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "next_cursor": {
+              "$ref": "#/$defs/Nullable_Text_0_2048"
+            },
+            "receipt_ref": {
+              "$ref": "#/$defs/Nullable_DomainId"
+            },
+            "schema_version": {
+              "$ref": "#/$defs/ProtocolVersion"
+            },
+            "status": {
+              "type": "string",
+              "const": "succeeded"
+            },
+            "truncated": {
+              "type": "boolean"
+            },
+            "usage_refs": {
+              "$ref": "#/$defs/List_DomainId_0_100"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "invocation_id",
+            "schema_version",
+            "artifact_refs",
+            "receipt_ref",
+            "truncated",
+            "next_cursor",
+            "usage_refs",
+            "data"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "artifact_refs": {
+              "$ref": "#/$defs/List_ArtifactRef_0_100"
+            },
+            "data": {
+              "$ref": "#/$defs/ToolResultRunningData"
+            },
+            "invocation_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "next_cursor": {
+              "$ref": "#/$defs/Nullable_Text_0_2048"
+            },
+            "receipt_ref": {
+              "$ref": "#/$defs/Nullable_DomainId"
+            },
+            "schema_version": {
+              "$ref": "#/$defs/ProtocolVersion"
+            },
+            "status": {
+              "type": "string",
+              "const": "running"
+            },
+            "truncated": {
+              "type": "boolean"
+            },
+            "usage_refs": {
+              "$ref": "#/$defs/List_DomainId_0_100"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "invocation_id",
+            "schema_version",
+            "artifact_refs",
+            "receipt_ref",
+            "truncated",
+            "next_cursor",
+            "usage_refs",
+            "data"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "artifact_refs": {
+              "$ref": "#/$defs/List_ArtifactRef_0_100"
+            },
+            "data": {
+              "$ref": "#/$defs/ToolResultAwaitingInputData"
+            },
+            "invocation_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "next_cursor": {
+              "$ref": "#/$defs/Nullable_Text_0_2048"
+            },
+            "receipt_ref": {
+              "$ref": "#/$defs/Nullable_DomainId"
+            },
+            "schema_version": {
+              "$ref": "#/$defs/ProtocolVersion"
+            },
+            "status": {
+              "type": "string",
+              "const": "awaiting_input"
+            },
+            "truncated": {
+              "type": "boolean"
+            },
+            "usage_refs": {
+              "$ref": "#/$defs/List_DomainId_0_100"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "invocation_id",
+            "schema_version",
+            "artifact_refs",
+            "receipt_ref",
+            "truncated",
+            "next_cursor",
+            "usage_refs",
+            "data"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "artifact_refs": {
+              "$ref": "#/$defs/List_ArtifactRef_0_100"
+            },
+            "data": {
+              "$ref": "#/$defs/Nullable_BoundData"
+            },
+            "error": {
+              "$ref": "#/$defs/SafeError"
+            },
+            "invocation_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "next_cursor": {
+              "$ref": "#/$defs/Nullable_Text_0_2048"
+            },
+            "receipt_ref": {
+              "$ref": "#/$defs/Nullable_DomainId"
+            },
+            "schema_version": {
+              "$ref": "#/$defs/ProtocolVersion"
+            },
+            "status": {
+              "type": "string",
+              "const": "denied"
+            },
+            "truncated": {
+              "type": "boolean"
+            },
+            "usage_refs": {
+              "$ref": "#/$defs/List_DomainId_0_100"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "invocation_id",
+            "schema_version",
+            "artifact_refs",
+            "receipt_ref",
+            "truncated",
+            "next_cursor",
+            "usage_refs",
+            "error",
+            "data"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "artifact_refs": {
+              "$ref": "#/$defs/List_ArtifactRef_0_100"
+            },
+            "data": {
+              "$ref": "#/$defs/Nullable_BoundData"
+            },
+            "error": {
+              "$ref": "#/$defs/SafeError"
+            },
+            "invocation_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "next_cursor": {
+              "$ref": "#/$defs/Nullable_Text_0_2048"
+            },
+            "receipt_ref": {
+              "$ref": "#/$defs/Nullable_DomainId"
+            },
+            "schema_version": {
+              "$ref": "#/$defs/ProtocolVersion"
+            },
+            "status": {
+              "type": "string",
+              "const": "conflict"
+            },
+            "truncated": {
+              "type": "boolean"
+            },
+            "usage_refs": {
+              "$ref": "#/$defs/List_DomainId_0_100"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "invocation_id",
+            "schema_version",
+            "artifact_refs",
+            "receipt_ref",
+            "truncated",
+            "next_cursor",
+            "usage_refs",
+            "error",
+            "data"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "artifact_refs": {
+              "$ref": "#/$defs/List_ArtifactRef_0_100"
+            },
+            "data": {
+              "$ref": "#/$defs/Nullable_BoundData"
+            },
+            "error": {
+              "$ref": "#/$defs/SafeError"
+            },
+            "invocation_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "next_cursor": {
+              "$ref": "#/$defs/Nullable_Text_0_2048"
+            },
+            "receipt_ref": {
+              "$ref": "#/$defs/Nullable_DomainId"
+            },
+            "schema_version": {
+              "$ref": "#/$defs/ProtocolVersion"
+            },
+            "status": {
+              "type": "string",
+              "const": "timed_out"
+            },
+            "truncated": {
+              "type": "boolean"
+            },
+            "usage_refs": {
+              "$ref": "#/$defs/List_DomainId_0_100"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "invocation_id",
+            "schema_version",
+            "artifact_refs",
+            "receipt_ref",
+            "truncated",
+            "next_cursor",
+            "usage_refs",
+            "error",
+            "data"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "artifact_refs": {
+              "$ref": "#/$defs/List_ArtifactRef_0_100"
+            },
+            "data": {
+              "$ref": "#/$defs/Nullable_BoundData"
+            },
+            "error": {
+              "$ref": "#/$defs/SafeError"
+            },
+            "invocation_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "next_cursor": {
+              "$ref": "#/$defs/Nullable_Text_0_2048"
+            },
+            "receipt_ref": {
+              "$ref": "#/$defs/Nullable_DomainId"
+            },
+            "schema_version": {
+              "$ref": "#/$defs/ProtocolVersion"
+            },
+            "status": {
+              "type": "string",
+              "const": "cancelled"
+            },
+            "truncated": {
+              "type": "boolean"
+            },
+            "usage_refs": {
+              "$ref": "#/$defs/List_DomainId_0_100"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "invocation_id",
+            "schema_version",
+            "artifact_refs",
+            "receipt_ref",
+            "truncated",
+            "next_cursor",
+            "usage_refs",
+            "error",
+            "data"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "artifact_refs": {
+              "$ref": "#/$defs/List_ArtifactRef_0_100"
+            },
+            "data": {
+              "$ref": "#/$defs/Nullable_BoundData"
+            },
+            "error": {
+              "$ref": "#/$defs/SafeError"
+            },
+            "invocation_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "next_cursor": {
+              "$ref": "#/$defs/Nullable_Text_0_2048"
+            },
+            "receipt_ref": {
+              "$ref": "#/$defs/Nullable_DomainId"
+            },
+            "schema_version": {
+              "$ref": "#/$defs/ProtocolVersion"
+            },
+            "status": {
+              "type": "string",
+              "const": "lost"
+            },
+            "truncated": {
+              "type": "boolean"
+            },
+            "usage_refs": {
+              "$ref": "#/$defs/List_DomainId_0_100"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "invocation_id",
+            "schema_version",
+            "artifact_refs",
+            "receipt_ref",
+            "truncated",
+            "next_cursor",
+            "usage_refs",
+            "error",
+            "data"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "artifact_refs": {
+              "$ref": "#/$defs/List_ArtifactRef_0_100"
+            },
+            "data": {
+              "$ref": "#/$defs/Nullable_BoundData"
+            },
+            "error": {
+              "$ref": "#/$defs/SafeError"
+            },
+            "invocation_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "next_cursor": {
+              "$ref": "#/$defs/Nullable_Text_0_2048"
+            },
+            "receipt_ref": {
+              "$ref": "#/$defs/Nullable_DomainId"
+            },
+            "schema_version": {
+              "$ref": "#/$defs/ProtocolVersion"
+            },
+            "status": {
+              "type": "string",
+              "const": "unknown"
+            },
+            "truncated": {
+              "type": "boolean"
+            },
+            "usage_refs": {
+              "$ref": "#/$defs/List_DomainId_0_100"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "invocation_id",
+            "schema_version",
+            "artifact_refs",
+            "receipt_ref",
+            "truncated",
+            "next_cursor",
+            "usage_refs",
+            "error",
+            "data"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "artifact_refs": {
+              "$ref": "#/$defs/List_ArtifactRef_0_100"
+            },
+            "data": {
+              "$ref": "#/$defs/Nullable_BoundData"
+            },
+            "error": {
+              "$ref": "#/$defs/SafeError"
+            },
+            "invocation_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "next_cursor": {
+              "$ref": "#/$defs/Nullable_Text_0_2048"
+            },
+            "receipt_ref": {
+              "$ref": "#/$defs/Nullable_DomainId"
+            },
+            "schema_version": {
+              "$ref": "#/$defs/ProtocolVersion"
+            },
+            "status": {
+              "type": "string",
+              "const": "failed"
+            },
+            "truncated": {
+              "type": "boolean"
+            },
+            "usage_refs": {
+              "$ref": "#/$defs/List_DomainId_0_100"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "invocation_id",
+            "schema_version",
+            "artifact_refs",
+            "receipt_ref",
+            "truncated",
+            "next_cursor",
+            "usage_refs",
+            "error",
+            "data"
+          ]
+        }
+      ]
+    },
+    "ToolResultAwaitingInputData": {
+      "type": "object",
+      "properties": {
+        "request_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "request_kind": {
+          "$ref": "#/$defs/ToolResultAwaitingInputDataRequestKind"
+        },
+        "wait_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "request_id",
+        "wait_id",
+        "request_kind"
+      ]
+    },
+    "ToolResultAwaitingInputDataRequestKind": {
+      "type": "string",
+      "enum": [
+        "clarification",
+        "action_approval",
+        "artifact_review"
+      ]
+    },
+    "ToolResultRunningData": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ToolResultRunningDataV1"
+        },
+        {
+          "$ref": "#/$defs/ToolResultRunningDataV2"
+        }
+      ]
+    },
+    "ToolResultRunningDataV1": {
+      "type": "object",
+      "properties": {
+        "handle": {
+          "$ref": "#/$defs/ToolResultRunningDataV1Handle"
+        },
+        "stderr_cursor": {
+          "$ref": "#/$defs/Nullable_Text_0_2048"
+        },
+        "stdout_cursor": {
+          "$ref": "#/$defs/Nullable_Text_0_2048"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "handle",
+        "stdout_cursor",
+        "stderr_cursor"
+      ]
+    },
+    "ToolResultRunningDataV1Handle": {
+      "type": "object",
+      "properties": {
+        "environment_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "generation": {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        "handle": {
+          "$ref": "#/$defs/Text_0_256"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "environment_id",
+        "generation",
+        "handle"
+      ]
+    },
+    "ToolResultRunningDataV2": {
+      "type": "object",
+      "properties": {
+        "operation_handle": {
+          "$ref": "#/$defs/RemoteOperationHandle"
+        },
+        "poll_after_ms": {
+          "$ref": "#/$defs/Integer_1000_120000"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "operation_handle",
+        "poll_after_ms"
+      ]
+    },
+    "TransferDisposition": {
+      "type": "string",
+      "enum": [
+        "preflight",
+        "pending",
+        "committed",
+        "aborted",
+        "blocked"
+      ]
+    },
+    "TransferReceipt": {
+      "type": "object",
+      "properties": {
+        "accepted_seq": {
+          "$ref": "#/$defs/Counter"
+        },
+        "authority": {
+          "$ref": "#/$defs/Authority"
+        },
+        "destination_epoch": {
+          "$ref": "#/$defs/Nullable_PositiveCounter"
+        },
+        "disposition": {
+          "$ref": "#/$defs/TransferDisposition"
+        },
+        "gap_codes": {
+          "$ref": "#/$defs/List_Text_0_128_0_100"
+        },
+        "receipt_ref": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "run_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "source_epoch": {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        "transfer_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "transfer_id",
+        "run_id",
+        "disposition",
+        "authority",
+        "source_epoch",
+        "destination_epoch",
+        "accepted_seq",
+        "receipt_ref",
+        "gap_codes"
+      ]
+    },
+    "TrustedContext": {
+      "type": "object",
+      "properties": {
+        "approval_ref": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "attempt_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "binding_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "budget_hold_refs": {
+          "$ref": "#/$defs/List_DomainId_0_100"
+        },
+        "catalog_digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "environment_id": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "epoch": {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        "generation": {
+          "$ref": "#/$defs/Nullable_PositiveCounter"
+        },
+        "principal_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "project_id": {
+          "$ref": "#/$defs/Nullable_DomainId"
+        },
+        "run_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "step_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "workspace_id": {
+          "$ref": "#/$defs/DomainId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "workspace_id",
+        "project_id",
+        "run_id",
+        "attempt_id",
+        "step_id",
+        "principal_id",
+        "epoch",
+        "environment_id",
+        "generation",
+        "binding_id",
+        "catalog_digest",
+        "budget_hold_refs",
+        "approval_ref"
+      ]
+    },
+    "TurnOutcome": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "artifact_refs": {
+              "$ref": "#/$defs/List_ArtifactRef_0_100"
+            },
+            "check_result_refs": {
+              "$ref": "#/$defs/List_DomainId_0_100"
+            },
+            "checkpoint_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "kind": {
+              "type": "string",
+              "const": "candidate_result"
+            },
+            "objective_version_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "objective_version_id",
+            "artifact_refs",
+            "check_result_refs",
+            "checkpoint_id"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "checkpoint_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "kind": {
+              "type": "string",
+              "const": "wait_requested"
+            },
+            "wait": {
+              "$ref": "#/$defs/WaitSpec"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "wait",
+            "checkpoint_id"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "checkpoint_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "kind": {
+              "type": "string",
+              "const": "yielded"
+            },
+            "reason": {
+              "$ref": "#/$defs/TurnOutcomeYieldedReason"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "reason",
+            "checkpoint_id"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "checkpoint_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "kind": {
+              "type": "string",
+              "const": "paused"
+            },
+            "reason": {
+              "$ref": "#/$defs/TurnOutcomeYieldedReason"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "reason",
+            "checkpoint_id"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "checkpoint_id": {
+              "$ref": "#/$defs/Nullable_DomainId"
+            },
+            "cleanup_refs": {
+              "$ref": "#/$defs/List_DomainId_0_100"
+            },
+            "kind": {
+              "type": "string",
+              "const": "cancelled"
+            },
+            "unresolved_receipt_refs": {
+              "$ref": "#/$defs/List_DomainId_0_100"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "checkpoint_id",
+            "cleanup_refs",
+            "unresolved_receipt_refs"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "checkpoint_id": {
+              "$ref": "#/$defs/Nullable_DomainId"
+            },
+            "error": {
+              "$ref": "#/$defs/SafeError"
+            },
+            "kind": {
+              "type": "string",
+              "const": "failed"
+            },
+            "retry_class": {
+              "$ref": "#/$defs/TurnOutcomeFailedRetryClass"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "error",
+            "retry_class",
+            "checkpoint_id"
+          ]
+        }
+      ]
+    },
+    "TurnOutcomeFailedRetryClass": {
+      "type": "string",
+      "enum": [
+        "safe_read",
+        "reconcile_first",
+        "remediation",
+        "terminal"
+      ]
+    },
+    "TurnOutcomeYieldedReason": {
+      "type": "string",
+      "enum": [
+        "turn_limit",
+        "context_limit",
+        "user",
+        "budget",
+        "resource_limit"
+      ]
+    },
+    "UsageReport": {
+      "type": "object",
+      "properties": {
+        "currency": {
+          "$ref": "#/$defs/UsageReportCurrency"
+        },
+        "scope_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "segments": {
+          "$ref": "#/$defs/List_UsageReportSegmentsItem_0_100"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "scope_id",
+        "currency",
+        "segments"
+      ]
+    },
+    "UsageReportCurrency": {
+      "type": "string",
+      "enum": [
+        "USD"
+      ]
+    },
+    "UsageReportSegmentsItem": {
+      "type": "object",
+      "properties": {
+        "budget_period_refs": {
+          "$ref": "#/$defs/List_DomainId_0_100"
+        },
+        "estimated_amount": {
+          "$ref": "#/$defs/Nullable_Money"
+        },
+        "kind": {
+          "$ref": "#/$defs/UsageReportSegmentsItemKind"
+        },
+        "settled_amount": {
+          "$ref": "#/$defs/Money"
+        },
+        "unsettled_refs": {
+          "$ref": "#/$defs/List_DomainId_0_100"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "settled_amount",
+        "estimated_amount",
+        "unsettled_refs",
+        "budget_period_refs"
+      ]
+    },
+    "UsageReportSegmentsItemKind": {
+      "type": "string",
+      "enum": [
+        "local",
+        "cloud_agent",
+        "worker"
+      ]
+    },
+    "WaitSpec": {
+      "type": "object",
+      "properties": {
+        "conditions": {
+          "$ref": "#/$defs/List_WaitSpecConditionsItem_1_20"
+        },
+        "deadline": {
+          "$ref": "#/$defs/Nullable_Instant"
+        },
+        "mode": {
+          "$ref": "#/$defs/WaitSpecMode"
+        },
+        "wait_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "watermark": {
+          "$ref": "#/$defs/Counter"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "wait_id",
+        "mode",
+        "conditions",
+        "watermark",
+        "deadline"
+      ]
+    },
+    "WaitSpecConditionsItem": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "human"
+            },
+            "request_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "request_revision": {
+              "$ref": "#/$defs/PositiveCounter"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "request_id",
+            "request_revision"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "due_at": {
+              "$ref": "#/$defs/Instant"
+            },
+            "kind": {
+              "type": "string",
+              "const": "timer"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "due_at"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "after_watermark": {
+              "$ref": "#/$defs/Counter"
+            },
+            "event_kind": {
+              "$ref": "#/$defs/Text_0_128"
+            },
+            "expected_version_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "kind": {
+              "type": "string",
+              "const": "event"
+            },
+            "resource_id": {
+              "$ref": "#/$defs/DomainId"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "resource_id",
+            "expected_version_id",
+            "event_kind",
+            "after_watermark"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "handle": {
+              "$ref": "#/$defs/WaitSpecConditionsItemProcessHandle"
+            },
+            "kind": {
+              "type": "string",
+              "const": "process"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "handle"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "child_run_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "kind": {
+              "type": "string",
+              "const": "child"
+            },
+            "required_output_schema_digest": {
+              "$ref": "#/$defs/Digest"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "child_run_id",
+            "required_output_schema_digest"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "budget_period_id": {
+              "$ref": "#/$defs/DomainId"
+            },
+            "kind": {
+              "type": "string",
+              "const": "budget"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "budget_period_id"
+          ]
+        }
+      ]
+    },
+    "WaitSpecConditionsItemProcessHandle": {
+      "type": "object",
+      "properties": {
+        "environment_id": {
+          "$ref": "#/$defs/DomainId"
+        },
+        "generation": {
+          "$ref": "#/$defs/PositiveCounter"
+        },
+        "handle": {
+          "$ref": "#/$defs/Text_0_256"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "environment_id",
+        "generation",
+        "handle"
+      ]
+    },
+    "WaitSpecMode": {
+      "type": "string",
+      "enum": [
+        "all",
+        "any"
+      ]
+    }
+  }
+}

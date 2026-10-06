@@ -32,7 +32,7 @@ MACOS_MIN="$(python3 "$PINS" --field sqlite macos_min_version)"
 
 # ---- prerequisites ---------------------------------------------------------
 say "prerequisites"
-for tool in python3 curl unzip xcrun ar; do
+for tool in python3 curl unzip ar; do
   command -v "$tool" >/dev/null 2>&1 || die "required tool '$tool' is not on PATH"
 done
 [ -f "$PINS" ] || die "missing $PINS"
@@ -53,13 +53,15 @@ echo "target : $TARGET"
 case "$PROFILE" in
   macos-arm64)
     [ "$TARGET" = "aarch64-apple-darwin" ] || die "profile $PROFILE requires rust host aarch64-apple-darwin, got $TARGET"
+    command -v xcrun >/dev/null 2>&1 || die "required tool 'xcrun' is not on PATH"
     CLANG="$(xcrun --find clang)" || die "xcrun --find clang failed; install the Xcode Command Line Tools"
     LIBTOOL="$(xcrun --find libtool)" || die "xcrun --find libtool failed"
     SDK="$(xcrun --show-sdk-path)" || die "xcrun --show-sdk-path failed"
     [ -d "$SDK" ] || die "SDK path does not exist: $SDK"
     # libclang must be a real file for bindgen, not just a clang executable.
-    LIBCLANG_PATH="$(cd "$(dirname "$CLANG")/../lib" && pwd)"
-    [ -n "$LIBCLANG_PATH" ] || die "libclang.dylib not found. bindgen needs a real libclang; do not let build.rs fall back to any other source."
+    _LIBCLANG_DIR="$(dirname "$CLANG")/../lib"
+    [ -f "$_LIBCLANG_DIR/libclang.dylib" ] || die "libclang.dylib not found. bindgen needs a real libclang; do not let build.rs fall back to any other source."
+    LIBCLANG_PATH="$(cd "$_LIBCLANG_DIR" && pwd)"
     CLANG_VERSION="$("$CLANG" --version | head -1)"
     SDK_VERSION="$(xcrun --show-sdk-version)"
     ARCHIVE_CMD="xcrun libtool -static"

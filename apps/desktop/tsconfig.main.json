@@ -3,7 +3,8 @@
   "compilerOptions": {
     "lib": ["ES2022"],
     "types": ["node"],
-    "outDir": "dist/main"
+    "outDir": "dist/main",
+    "tsBuildInfoFile": "dist/main/.tsbuildinfo"
   },
   "include": ["src/main/**/*.ts", "src/preload/**/*.ts", "src/shared/**/*.ts"]
 }

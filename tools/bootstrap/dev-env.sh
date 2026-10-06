@@ -68,24 +68,27 @@ for _override in CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH \
     return 2 2>/dev/null || exit 2
   fi
 done
-_CLANG="$(xcrun --find clang)" || return 2 2>/dev/null || exit 2
-_SDK="$(xcrun --show-sdk-path)" || return 2 2>/dev/null || exit 2
-export LIBCLANG_PATH="$(cd "$(dirname "$_CLANG")/../lib" && pwd)"
-[ -f "$LIBCLANG_PATH/libclang.dylib" ] || {
-  echo "dev-env: selected developer toolchain has no libclang.dylib" >&2
-  return 2 2>/dev/null || exit 2
-}
-_SQLITE_FLAGS="$(python3 "$_PINS" --field sqlite common_c_flags)" || return 2 2>/dev/null || exit 2
-_MACOS_MIN="$(python3 "$_PINS" --field sqlite macos_min_version)" || return 2 2>/dev/null || exit 2
-export BINDGEN_EXTRA_CLANG_ARGS="--target=$_RUST_HOST -isysroot \"$_SDK\" -mmacosx-version-min=$_MACOS_MIN $_SQLITE_FLAGS"
-# bindgen also accepts target-specific overrides; reject those rather than
-# allowing them to take precedence over the selected arguments above.
-for _override in BINDGEN_EXTRA_CLANG_ARGS_aarch64_apple_darwin; do
-  if [ -n "${!_override:-}" ]; then
-    echo "dev-env: clear inherited $_override before building" >&2
+if [ "$(uname -s)" = Darwin ]; then
+  _CLANG="$(xcrun --find clang)" || return 2 2>/dev/null || exit 2
+  _SDK="$(xcrun --show-sdk-path)" || return 2 2>/dev/null || exit 2
+  _LIBCLANG_DIR="$(dirname "$_CLANG")/../lib"
+  [ -f "$_LIBCLANG_DIR/libclang.dylib" ] || {
+    echo "dev-env: selected developer toolchain has no libclang.dylib" >&2
     return 2 2>/dev/null || exit 2
-  fi
-done
+  }
+  export LIBCLANG_PATH="$(cd "$_LIBCLANG_DIR" && pwd)"
+  _SQLITE_FLAGS="$(python3 "$_PINS" --field sqlite common_c_flags)" || return 2 2>/dev/null || exit 2
+  _MACOS_MIN="$(python3 "$_PINS" --field sqlite macos_min_version)" || return 2 2>/dev/null || exit 2
+  export BINDGEN_EXTRA_CLANG_ARGS="--target=$_RUST_HOST -isysroot \"$_SDK\" -mmacosx-version-min=$_MACOS_MIN $_SQLITE_FLAGS"
+  # bindgen also accepts target-specific overrides; reject those rather than
+  # allowing them to take precedence over the selected arguments above.
+  for _override in BINDGEN_EXTRA_CLANG_ARGS_aarch64_apple_darwin; do
+    if [ -n "${!_override:-}" ]; then
+      echo "dev-env: clear inherited $_override before building" >&2
+      return 2 2>/dev/null || exit 2
+    fi
+  done
+fi
 
 export AVENCREW_ENV_VARS="RUSTUP_HOME CARGO_HOME PNPM_HOME AVENCREW_MANAGED_ROOT AVENCREW_TOOLCHAIN AVENCREW_SQLITE_DIR AVENCREW_ENV_ACTIVE AVENCREW_ENV_VARS SQLITE3_INCLUDE_DIR SQLITE3_LIB_DIR SQLITE3_STATIC SQLITE3_NO_PKG_CONFIG LIBSQLITE3_SYS_USE_PKG_CONFIG LIBCLANG_PATH BINDGEN_EXTRA_CLANG_ARGS AVENCREW_SQLITE_VERSION"
 

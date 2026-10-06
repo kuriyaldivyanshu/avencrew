@@ -1,0 +1,30 @@
+{
+  "name": "@avencrew/contracts-ts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Generated Avencrew wire types and TypeScript runtime checks. Generated from crates/contracts; do not edit src/wire.ts or src/wire.schema.json by hand.",
+  "type": "module",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./wire": "./src/wire.ts",
+    "./schema": "./src/wire.schema.json",
+    "./validate": "./src/validate.ts"
+  },
+  "files": [
+    "src",
+    "NOTICE"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "conformance": "node --experimental-strip-types examples/conformance.ts",
+    "check:generated": "node ../../tools/contracts/generate.mjs --check",
+    "check": "pnpm run typecheck && pnpm run conformance && pnpm run check:generated"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.1",
+    "ajv": "8.20.0",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2"
+  }
+}

@@ -7,7 +7,8 @@
     // file cannot accidentally reach one.
     "types": [],
     "jsx": "react-jsx",
-    "outDir": "dist/renderer"
+    "outDir": "dist/renderer",
+    "tsBuildInfoFile": "dist/renderer/.tsbuildinfo"
   },
   "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx", "src/shared/**/*.ts"]
 }
