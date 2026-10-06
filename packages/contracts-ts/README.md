@@ -104,7 +104,7 @@ The generated types are checked by the conformance runner:
 The runner also submits raw nested/request/type/byte-limit regressions to Rust
 and runs a browser bundle in a VM with string code generation disabled and no
 Node globals. It checks input immutability and large/deep/Unicode JSON ingress.
-Current result: `1058 passed, 0 failed` (105 examples and the 225 baseline Rust
+Current result: `1059 passed, 0 failed` (105 examples and the 225 baseline Rust
 verdicts, plus additional submitted regressions).
 
 ## What this package does not do

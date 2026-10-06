@@ -97,12 +97,14 @@ const invalidCases: Array<[string, () => unknown]> = [
 ];
 
 for (const [name, build] of invalidCases) {
-  const rustVerdict = verdicts.find((v) => v.case === `invalid/${name}`);
-  const mine = validateMessage(build(), { surface: 'internal' });
   const expectedAccept = name === 'local-authority-not-cloud';
+  const rustCase = `${expectedAccept ? 'valid' : 'invalid'}/${name}`;
+  const rustVerdict = verdicts.find((v) => v.case === rustCase);
+  const mine = validateMessage(build(), { surface: 'internal' });
   check(`invalid/${name}`, mine.ok === expectedAccept,
     `expected accept=${expectedAccept} got ts=${mine.ok}${mine.ok ? '' : ' ' + JSON.stringify(mine.violations)}`);
-  if (rustVerdict) check(`invalid/${name} agrees with Rust`, rustVerdict.accept === expectedAccept, `rust=${rustVerdict.accept}`);
+  check(`${rustCase} agrees with Rust`, rustVerdict != null && rustVerdict.accept === expectedAccept,
+    rustVerdict ? `rust=${rustVerdict.accept}` : 'no Rust verdict');
 }
 
 // ---- 4. duplicate keys (raw text; JSON.parse would silently collapse) --------

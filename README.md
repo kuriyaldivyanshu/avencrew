@@ -60,3 +60,21 @@ bash tools/bootstrap/dev-env.sh pnpm dev
 ```
 
 The desktop does not consume fixture seeds yet. Linux ARM64 remains unverified.
+
+## Continuous integration
+
+[Scaffold checks](.github/workflows/scaffold.yml) run on pushes to `main` and
+`setup/initial-foundation`, PRs targeting `main`, and manual dispatch. The
+workflow uses one standard macOS ARM64 runner and the tracked toolchain/native
+recipes. Rust, desktop, contracts and fixture checks have separate steps.
+
+Run the same checks locally after dependency setup:
+
+```sh
+bash tools/verification/check.sh all
+```
+
+See [verification scope and prerequisites](tools/verification/README.md).
+Linux ARM64, desktop launch and runtime recovery/isolation are not established
+by a passing scaffold job. This public-repository workflow skips private repos
+rather than automatically switching to billed execution.
