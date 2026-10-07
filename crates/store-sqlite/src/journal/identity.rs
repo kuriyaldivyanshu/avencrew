@@ -594,7 +594,11 @@ fn commit_barrier(database: &std::path::Path, stage: &str) -> Result<(), StoreEr
         return Ok(());
     }
     let root = database.parent().ok_or(invalid("missing test root"))?;
-    std::fs::write(root.join("identity-crash-ready"), stage)?;
+    std::fs::write(root.join("identity-crash-pending"), stage)?;
+    std::fs::rename(
+        root.join("identity-crash-pending"),
+        root.join("identity-crash-ready"),
+    )?;
     let started = std::time::Instant::now();
     while started.elapsed() < std::time::Duration::from_secs(30) {
         std::thread::sleep(std::time::Duration::from_millis(20));
@@ -613,6 +617,11 @@ pub(super) struct VerifiedIdentity {
     device: DomainId,
     origin: String,
     retained: Vec<(DomainId, String, i64)>,
+}
+impl VerifiedIdentity {
+    pub(super) fn device(&self) -> &DomainId {
+        &self.device
+    }
 }
 impl LocalStore {
     pub(super) async fn verified_identity(

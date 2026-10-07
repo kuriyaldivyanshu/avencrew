@@ -9,7 +9,7 @@ fn id(n: u32) -> DomainId {
 fn wrapper(table: &str, record: Value) -> Value {
     json!({"table":table,"id":record["id"],"record_schema":if table=="policy_versions" {"server-v1:target"} else {"server-v1:S0"},"record":record})
 }
-fn fixture(purpose: Purpose, raw: bool) -> Value {
+pub(crate) fn fixture(purpose: Purpose, raw: bool) -> Value {
     let task = purpose == Purpose::Task;
     let base = if task { 100 } else { 200 };
     let time = "2026-10-08T00:00:00.000000Z";
@@ -45,7 +45,7 @@ fn fixture(purpose: Purpose, raw: bool) -> Value {
     }
     json!({"schema_version":"1.0","purpose":if task {"task"}else{"artifact"},"root":{"table":if task {"tasks"}else{"artifacts"},"id":id(base)},"records":records,"referenced_blobs":if raw {json!([{"id":id(base+6),"sha256":hex(&content),"byte_size":"7"}])}else{json!([])}})
 }
-fn allocations(value: &Value) -> Vec<RecordAllocation> {
+pub(crate) fn allocations(value: &Value) -> Vec<RecordAllocation> {
     let base = if value["purpose"] == "task" {
         1000
     } else {

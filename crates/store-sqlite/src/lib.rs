@@ -3,7 +3,8 @@
 
 mod journal;
 pub use journal::{
-    BundlePublication, LocalStore, Payload, PublicationReceipt, PublishedBundle, RecordAllocation,
+    BundlePublication, CommandAcceptance, ControlError, LocalRunReceipt, LocalRunRegistration,
+    LocalStore, Payload, PublicationReceipt, PublishedBundle, RecordAllocation,
     RegistrationReceipt, StoreError, StoreStatus,
 };
 

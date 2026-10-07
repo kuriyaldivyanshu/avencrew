@@ -846,7 +846,7 @@ impl LocalStore {
 }
 
 #[cfg(test)]
-mod tests;
+pub(super) mod tests;
 #[cfg(test)]
 fn commit_barrier(database: &std::path::Path, stage: &str) -> Result<(), StoreError> {
     if std::env::var("AVENCREW_PUBLICATION_CRASH_CHILD").as_deref() != Ok("1")
@@ -854,12 +854,11 @@ fn commit_barrier(database: &std::path::Path, stage: &str) -> Result<(), StoreEr
     {
         return Ok(());
     }
-    std::fs::write(
-        database
-            .parent()
-            .ok_or(invalid("missing test root"))?
-            .join("publication-crash-ready"),
-        stage,
+    let root = database.parent().unwrap();
+    std::fs::write(root.join("publication-crash-pending"), stage)?;
+    std::fs::rename(
+        root.join("publication-crash-pending"),
+        root.join("publication-crash-ready"),
     )?;
     let started = std::time::Instant::now();
     while started.elapsed() < std::time::Duration::from_secs(30) {

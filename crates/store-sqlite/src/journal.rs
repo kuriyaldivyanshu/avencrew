@@ -13,8 +13,10 @@ use sqlx::{Connection, SqlSafeStr, SqliteConnection};
 
 const SCHEMA_VERSION: i64 = 2;
 mod blobs;
+mod commands;
 mod identity;
 mod publication;
+pub use commands::{CommandAcceptance, ControlError, LocalRunReceipt, LocalRunRegistration};
 pub use identity::RegistrationReceipt;
 pub use publication::{
     BundlePublication, Payload, PublicationReceipt, PublishedBundle, RecordAllocation,
