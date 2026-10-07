@@ -80,10 +80,20 @@ expect "rust channel manifest bytes" "$MANIFEST_BYTES" "$(wc -c < "$MANIFEST_OUT
 RUSTUP_BIN="$(command -v rustup)" || die "rustup not found on PATH. Install Rustup (https://rustup.rs) first; this script manages toolchains, not rustup itself."
 echo "rustup binary: $RUSTUP_BIN"
 
-# shellcheck disable=SC2046
-"$RUSTUP_BIN" toolchain install "$RUST_VERSION" \
-  --profile minimal \
-  $(python3 "$PINS" --field rust components | tr ' ' '\n' | sed 's/^/--component /' | tr '\n' ' ') \
+# Serve the exact verified manifest and its verified archives from a local mirror.
+# An ordinary rustup install would fetch a new manifest, bypassing our pin.
+RUST_COMPONENTS="$(python3 "$PINS" --field rust components)"
+read -r -a RUST_COMPONENT_ARRAY <<< "$RUST_COMPONENTS"
+RUST_MIRROR="$DL/rust-dist"
+python3 "$BOOTSTRAP/rust_mirror.py" "$MANIFEST_OUT" "$RUST_MIRROR" \
+  "$(python3 "$PINS" --field rust host)" "${RUST_COMPONENT_ARRAY[@]}"
+RUST_DIST_SERVER="$(python3 -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).resolve().as_uri())' "$RUST_MIRROR")"
+RUST_COMPONENT_ARGS=()
+for component in "${RUST_COMPONENT_ARRAY[@]}"; do
+  RUST_COMPONENT_ARGS+=(--component "$component")
+done
+RUSTUP_DIST_SERVER="$RUST_DIST_SERVER" "$RUSTUP_BIN" toolchain install "$RUST_VERSION" \
+  --profile minimal "${RUST_COMPONENT_ARGS[@]}" \
   --no-self-update
 
 # ---- 2. Node ---------------------------------------------------------------

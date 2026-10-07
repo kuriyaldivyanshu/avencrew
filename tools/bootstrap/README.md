@@ -51,9 +51,11 @@ Use the tools for one command:
 tools/bootstrap/dev-env.sh cargo --version
 ```
 
-Or activate for the current shell:
+Or enter Bash and activate there (`dev-env.sh` uses Bash-specific expressions
+and cannot be sourced from zsh):
 
 ```sh
+bash
 source tools/bootstrap/dev-env.sh
 cargo --version && node --version && pnpm --version && tsc --version
 ```
@@ -68,8 +70,11 @@ If `build/dev-toolchain/` is missing when you activate, run `bootstrap.sh` first
 
 Every artifact is checked **before** extraction or execution:
 
-- Rust: the dated `channel-rust-1.99.0.toml` manifest is compared to the pinned
-  SHA-256 and byte count, then rustup verifies each component's own hashes. This
+- Rust: `channel-rust-1.99.0.toml` is compared to the pinned SHA-256 and byte
+  count. A local distribution mirror preserves those exact manifest bytes and
+  verifies the minimal profile and requested component archives against its
+  hashes, including cached archives on each run. Rustup installs from that
+  mirror and checks the component hashes again. This
   is a hash comparison against the primary source, **not** an independently
   verified publisher signature.
 - Node: host archive SHA-256 against its explicit pin.
