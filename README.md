@@ -18,7 +18,7 @@ Planned capabilities include:
 
 ## Current status
 
-The Electron desktop scaffold, managed toolchain, static SQLite build, canonical Rust wire contracts, generated TypeScript validation and fixture development commands are implemented. Durable application storage, harness execution, workers and cloud services remain future work. The local private [architecture draft](docs/ARCHITECTURE_DRAFT_1.md) and database plans describe the intended application; a public checkout builds without these design documents.
+The Electron desktop scaffold, managed toolchain, static SQLite build, canonical Rust wire contracts, generated TypeScript validation and fixture development commands are implemented. The P2 local journal now boots 19 STRICT tables with exclusive supervisor ownership and transactional migrations. Task admission, command acceptance/recovery, harness execution, workers and cloud services remain future work. The local private [architecture draft](docs/ARCHITECTURE_DRAFT_1.md) and database plans describe the intended application; a public checkout builds without these design documents.
 
 Start with the [documentation review order](docs/README.md).
 
@@ -85,3 +85,10 @@ Formatting: `bash tools/bootstrap/dev-env.sh pnpm format`; checking:
 `bash tools/bootstrap/dev-env.sh pnpm lint`. Generated contracts stay
 generator-owned. Dependency inventories and known redistribution limitations
 are described in the verification guide.
+
+## Local journal boot
+
+The supervisor now supports `store-check --data-root ABSOLUTE_DIRECTORY`,
+which migrates/validates the journal and closes it. Use a disposable directory
+while developing; see [local migrations and recovery checks](migrations/sqlite/README.md).
+It does not execute tasks or start a harness.

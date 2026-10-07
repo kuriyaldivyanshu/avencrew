@@ -20,3 +20,4 @@ path = "src/main.rs"
 avencrew-contracts.workspace = true
 avencrew-harness.workspace = true
 avencrew-store-sqlite.workspace = true
+tokio.workspace = true

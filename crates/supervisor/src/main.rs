@@ -2,9 +2,9 @@
 //!
 //! # What this binary does in this scaffold
 //!
-//! Reports build provenance and exits. That is all.
+//! Reports build provenance, or boots/checks/closes the local durable store.
 //!
-//! It deliberately accepts **no** execution subcommands. A supervisor that
+//! It deliberately accepts **no** task execution subcommands. A supervisor that
 //! answered `run` or `submit` without a coordinator, a journal or a harness would
 //! be claiming authority it does not have. An honest "not implemented" is the
 //! correct scaffold behaviour; see the batch rule against fake run completions,
@@ -35,16 +35,21 @@ const COMPONENTS: [BuildInfo; 4] = [
 
 /// Command used when no arguments are given.
 const USAGE: &str = "\
-avencrew-supervisor — per-user coordinator (scaffold)
+avencrew-supervisor — per-user coordinator foundation
 
 USAGE:
     avencrew-supervisor --version
     avencrew-supervisor --build-info
+    avencrew-supervisor store-check --data-root ABSOLUTE_DIRECTORY
 
-This scaffold builds and reports provenance only. It has no execution,
-admission, scheduling, journal or environment behaviour yet.";
+store-check boots and validates the durable SQLite journal, then closes it.
+No task admission, harness execution, scheduling or environment behavior yet.";
 
 fn main() -> ExitCode {
+    let args: Vec<_> = std::env::args().skip(1).collect();
+    if args.first().map(String::as_str) == Some("store-check") {
+        return store_check(&args[1..]);
+    }
     let mut arguments = std::env::args().skip(1);
 
     match (arguments.next(), arguments.next()) {
@@ -66,6 +71,41 @@ fn main() -> ExitCode {
             eprintln!("avencrew-supervisor: unsupported argument {unknown:?}");
             eprintln!("{USAGE}");
             ExitCode::from(2)
+        }
+    }
+}
+
+fn store_check(args: &[String]) -> ExitCode {
+    if args.len() != 2 || args[0] != "--data-root" {
+        eprintln!("usage: avencrew-supervisor store-check --data-root ABSOLUTE_DIRECTORY");
+        return ExitCode::from(2);
+    }
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(runtime) => runtime,
+        Err(error) => {
+            eprintln!("supervisor runtime: {error}");
+            return ExitCode::FAILURE;
+        }
+    };
+    let result = runtime.block_on(async {
+        let store = avencrew_store_sqlite::LocalStore::open(std::path::Path::new(&args[1])).await?;
+        let status = store.status().clone();
+        store.close().await?;
+        Ok::<_, avencrew_store_sqlite::StoreError>(status)
+    });
+    match result {
+        Ok(status) => {
+            println!("journal verified: schema {} / {} domain tables / WAL / FULL / foreign keys / 5000ms busy timeout", status.schema_version, status.domain_tables);
+            println!("database: {}", status.database_path.display());
+            println!("Journal boot only; no task or harness executed.");
+            ExitCode::SUCCESS
+        }
+        Err(error) => {
+            eprintln!("{error}");
+            ExitCode::FAILURE
         }
     }
 }
