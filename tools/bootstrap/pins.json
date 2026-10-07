@@ -1,0 +1,98 @@
+{
+  "$comment": [
+    "Tracked source of truth for public development-tool acquisition.",
+    "Derived from the V-D03 dependency-selection review; that review document is",
+    "private and NOT required to build this project. Only these public versions,",
+    "URLs and integrity digests are reproduced here.",
+    "Contains no private design content. Digest verification is a hash comparison",
+    "against the primary source; no publisher signature was verified.",
+    "Regenerating from the selection review is a deliberate, reviewed act."
+  ],
+  "schema_version": "1.0",
+  "platform": "darwin-arm64",
+  "platform_note": "Apple Silicon macOS desktop and native GNU/Linux ARM64 portable build profiles; no Windows, Intel or musl fallback.",
+  "tools": {
+    "rust": {
+      "version": "1.99.0",
+      "host": "aarch64-apple-darwin",
+      "channel_manifest_url": "https://static.rust-lang.org/dist/channel-rust-1.99.0.toml",
+      "channel_manifest_sha256": "ce6dddc886364f8d786514771212cebe9b731ba82d6b859951c6b0ccc516b6a2",
+      "channel_manifest_bytes": 943486,
+      "components": [
+        "rustfmt",
+        "clippy"
+      ]
+    },
+    "node": {
+      "version": "24.21.0",
+      "archive_url": "https://nodejs.org/dist/v24.21.0/node-v24.21.0-darwin-arm64.tar.xz",
+      "archive_sha256": "6239d4cf92d864487ec8cd3615038f7b67e7f58b77b21cd2f09ea9fbd68065fe"
+    },
+    "pnpm": {
+      "version": "12.9.1",
+      "wrapper_url": "https://registry.npmjs.org/pnpm/-/pnpm-12.9.1.tgz",
+      "wrapper_sha512": "BrBV//XNINwSeB3hc87TMQzglRvy7GICEaFgRdVETVyTpmMhB2TvKaZTphBFm6A2jw50+E2AxUcjz5Wq57wNbQ==",
+      "native_package": "@pnpm/exe.darwin-arm64",
+      "native_url": "https://registry.npmjs.org/@pnpm/exe.darwin-arm64/-/exe.darwin-arm64-12.9.1.tgz",
+      "native_sha512": "sha512-+7iiEEBgYN9szPWUnAuN6eOVMTI6Hrki5bcuC9n9xl9tTnT53Tpxpo45Hml+W4IrAU0d+Tmd0sPnVIbX59PD6w=="
+    },
+    "typescript": {
+      "version": "7.0.2",
+      "wrapper_url": "https://registry.npmjs.org/typescript/-/typescript-7.0.2.tgz",
+      "wrapper_sha512": "8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA==",
+      "native_package": "@typescript/typescript-darwin-arm64",
+      "native_url": "https://registry.npmjs.org/@typescript/typescript-darwin-arm64/-/typescript-darwin-arm64-7.0.2.tgz",
+      "native_sha512": "sha512-gowzar9MwS/aRWp6f3a4KUqzRjAZjOsmGNCM6LcTgXum+dBfgsBVMN+AgvOCCbguXyick6LJhpBszxMebJ8syA=="
+    },
+    "esbuild": {
+      "version": "0.28.2",
+      "wrapper_url": "https://registry.npmjs.org/esbuild/-/esbuild-0.28.2.tgz",
+      "wrapper_sha512": "HKVLS8dvII+xoKW9kmqxbRKrnWEXfJJr/FZhhJmiqIB0e053QNYFqOBouTMO/k5sID4MvCiUCvv8b9M4h32wIA==",
+      "native_package": "@esbuild/darwin-arm64",
+      "native_url": "https://registry.npmjs.org/@esbuild/darwin-arm64/-/darwin-arm64-0.28.2.tgz",
+      "native_sha512": "sha512-n4KqkOQrraxHJcgjM1RvwbigfQKIKJVpM7xp+KsxiyUSrRdIXnt73VhrPAx0fV44hgfmIVKjxMN9J1t5jySVkw=="
+    },
+    "electron": {
+      "version": "44.5.1",
+      "wrapper_url": "https://registry.npmjs.org/electron/-/electron-44.5.1.tgz",
+      "wrapper_sha512": "lx7AYoFIiyvEvgvpyWO9kOC60xtNPpiPZAth6Fmg9NutzpCAMLwpUlaBY2EXfZyIgUdzEmLMj9KvK0Vrokl1yQ==",
+      "binary_url": "https://github.com/electron/electron/releases/download/v44.5.1/electron-v44.5.1-darwin-arm64.zip",
+      "binary_sha256": "1d75703019bb16461ae65f3081d7e6f5c0b11e901d0ccb5c343bcf7bcdd6435c"
+    },
+    "sqlite": {
+      "version": "3.53.4",
+      "version_number": "3053004",
+      "source_id": "2026-07-24 19:02:57 bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc",
+      "amalgamation_url": "https://www.sqlite.org/2026/sqlite-amalgamation-3530400.zip",
+      "amalgamation_sha3_256": "628a44cfe82c66aed1ccbbe85a562d2e33ebe64b3288981ed76285612227934e",
+      "common_c_flags": "-O2 -fPIC -DSQLITE_THREADSAFE=1 -DSQLITE_ENABLE_FTS5 -DSQLITE_ENABLE_COLUMN_METADATA -DSQLITE_OMIT_LOAD_EXTENSION -DSQLITE_DEFAULT_FOREIGN_KEYS=1 -DSQLITE_DEFAULT_SYNCHRONOUS=2 -DSQLITE_DEFAULT_WAL_SYNCHRONOUS=2",
+      "macos_min_version": "14.0"
+    }
+  },
+  "platform_overrides": {
+    "linux-arm64": {
+      "rust": {
+        "host": "aarch64-unknown-linux-gnu"
+      },
+      "node": {
+        "archive_url": "https://nodejs.org/dist/v24.21.0/node-v24.21.0-linux-arm64.tar.xz",
+        "archive_sha256": "6ad1325edbdb5649c379b75a237147a666c95d4f9ae8d340fef2d1575d289ad2"
+      },
+      "pnpm": {
+        "native_package": "@pnpm/exe.linux-arm64",
+        "native_url": "https://registry.npmjs.org/@pnpm/exe.linux-arm64/-/exe.linux-arm64-12.9.1.tgz",
+        "native_sha512": "sha512-cx+uF6xqwEtm7B8NV+1ve0xBg9gcuzQZ5R+0WgOWvKG/h978UljS6BgWs1ipIGuGgUdeVhm3PKmBltXIcczLXA=="
+      },
+      "typescript": {
+        "native_package": "@typescript/typescript-linux-arm64",
+        "native_url": "https://registry.npmjs.org/@typescript/typescript-linux-arm64/-/typescript-linux-arm64-7.0.2.tgz",
+        "native_sha512": "sha512-Qh4eU4/y3yDjnfjjyPYihMj5/ODIlmt+Bzu17OI+fiSRDW57QmU5SiN63exPRNJPKUzcc1INa1NXdrJ+MqHjUQ=="
+      },
+      "esbuild": {
+        "native_package": "@esbuild/linux-arm64",
+        "native_url": "https://registry.npmjs.org/@esbuild/linux-arm64/-/linux-arm64-0.28.2.tgz",
+        "native_sha512": "sha512-pW4AC0P3it8c7do9MVM4p51FzHzdM/TZrerurgRcHJ2WTa1VQ1CIq18xncfpBJw4ojkiZZrKW2yIBWBP92j6Ug=="
+      }
+    }
+  }
+}

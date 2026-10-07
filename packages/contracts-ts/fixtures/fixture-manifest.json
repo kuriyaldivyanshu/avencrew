@@ -1,0 +1,42 @@
+{
+  "kind": "avencrew-fixture-corpus",
+  "schema_version": "1",
+  "description": "Synthetic, committed fixtures for local development. No real customer data, credential, mailbox, API key or paid service is involved.",
+
+  "sources": ["packages/contracts-ts/fixtures/wire-examples.json"],
+
+  "determinism": {
+    "rule": "Seeding the same fixtures into two different isolated roots must produce byte-identical manifests.",
+    "why": "A development root that varies between runs cannot support reproducible debugging or a believable diff.",
+    "guarantees": [
+      "No timestamp, hostname, username, absolute path, random value or process id is written into any seeded file.",
+      "Manifest entries are sorted by path.",
+      "Fixtures are copied verbatim from committed files, never generated at seed time.",
+      "Two roots seeded from the same commit are equal byte for byte, and neither is derived from the other."
+    ]
+  },
+
+  "isolation": {
+    "rule": "The seed loader must never write to a path that could hold real application data.",
+    "how": [
+      "A data root must resolve inside the OS temporary directory.",
+      "Roots inside the repository, the home directory, or APPDATA are rejected unconditionally.",
+      "The temporary-directory rule has no override; the OS temporary directory itself is refused.",
+      "Existing nonempty roots are accepted only when all four seeded files match exactly; symlinks and unrelated files are refused. Every seeded root carries a .avencrew-fixture-root marker file."
+    ]
+  },
+
+  "notIncluded": [
+    "No database schema, migration or journal. crates/store-sqlite intentionally has no table definitions yet (P2 work).",
+    "No model execution, provider call, harness turn or tool dispatch. Nothing here can spend money.",
+    "No cloud service, remote worker or supervisor process.",
+    "No claim that any run, task, receipt or artifact succeeded.",
+    "No business scenario data beyond the wire examples. The cross-functional oracles in docs/implementation/fixtures/ specify future tests; their bytes are P3-01."
+  ],
+
+  "verification": [
+    "Seed into two separate isolated roots and compare manifests byte for byte; they must be identical.",
+    "Attempt to seed into the repository, the home directory and a simulated application data root; each must be refused with a nonzero exit.",
+    "Confirm no network access is required and no API key is read."
+  ]
+}

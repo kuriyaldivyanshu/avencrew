@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!--
+      Local assets only. No remote script, no eval, no inline script, no network
+      connection, no framing. `script-src 'self'` plus a separate external
+      stylesheet means injected script markup or an inline handler cannot run.
+      Kept free of literal tag names so this comment cannot be mistaken for one.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'; frame-ancestors 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Avencrew</title>
+    <link rel="stylesheet" href="./index.css" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./index.js"></script>
+  </body>
+</html>

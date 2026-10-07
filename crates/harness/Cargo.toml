@@ -1,0 +1,18 @@
+[package]
+name = "avencrew-harness"
+description = "Bounded agent execution harness for Avencrew."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Direction: harness -> contracts only.
+#
+# `store-sqlite` is intentionally absent. The harness must never reach the local
+# journal adapter directly; persistence goes through the coordinator contract.
+avencrew-contracts.workspace = true

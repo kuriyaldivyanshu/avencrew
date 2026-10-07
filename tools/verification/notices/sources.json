@@ -1,0 +1,46 @@
+{
+  "cargo:jsonschema-regex@0.58.5": {
+    "file": "Stranger6667-jsonschema-LICENSE",
+    "url": "https://raw.githubusercontent.com/Stranger6667/jsonschema/21a061d68984c7b1fb1aad3398a260c585ca89a9/LICENSE",
+    "sha256": "117829c3ca21efb132d81a44b55363d395ab8eea18526873bc828da4c0e5f038",
+    "revision": "21a061d68984c7b1fb1aad3398a260c585ca89a9"
+  },
+  "cargo:jsonschema-value@0.58.5": {
+    "file": "Stranger6667-jsonschema-LICENSE",
+    "url": "https://raw.githubusercontent.com/Stranger6667/jsonschema/21a061d68984c7b1fb1aad3398a260c585ca89a9/LICENSE",
+    "sha256": "117829c3ca21efb132d81a44b55363d395ab8eea18526873bc828da4c0e5f038",
+    "revision": "21a061d68984c7b1fb1aad3398a260c585ca89a9"
+  },
+  "cargo:ts-rs@12.0.1": {
+    "file": "Aleph-Alpha-ts-rs-LICENSE",
+    "url": "https://raw.githubusercontent.com/Aleph-Alpha/ts-rs/7182ad8289596097235406b715fa04506443b4ad/LICENSE",
+    "sha256": "db7f7f8e7236a2d0b41b855b2501b7b913caebbcda6ce498637a304ad1706ce1",
+    "revision": "7182ad8289596097235406b715fa04506443b4ad"
+  },
+  "cargo:ts-rs-macros@12.0.1": {
+    "file": "Aleph-Alpha-ts-rs-LICENSE",
+    "url": "https://raw.githubusercontent.com/Aleph-Alpha/ts-rs/7182ad8289596097235406b715fa04506443b4ad/LICENSE",
+    "sha256": "db7f7f8e7236a2d0b41b855b2501b7b913caebbcda6ce498637a304ad1706ce1",
+    "revision": "7182ad8289596097235406b715fa04506443b4ad"
+  },
+  "cargo:uuid-simd@0.8.0": {
+    "file": "Nugine-simd-LICENSE",
+    "url": "https://raw.githubusercontent.com/Nugine/simd/d74c030d9dc4f3cae02146d1f497ff62726ef09a/LICENSE",
+    "sha256": "71674605ec4c087fe9eb534e3e4f9e26eb2e4aabcd76a29fd156c6a844d44b3d",
+    "revision": "d74c030d9dc4f3cae02146d1f497ff62726ef09a"
+  },
+  "cargo:vsimd@0.8.0": {
+    "file": "Nugine-simd-LICENSE",
+    "url": "https://raw.githubusercontent.com/Nugine/simd/d74c030d9dc4f3cae02146d1f497ff62726ef09a/LICENSE",
+    "sha256": "71674605ec4c087fe9eb534e3e4f9e26eb2e4aabcd76a29fd156c6a844d44b3d",
+    "revision": "d74c030d9dc4f3cae02146d1f497ff62726ef09a"
+  },
+  "npm:@electron-internal/extract-zip@1.0.5": {
+    "file": "electron-extract-zip-README.md",
+    "url": "https://raw.githubusercontent.com/electron/extract-zip/b83e459fd04c53b0a1c8438a6792df8f64be47fc/README.md",
+    "revision": "b83e459fd04c53b0a1c8438a6792df8f64be47fc",
+    "sha256": "61090965f7edb896c4492e9a090bec14e8e6abe2322480e4d2acde2a478c7500",
+    "notice_missing": true,
+    "limitation": "Published archive and source revision declare BSD-2-Clause but provide no copyright/license text. Development inventory only; resolve upstream notice before redistribution."
+  }
+}

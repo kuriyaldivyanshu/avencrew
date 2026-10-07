@@ -1,0 +1,14 @@
+{
+  "extends": "../../apps/desktop/tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "noEmit": true,
+    "composite": false,
+    "tsBuildInfoFile": null,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "noUncheckedIndexedAccess": true
+  },
+  "include": ["src/**/*.ts", "examples/**/*.ts"]
+}

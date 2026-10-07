@@ -1,0 +1,27 @@
+[package]
+name = "avencrew-store-sqlite"
+description = "Local supervisor journal adapter for Avencrew."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+# build.rs is the native prerequisite guard; it adds no build dependencies.
+build = "build.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+# Direction: store-sqlite -> contracts only.
+#
+# No SQLx yet in lib code: migrations and journal behaviour are P2. The SQLx and
+# native wrapper dependencies exist for the consumed build boundary and the
+# engine diagnostic, not to populate an empty manifest.
+avencrew-contracts.workspace = true
+
+[dev-dependencies]
+# Consumed by examples/engine_check.rs, which opens a real SQLx connection.
+sqlx.workspace = true
+libsqlite3-sys.workspace = true
+tokio.workspace = true

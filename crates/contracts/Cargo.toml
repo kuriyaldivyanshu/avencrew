@@ -1,0 +1,39 @@
+[package]
+name = "avencrew-contracts"
+description = "Canonical wire contracts and bounded validation for the Avencrew runtime."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+schema-export = ["dep:schemars"]
+typescript-export = ["dep:ts-rs"]
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+schemars = { workspace = true, optional = true }
+ts-rs = { workspace = true, optional = true }
+
+[dev-dependencies]
+jsonschema.workspace = true
+
+[[example]]
+name = "export_schema"
+required-features = ["schema-export"]
+
+[[example]]
+name = "export_typescript"
+required-features = ["typescript-export"]
+
+# P1-04 cross-language conformance oracle: emits Rust's authoritative verdict
+# per synthetic example so the TypeScript package can be compared against it.
+[[example]]
+name = "export_verdicts"

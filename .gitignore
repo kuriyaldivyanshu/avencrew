@@ -44,6 +44,10 @@ coverage/
 *.sqlite3
 *.sqlite-wal
 *.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
+*.db-wal
+*.db-shm
 
 # Editor and operating system files
 .DS_Store
@@ -65,3 +69,5 @@ Thumbs.db
 /archive
 /docs
 /plan
+codex-session-*
+/schemas

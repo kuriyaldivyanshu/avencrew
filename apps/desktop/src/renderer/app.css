@@ -1,0 +1,94 @@
+/* Scaffold presentation only. No design system, no animation. */
+
+:root {
+  color-scheme: dark;
+  --surface: #12131a;
+  --panel: #1b1d27;
+  --border: #2c2f3d;
+  --text: #e6e8f0;
+  --muted: #9aa0b4;
+  --accent: #7aa2f7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--text);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: 0.01em;
+}
+
+.build-line {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.app-nav {
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.app-nav ul {
+  display: flex;
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nav-item {
+  color: var(--muted);
+  cursor: default;
+  padding: 4px 0;
+}
+
+.app-main {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 24px;
+}
+
+.empty-area {
+  flex: 1 1 260px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.empty-area h2 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.empty-area p {
+  margin: 0;
+  color: var(--muted);
+}
