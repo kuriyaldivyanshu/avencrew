@@ -14,7 +14,11 @@ use sqlx::{Connection, SqlSafeStr, SqliteConnection};
 const SCHEMA_VERSION: i64 = 2;
 mod blobs;
 mod identity;
+mod publication;
 pub use identity::RegistrationReceipt;
+pub use publication::{
+    BundlePublication, Payload, PublicationReceipt, PublishedBundle, RecordAllocation,
+};
 const ENGINE_VERSION: &str = "3.53.4";
 const ENGINE_SOURCE: &str =
     "2026-07-24 19:02:57 bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc";
@@ -182,6 +186,9 @@ impl LocalStore {
     pub async fn close(self) -> Result<(), StoreError> {
         // Keep the lock until SQLx has finished closing the actual connection.
         self.connection.close().await?;
+        // Explicitly release the lock: a concurrent fork can temporarily inherit
+        // the descriptor before exec closes it, delaying release by drop alone.
+        self._ownership.unlock()?;
         drop(self._ownership);
         Ok(())
     }

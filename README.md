@@ -18,7 +18,7 @@ Planned capabilities include:
 
 ## Current status
 
-The Electron desktop scaffold, managed toolchain, static SQLite build, canonical Rust wire contracts, generated TypeScript validation and fixture development commands are implemented. The P2 local journal now boots 19 STRICT tables with exclusive supervisor ownership and transactional migrations. Task admission, command acceptance/recovery, harness execution, workers and cloud services remain future work. The local private [architecture draft](docs/ARCHITECTURE_DRAFT_1.md) and database plans describe the intended application; a public checkout builds without these design documents.
+The Electron desktop scaffold, managed toolchain, static SQLite build, canonical Rust wire contracts, generated TypeScript validation and fixture development commands are implemented. The P2 local journal now boots 19 STRICT tables with exclusive supervisor ownership and transactional migrations. Standalone human registration and private first-version task/draft-artifact canonical publication are implemented in the store, with digest/closure checks and atomic references. Command acceptance/recovery, authenticated supervisor transport, harness execution, workers and cloud services remain future work. The local private [architecture draft](docs/ARCHITECTURE_DRAFT_1.md) and database plans describe the intended application; a public checkout builds without these design documents.
 
 Start with the [documentation review order](docs/README.md).
 

@@ -7,7 +7,7 @@ use sqlx::Row;
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
 use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
-use std::path::Path;
+use std::path::{Component, Path};
 
 pub(super) const MAX_BYTES: usize = 1_048_576;
 pub(super) const REGISTRATION_MEDIA: &str = "application/vnd.avencrew.local-registration+json";
@@ -62,7 +62,17 @@ impl LocalStore {
         id: &DomainId,
         bytes: &[u8],
     ) -> Result<String, StoreError> {
-        if bytes.is_empty() || bytes.len() > MAX_BYTES {
+        self.put_at(workspace, &relative(workspace, id), bytes)
+    }
+
+    pub(super) fn put_at(
+        &self,
+        workspace: &DomainId,
+        relative: &str,
+        bytes: &[u8],
+    ) -> Result<String, StoreError> {
+        check_relative(workspace, relative)?;
+        if bytes.len() > MAX_BYTES {
             return Err(invalid("canonical blob byte bound"));
         }
         let root = self
@@ -70,12 +80,19 @@ impl LocalStore {
             .database_path
             .parent()
             .ok_or(invalid("missing data root"))?;
-        let blobs = private_root(&root.join("blobs"))?;
-        let folder = private_root(&blobs.join(workspace.as_str()))?;
-        File::open(root)?.sync_all()?;
-        File::open(&blobs)?.sync_all()?;
-        let path = folder.join(format!("{}.json", id.as_str()));
-        let pending = folder.join(format!("{}.pending", id.as_str()));
+        let path = root.join(relative);
+        let folder = path.parent().ok_or(invalid("missing blob directory"))?;
+        let mut directory = root.to_path_buf();
+        for component in Path::new(relative)
+            .parent()
+            .ok_or(invalid("missing blob directory"))?
+            .components()
+        {
+            directory.push(component.as_os_str());
+            private_root(&directory)?;
+            File::open(directory.parent().ok_or(invalid("missing blob parent"))?)?.sync_all()?;
+        }
+        let pending = path.with_extension("pending");
         // One supervisor owns these paths. A crash may leave an unreferenced
         // staging file, or the two names from link-before-unlink. Recover only
         // this exact allocated ID; never follow a symlink or scan arbitrary paths.
@@ -92,7 +109,7 @@ impl LocalStore {
                     }
                 }
                 fs::remove_file(&pending)?;
-                File::open(&folder)?.sync_all()?;
+                File::open(folder)?.sync_all()?;
             }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
             Err(e) => return Err(e.into()),
@@ -101,8 +118,8 @@ impl LocalStore {
             if read_private(&path)? != bytes {
                 return Err(invalid("immutable canonical blob conflict"));
             }
-            File::open(&folder)?.sync_all()?;
-            return Ok(relative(workspace, id));
+            File::open(folder)?.sync_all()?;
+            return Ok(relative.to_owned());
         }
         let result = (|| {
             let mut file = OpenOptions::new()
@@ -115,7 +132,7 @@ impl LocalStore {
             // Atomic, no replacement of an existing immutable object.
             fs::hard_link(&pending, &path)?;
             fs::remove_file(&pending)?;
-            File::open(&folder)?.sync_all()?;
+            File::open(folder)?.sync_all()?;
             if read_private(&path)? != bytes {
                 return Err(invalid("canonical publication bytes changed"));
             }
@@ -125,7 +142,7 @@ impl LocalStore {
             let _ = fs::remove_file(&pending);
         }
         result?;
-        Ok(relative(workspace, id))
+        Ok(relative.to_owned())
     }
 
     pub(super) async fn read_registered_blob(
@@ -135,6 +152,18 @@ impl LocalStore {
         id: &DomainId,
         media: &str,
     ) -> Result<Vec<u8>, StoreError> {
+        self.read_at(workspace, actor, id, media, &relative(workspace, id))
+            .await
+    }
+    pub(super) async fn read_at(
+        &mut self,
+        workspace: &DomainId,
+        actor: &DomainId,
+        id: &DomainId,
+        media: &str,
+        expected_path: &str,
+    ) -> Result<Vec<u8>, StoreError> {
+        check_relative(workspace, expected_path)?;
         let row=sqlx::query("SELECT storage_relpath,sha256,byte_size,status,erased_at_us,owner_actor_id,media_type FROM local_blobs WHERE workspace_id=? AND id=?")
             .bind(workspace.as_str()).bind(id.as_str()).fetch_optional(&mut self.connection).await?
             .ok_or(invalid("missing registered canonical blob"))?;
@@ -145,7 +174,7 @@ impl LocalStore {
         let erased: Option<i64> = row.try_get("erased_at_us")?;
         let owner: String = row.try_get("owner_actor_id")?;
         let kind: String = row.try_get("media_type")?;
-        if path != relative(workspace, id)
+        if path != expected_path
             || state != "verified"
             || erased.is_some()
             || owner != actor.as_str()
@@ -163,12 +192,15 @@ impl LocalStore {
             .ok_or(invalid("missing data root"))?;
         // Validate each directory: a safe relative string alone does not reject
         // a symlinked or permissive ancestor.
-        for directory in [
-            root.to_path_buf(),
-            root.join("blobs"),
-            root.join("blobs").join(workspace.as_str()),
-        ] {
-            // Reads cannot create a missing registry directory.
+        let mut directory = root.to_path_buf();
+        std::fs::symlink_metadata(&directory)?;
+        private_root(&directory)?;
+        for component in Path::new(expected_path)
+            .parent()
+            .ok_or(invalid("missing blob directory"))?
+            .components()
+        {
+            directory.push(component.as_os_str());
             std::fs::symlink_metadata(&directory)?;
             private_root(&directory)?;
         }
@@ -178,4 +210,21 @@ impl LocalStore {
         }
         Ok(bytes)
     }
+}
+
+// Private callers derive locators from explicit UUIDs and allowlisted tables.
+// A storage locator is never an identity allocation or an authorization grant.
+fn check_relative(workspace: &DomainId, path: &str) -> Result<(), StoreError> {
+    if !path.starts_with(&format!("blobs/{}/", workspace.as_str()))
+        || path.contains('\0')
+        || path.contains('\\')
+        || path.contains("//")
+        || path.split('/').any(|p| p == "." || p == "..")
+        || Path::new(path)
+            .components()
+            .any(|c| !matches!(c, Component::Normal(_)))
+    {
+        return Err(invalid("invalid derived blob locator"));
+    }
+    Ok(())
 }

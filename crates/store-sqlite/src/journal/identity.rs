@@ -582,7 +582,7 @@ impl LocalStore {
 }
 
 #[cfg(test)]
-mod tests;
+pub(super) mod tests;
 
 // Compiled only into unit tests: interrupt the actual registration transaction,
 // never an approximation in a scratch database. No runtime environment hook.
@@ -600,4 +600,94 @@ fn commit_barrier(database: &std::path::Path, stage: &str) -> Result<(), StoreEr
         std::thread::sleep(std::time::Duration::from_millis(20));
     }
     Err(invalid("registration crash test timed out"))
+}
+
+// Private to the store. Neither callers nor bundle records can construct trust.
+pub(super) struct VerifiedIdentity {
+    pub principal: DomainId,
+    pub audience: DomainId,
+    pub execution: DomainId,
+    pub records: std::collections::BTreeMap<(String, DomainId), serde_json::Value>,
+    workspace: DomainId,
+    actor: DomainId,
+    device: DomainId,
+    origin: String,
+    retained: Vec<(DomainId, String, i64)>,
+}
+impl LocalStore {
+    pub(super) async fn verified_identity(
+        &mut self,
+        workspace: &DomainId,
+        actor: &DomainId,
+    ) -> Result<VerifiedIdentity, StoreError> {
+        let request = self.resolve_identity(workspace, actor).await?;
+        let r = &request.registration;
+        let mut records = std::collections::BTreeMap::new();
+        records.insert(
+            ("principals".into(), r.principal_id.clone()),
+            serde_json::to_value(&request.records.principal)
+                .map_err(|_| invalid("invalid retained principal"))?,
+        );
+        records.insert(
+            ("policy_versions".into(), r.audience_policy_id.clone()),
+            serde_json::to_value(&request.records.audience_policy)
+                .map_err(|_| invalid("invalid retained policy"))?,
+        );
+        records.insert(
+            ("policy_versions".into(), r.execution_policy_id.clone()),
+            serde_json::to_value(&request.records.execution_policy)
+                .map_err(|_| invalid("invalid retained policy"))?,
+        );
+        let mut retained: Vec<_> = r
+            .records
+            .all()
+            .into_iter()
+            .map(|x| {
+                (
+                    x.blob_id.clone(),
+                    x.sha256.as_str().to_owned(),
+                    x.byte_size.value() as i64,
+                )
+            })
+            .collect();
+        let bytes = canonical(r)?;
+        retained.push((r.id.clone(), hex(&digest(&bytes)), bytes.len() as i64));
+        Ok(VerifiedIdentity {
+            principal: r.principal_id.clone(),
+            audience: r.audience_policy_id.clone(),
+            execution: r.execution_policy_id.clone(),
+            records,
+            workspace: workspace.clone(),
+            actor: actor.clone(),
+            device: r.device_id.clone(),
+            origin: r.origin_public_key.as_str().into(),
+            retained,
+        })
+    }
+}
+impl VerifiedIdentity {
+    pub fn blob_ids(&self) -> impl Iterator<Item = &DomainId> {
+        self.retained.iter().map(|(id, _, _)| id)
+    }
+    pub async fn check_live(&self, conn: &mut sqlx::SqliteConnection) -> Result<(), StoreError> {
+        let now = i64::try_from(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|_| invalid("clock before epoch"))?
+                .as_micros(),
+        )
+        .map_err(|_| invalid("clock exceeds journal range"))?;
+        let available:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM local_workspaces w JOIN local_actors a ON a.workspace_id=w.id JOIN local_devices d ON d.workspace_id=w.id AND d.actor_id=a.id WHERE w.id=? AND a.id=? AND d.id=? AND w.status='active' AND w.permission_generation=0 AND w.deletion_generation=0 AND w.origin_public_key=? AND a.kind='human' AND a.status='active' AND (a.authority_expires_at_us IS NULL OR a.authority_expires_at_us>?) AND d.status='active' AND d.public_key=? AND NOT EXISTS(SELECT 1 FROM local_erasure_fences f WHERE f.workspace_id=w.id))")
+            .bind(self.workspace.as_str()).bind(self.actor.as_str()).bind(self.device.as_str()).bind(&self.origin).bind(now).bind(&self.origin).fetch_one(&mut *conn).await?;
+        if !available {
+            return Err(invalid("bundle publication identity is unavailable"));
+        }
+        for (id, hash, size) in &self.retained {
+            let available:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM local_blobs WHERE workspace_id=? AND id=? AND owner_actor_id=? AND status='verified' AND erased_at_us IS NULL AND lower(hex(sha256))=? AND byte_size=?)").bind(self.workspace.as_str()).bind(id.as_str()).bind(self.actor.as_str()).bind(hash).bind(size).fetch_one(&mut *conn).await?;
+            if !available {
+                return Err(invalid("bundle publication registration changed"));
+            }
+        }
+        Ok(())
+    }
 }

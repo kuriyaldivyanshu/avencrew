@@ -11,7 +11,7 @@ fn id(n: u32) -> String {
 fn domain(n: u32) -> DomainId {
     DomainId::new(id(n)).unwrap()
 }
-fn fixture() -> Value {
+pub(crate) fn fixture() -> Value {
     let now = "2026-10-07T00:00:00.000000Z";
     let audience = json!({"allowed_principal_ids":[id(3)]});
     let execution = json!({"default":"deny","allowed_tools":[]});
