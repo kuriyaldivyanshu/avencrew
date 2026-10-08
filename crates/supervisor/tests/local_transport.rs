@@ -76,7 +76,7 @@ fn context() -> LaunchContext {
 fn request(op: &str, body: Value, n: u32) -> Value {
     json!({"message_kind":"rpc_request","schema_version":"1.0","payload":{"frame_kind":"request","operation":op,"request_id":id(n),"body":body}})
 }
-fn handshake(grant: &LaunchGrant, n: u32) -> Value {
+fn handshake(grant: &LaunchGrant, connection_challenge: &str, n: u32) -> Value {
     let mut v = request(
         "handshake",
         json!({"supported_versions":["1.0"],"client_kind":"electron_main","build_digest":"a".repeat(64),"nonce":format!("{n:064x}"),"challenge_response":"","requested_workspace_id":id(1)}),
@@ -85,8 +85,18 @@ fn handshake(grant: &LaunchGrant, n: u32) -> Value {
     let uid = nix::unistd::geteuid().as_raw();
     let r = decode_client_request(&serde_json::to_vec(&v).unwrap()).unwrap();
     v["payload"]["body"]["challenge_response"] =
-        json!(handshake_proof(grant, uid, std::process::id(), &r).unwrap());
+        json!(handshake_proof(grant, connection_challenge, uid, std::process::id(), &r).unwrap());
     v
+}
+async fn read_challenge(s: &mut UnixStream) -> String {
+    let mut h = [0; 4];
+    tokio::time::timeout(std::time::Duration::from_secs(3), s.read_exact(&mut h))
+        .await
+        .unwrap()
+        .unwrap();
+    let mut b = vec![0; u32::from_be_bytes(h) as usize];
+    s.read_exact(&mut b).await.unwrap();
+    serde_json::from_slice(&b).unwrap()
 }
 async fn send(s: &mut UnixStream, v: &Value) {
     let b = serde_json::to_vec(v).unwrap();
@@ -105,6 +115,7 @@ async fn receive(s: &mut UnixStream) -> Value {
     serde_json::from_slice(&b).unwrap()
 }
 async fn rejected(s: &mut UnixStream, v: &Value) {
+    let _ = read_challenge(s).await;
     send(s, v).await;
     let mut h = [0; 4];
     assert!(
@@ -145,6 +156,60 @@ fn fixture() -> Value {
 }
 
 #[test]
+fn reconnects_do_not_exhaust_authentication_and_idle_frames_remain_bounded() {
+    run(async {
+        let root = Root::new();
+        seed(&root).await;
+        let supervisor = Supervisor::open(&root.0, context()).await.unwrap();
+        let grant: LaunchGrant =
+            serde_json::from_value(serde_json::to_value(supervisor.grant()).unwrap()).unwrap();
+        let (stop, shutdown) = tokio::sync::oneshot::channel();
+        let task = tokio::spawn(supervisor.serve(shutdown));
+        let mut previous_challenge = None;
+        // Cross the former lifetime cap, even using the same client nonce.
+        // Each connection instead authenticates against its own server challenge.
+        for _ in 0..1026 {
+            let mut socket = UnixStream::connect(&grant.socket_path).await.unwrap();
+            let challenge = read_challenge(&mut socket).await;
+            assert_ne!(previous_challenge.as_ref(), Some(&challenge));
+            send(&mut socket, &handshake(&grant, &challenge, 40)).await;
+            assert_eq!(receive(&mut socket).await["payload"]["ok"], true);
+            previous_challenge = Some(challenge);
+        }
+        let mut socket = UnixStream::connect(&grant.socket_path).await.unwrap();
+        let challenge = read_challenge(&mut socket).await;
+        send(&mut socket, &handshake(&grant, &challenge, 40)).await;
+        receive(&mut socket).await;
+        tokio::time::sleep(std::time::Duration::from_secs(6)).await;
+        send(
+            &mut socket,
+            &request("describe_capabilities", json!({}), 41),
+        )
+        .await;
+        assert_eq!(receive(&mut socket).await["payload"]["ok"], true);
+        // The first byte starts the five-second frame deadline, even though
+        // idle waiting itself allows sixty seconds. An incomplete header closes.
+        socket.write_all(&[0]).await.unwrap();
+        let mut byte = [0];
+        assert_eq!(
+            tokio::time::timeout(std::time::Duration::from_secs(7), socket.read(&mut byte))
+                .await
+                .unwrap()
+                .unwrap(),
+            0
+        );
+        // A frame timeout affects only that client, not future authentication.
+        let mut socket = UnixStream::connect(&grant.socket_path).await.unwrap();
+        let challenge = read_challenge(&mut socket).await;
+        send(&mut socket, &handshake(&grant, &challenge, 40)).await;
+        assert_eq!(receive(&mut socket).await["payload"]["ok"], true);
+        drop(socket);
+        stop.send(()).unwrap();
+        task.await.unwrap().unwrap();
+    });
+}
+
+#[test]
 fn authenticated_reconnect_replay_and_unauthorized_frames() {
     run(async {
         let root = Root::new();
@@ -163,8 +228,9 @@ fn authenticated_reconnect_replay_and_unauthorized_frames() {
         assert!(Supervisor::open(&root.0, context()).await.is_err());
         let (stop, shutdown) = tokio::sync::oneshot::channel();
         let task = tokio::spawn(supervisor.serve(shutdown));
-        let good = handshake(&grant, 40);
         let mut s = UnixStream::connect(&grant.socket_path).await.unwrap();
+        let challenge = read_challenge(&mut s).await;
+        let good = handshake(&grant, &challenge, 40);
         send(&mut s, &good).await;
         assert_eq!(receive(&mut s).await["payload"]["ok"], true);
         send(&mut s, &request("describe_capabilities", json!({}), 41)).await;
@@ -176,10 +242,13 @@ fn authenticated_reconnect_replay_and_unauthorized_frames() {
         assert_eq!(caps["payload"]["result"]["profiles"][1]["enabled"], false);
         drop(s);
         // Subscriber closure never shuts down the independently owned supervisor.
+        // Replaying a prior connection's proof fails: the server issues a fresh challenge.
         let mut s = UnixStream::connect(&grant.socket_path).await.unwrap();
         rejected(&mut s, &good).await;
         for mode in 0..5 {
-            let mut v = handshake(&grant, 50 + mode);
+            let mut s = UnixStream::connect(&grant.socket_path).await.unwrap();
+            let challenge = read_challenge(&mut s).await;
+            let mut v = handshake(&grant, &challenge, 50 + mode);
             match mode {
                 0 => v["payload"]["body"]["challenge_response"] = json!("0".repeat(64)),
                 1 => v["payload"]["body"]["requested_workspace_id"] = json!(id(99)),
@@ -187,13 +256,21 @@ fn authenticated_reconnect_replay_and_unauthorized_frames() {
                 3 => v["payload"]["body"]["supported_versions"] = json!(["2.0"]),
                 _ => v["payload"]["body"]["actor_id"] = json!(id(2)),
             };
-            let mut s = UnixStream::connect(&grant.socket_path).await.unwrap();
-            rejected(&mut s, &v).await;
+            // Challenge already consumed above; send the tampered frame directly.
+            send(&mut s, &v).await;
+            let mut h = [0; 4];
+            assert!(
+                tokio::time::timeout(std::time::Duration::from_secs(3), s.read_exact(&mut h))
+                    .await
+                    .unwrap()
+                    .is_err()
+            );
         }
         let mut s = UnixStream::connect(&grant.socket_path).await.unwrap();
         rejected(&mut s, &request("describe_capabilities", json!({}), 70)).await;
         let mut s = UnixStream::connect(&grant.socket_path).await.unwrap();
-        send(&mut s, &handshake(&grant, 71)).await;
+        let challenge = read_challenge(&mut s).await;
+        send(&mut s, &handshake(&grant, &challenge, 71)).await;
         receive(&mut s).await;
         send(&mut s,&request("submit_command",json!({"kind":"stop","command_id":id(500),"run_id":id(501),"idempotency_key":"stop","payload":{"reason":"stop"}}),72)).await;
         let reply = receive(&mut s).await;
@@ -242,12 +319,23 @@ fn real_process_private_pipe_launch_crash_and_stale_endpoint_restart() {
             assert_eq!(grant.generation, (n + 1).to_string());
             if let Some(old) = previous_grant.as_ref() {
                 let mut s = UnixStream::connect(&grant.socket_path).await.unwrap();
-                rejected(&mut s, &handshake(old, 90 + n)).await;
+                let challenge = read_challenge(&mut s).await;
+                // Old grant proof against the new connection challenge must fail.
+                send(&mut s, &handshake(old, &challenge, 90 + n)).await;
+                let mut h = [0; 4];
+                assert!(tokio::time::timeout(
+                    std::time::Duration::from_secs(3),
+                    s.read_exact(&mut h)
+                )
+                .await
+                .unwrap()
+                .is_err());
             }
             // Launch-channel EOF is independent of the service/window lifetime.
             drop(child.stdin.take());
             let mut s = UnixStream::connect(&grant.socket_path).await.unwrap();
-            send(&mut s, &handshake(&grant, 80 + n)).await;
+            let challenge = read_challenge(&mut s).await;
+            send(&mut s, &handshake(&grant, &challenge, 80 + n)).await;
             receive(&mut s).await;
             drop(s);
             assert!(LocalStore::open(&root.0).await.is_err());
@@ -302,7 +390,8 @@ fn committed_command_survives_lost_reply_and_reconnect() {
         let (stop, shutdown) = tokio::sync::oneshot::channel();
         let task = tokio::spawn(supervisor.serve(shutdown));
         let mut s = UnixStream::connect(&grant.socket_path).await.unwrap();
-        send(&mut s, &handshake(&grant, 110)).await;
+        let challenge = read_challenge(&mut s).await;
+        send(&mut s, &handshake(&grant, &challenge, 110)).await;
         receive(&mut s).await;
         let command = request(
             "submit_command",
@@ -317,7 +406,8 @@ fn committed_command_survives_lost_reply_and_reconnect() {
         send(&mut s, &command).await;
         drop(s);
         let mut s = UnixStream::connect(&grant.socket_path).await.unwrap();
-        send(&mut s, &handshake(&grant, 112)).await;
+        let challenge = read_challenge(&mut s).await;
+        send(&mut s, &handshake(&grant, &challenge, 112)).await;
         receive(&mut s).await;
         send(&mut s, &command).await;
         assert_eq!(receive(&mut s).await, original);
@@ -346,11 +436,13 @@ fn invalid_frames_and_runtime_metadata_fail_closed() {
         let task = tokio::spawn(supervisor.serve(shutdown));
         for length in [0, 1_048_577] {
             let mut s = UnixStream::connect(&grant.socket_path).await.unwrap();
+            let _ = read_challenge(&mut s).await;
             s.write_all(&u32::to_be_bytes(length)).await.unwrap();
             let mut b = [0];
             assert_eq!(s.read(&mut b).await.unwrap(), 0);
         }
         let mut s = UnixStream::connect(&grant.socket_path).await.unwrap();
+        let _ = read_challenge(&mut s).await;
         s.write_all(&10u32.to_be_bytes()).await.unwrap();
         s.write_all(b"{").await.unwrap();
         s.shutdown().await.unwrap();
@@ -361,6 +453,7 @@ fn invalid_frames_and_runtime_metadata_fail_closed() {
             b"{\"message_kind\":\"model_request\"}".as_slice(),
         ] {
             let mut s = UnixStream::connect(&grant.socket_path).await.unwrap();
+            let _ = read_challenge(&mut s).await;
             s.write_all(&(bytes.len() as u32).to_be_bytes())
                 .await
                 .unwrap();

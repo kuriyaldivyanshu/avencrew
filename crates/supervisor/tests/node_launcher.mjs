@@ -36,8 +36,10 @@ try {
   child.stdin.write(frame({schema_version:'avencrew.local-launch/1',workspace_id:id(1),actor_id:id(2),main_pid:process.pid,client_build_digest:'a'.repeat(64)}));
   const grant=await nextGrant();child.stdin.end();
   socket=connect(grant.socket_path); const next=reader(socket);await once(socket,'connect');
+  const connectionChallenge=await next();
+  if (typeof connectionChallenge !== 'string' || connectionChallenge.length !== 64) throw Error('connection challenge missing');
   const payload={frame_kind:'request',operation:'handshake',request_id:id(120),body:{supported_versions:['1.0'],client_kind:'electron_main',build_digest:'a'.repeat(64),nonce:'c'.repeat(64),challenge_response:'',requested_workspace_id:id(1)}};
-  const transcript={domain:'avencrew.local-handshake/1',challenge:grant.challenge,generation:grant.generation,scope_id:grant.scope_id,peer_uid:process.geteuid(),peer_pid:process.pid,request:payload};
+  const transcript={domain:'avencrew.local-handshake/1',challenge:grant.challenge,connection_challenge:connectionChallenge,generation:grant.generation,scope_id:grant.scope_id,peer_uid:process.geteuid(),peer_pid:process.pid,request:payload};
   payload.body.challenge_response=createHmac('sha256',Buffer.from(grant.session_key,'hex')).update(canonical(transcript)).digest('hex');
   socket.write(frame({message_kind:'rpc_request',schema_version:'1.0',payload}));
   if ((await next()).payload.ok !== true) throw Error('handshake failed');

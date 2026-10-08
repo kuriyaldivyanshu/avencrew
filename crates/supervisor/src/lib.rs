@@ -10,7 +10,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sha2_auth::{Digest as _, Sha256};
 use std::{
-    collections::BTreeSet,
     fs::{self, File, OpenOptions},
     io::{self, Read, Write},
     os::unix::fs::{FileTypeExt, MetadataExt, OpenOptionsExt, PermissionsExt},
@@ -26,6 +25,7 @@ use tokio::{
 
 const MAX: usize = 1_048_576;
 const DEADLINE: Duration = Duration::from_secs(5);
+const IDLE_TIMEOUT: Duration = Duration::from_secs(60);
 const MANIFEST: &str = r#"{"operation_names":["handshake","describe_capabilities","submit_command"],"profiles":[{"id":"local-controls-steer-pause-stop","enabled":true,"reason":null},{"id":"harness-execution","enabled":false,"reason":"Harness and executable admission are not implemented"}],"schema_versions":["sqlite:L0-L1"]}"#;
 fn denied() -> io::Error {
     io::Error::new(
@@ -90,7 +90,6 @@ struct Session {
     grant: LaunchGrant,
     key: [u8; 32],
     uid: u32,
-    nonces: Mutex<BTreeSet<String>>,
     build: String,
     manifest: String,
 }
@@ -177,13 +176,14 @@ fn binary_digest() -> io::Result<String> {
 }
 fn transcript(
     grant: &LaunchGrant,
+    connection_challenge: &str,
     uid: u32,
     pid: u32,
     request: &RpcRequest,
 ) -> io::Result<Vec<u8>> {
     let mut value = serde_json::to_value(request).map_err(|_| invalid())?;
     value["body"]["challenge_response"] = json!("");
-    canonical_bytes(&serde_json::to_vec(&json!({"domain":"avencrew.local-handshake/1","challenge":grant.challenge,"generation":grant.generation,"scope_id":grant.scope_id,"peer_uid":uid,"peer_pid":pid,"request":value})).map_err(|_|invalid())?).map_err(|_|invalid())
+    canonical_bytes(&serde_json::to_vec(&json!({"domain":"avencrew.local-handshake/1","challenge":grant.challenge,"connection_challenge":connection_challenge,"generation":grant.generation,"scope_id":grant.scope_id,"peer_uid":uid,"peer_pid":pid,"request":value})).map_err(|_|invalid())?).map_err(|_|invalid())
 }
 fn unhex(s: &str) -> io::Result<Vec<u8>> {
     if s.len() != 64
@@ -199,7 +199,7 @@ fn unhex(s: &str) -> io::Result<Vec<u8>> {
         .collect()
 }
 impl Session {
-    async fn authenticate(&self, request: &RpcRequest) -> io::Result<()> {
+    fn authenticate(&self, request: &RpcRequest, connection_challenge: &str) -> io::Result<()> {
         let RpcRequest::Handshake { body, .. } = request else {
             return Err(denied());
         };
@@ -219,23 +219,24 @@ impl Session {
         let mut mac = Hmac::<Sha256>::new_from_slice(&self.key).map_err(|_| invalid())?;
         mac.update(&transcript(
             &self.grant,
+            connection_challenge,
             self.uid,
             self.context.main_pid,
             request,
         )?);
         mac.verify_slice(&proof).map_err(|_| denied())?;
-        let mut nonces = self.nonces.lock().await;
-        if nonces.len() >= 1024 || !nonces.insert(body.nonce.as_str().into()) {
-            return Err(denied());
-        }
         Ok(())
     }
 }
-/// Bound both memory and slow/partial frames. State changes require full decoding.
-async fn read_frame(stream: &mut UnixStream) -> io::Result<Vec<u8>> {
+/// Idle waiting does not consume the partial-frame deadline. Once the first
+/// byte arrives, the remaining header and body share one bounded deadline.
+async fn read_frame(stream: &mut UnixStream, idle: Duration) -> io::Result<Vec<u8>> {
+    let mut h = [0; 4];
+    tokio::time::timeout(idle, stream.read_exact(&mut h[..1]))
+        .await
+        .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "local idle timeout"))??;
     tokio::time::timeout(DEADLINE, async {
-        let mut h = [0; 4];
-        stream.read_exact(&mut h).await?;
+        stream.read_exact(&mut h[1..]).await?;
         let n = u32::from_be_bytes(h) as usize;
         if n == 0 || n > MAX {
             return Err(invalid());
@@ -278,8 +279,24 @@ async fn client(
     session: Arc<Session>,
     store: Arc<Mutex<LocalStore>>,
 ) -> io::Result<()> {
-    let request = decode_client_request(&read_frame(&mut stream).await?).map_err(|_| invalid())?;
-    session.authenticate(&request).await?;
+    // The OS peer check has already passed. This public, single-connection
+    // challenge is not a credential and cannot authenticate without the pipe key.
+    let connection_challenge = hex(&random()?);
+    let challenge_bytes = serde_json::to_vec(&connection_challenge).map_err(|_| invalid())?;
+    tokio::time::timeout(DEADLINE, async {
+        stream
+            .write_all(&(challenge_bytes.len() as u32).to_be_bytes())
+            .await?;
+        stream.write_all(&challenge_bytes).await
+    })
+    .await
+    .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "local challenge timeout"))??;
+    // Handshake remains bounded from challenge publication, including idle wait.
+    let bytes = tokio::time::timeout(DEADLINE, read_frame(&mut stream, DEADLINE))
+        .await
+        .map_err(|_| io::Error::new(io::ErrorKind::TimedOut, "local handshake timeout"))??;
+    let request = decode_client_request(&bytes).map_err(|_| invalid())?;
+    session.authenticate(&request, &connection_challenge)?;
     store
         .lock()
         .await
@@ -288,7 +305,7 @@ async fn client(
         .map_err(store_error)?;
     reply(&mut stream,&request,Ok(json!({"selected_version":"1.0","supervisor_generation":session.grant.generation,"schema_min":"sqlite:L0-L1","schema_max":"sqlite:L0-L1","capability_manifest_digest":session.manifest,"max_frame_bytes":MAX,"authenticated_scope_id":session.grant.scope_id}))).await?;
     for _ in 0..256 {
-        let request = match read_frame(&mut stream).await {
+        let request = match read_frame(&mut stream, IDLE_TIMEOUT).await {
             Ok(bytes) => decode_client_request(&bytes).map_err(|_| invalid())?,
             Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => return Ok(()),
             Err(e) => return Err(e),
@@ -444,7 +461,6 @@ impl Supervisor {
                 grant,
                 key,
                 uid,
-                nonces: Mutex::new(BTreeSet::new()),
                 build: binary_digest()?,
                 manifest: hash(&canonical_bytes(MANIFEST.as_bytes()).map_err(|_| invalid())?),
             });
@@ -595,13 +611,15 @@ fn validate_launch_io(pid: u32) -> io::Result<()> {
 /// Main-session client helper; the private pipe grant is required to make proof.
 pub fn handshake_proof(
     grant: &LaunchGrant,
+    connection_challenge: &str,
     uid: u32,
     pid: u32,
     request: &RpcRequest,
 ) -> io::Result<String> {
+    unhex(connection_challenge)?;
     let key = unhex(&grant.session_key)?;
     let mut mac = Hmac::<Sha256>::new_from_slice(&key).map_err(|_| invalid())?;
-    mac.update(&transcript(grant, uid, pid, request)?);
+    mac.update(&transcript(grant, connection_challenge, uid, pid, request)?);
     Ok(hex(&mac.finalize().into_bytes()))
 }
 pub fn write_launch_grant(grant: &LaunchGrant) -> io::Result<()> {
