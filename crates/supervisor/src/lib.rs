@@ -398,6 +398,20 @@ impl Supervisor {
                 .recover_local_controls(&context.workspace_id, &context.actor_id)
                 .await
                 .map_err(store_error)?;
+            // Validate every retained page before binding, but retain only the
+            // initial bounded page. Later consumers must follow its cursor.
+            let mut cursor = startup_recovery.next_after.clone();
+            while let Some(after) = cursor {
+                let page = store
+                    .recover_local_controls_page(
+                        &context.workspace_id,
+                        &context.actor_id,
+                        Some(&after),
+                    )
+                    .await
+                    .map_err(store_error)?;
+                cursor = page.next_after;
+            }
             let root = store
                 .status()
                 .database_path

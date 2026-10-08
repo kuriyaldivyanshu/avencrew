@@ -381,12 +381,12 @@ END;
 -- recordable (there is deliberately no held+settled<=cap constraint).
 CREATE TRIGGER local_budget_periods_overlap_insert BEFORE INSERT ON local_budget_periods BEGIN
  SELECT RAISE(ABORT,'overlapping budget period') WHERE EXISTS (
-   SELECT 1 FROM local_budget_periods WHERE workspace_id=NEW.workspace_id AND scope_key=NEW.scope_key AND unit=NEW.unit AND currency IS NEW.currency AND starts_at_us<NEW.ends_at_us AND ends_at_us>NEW.starts_at_us
+   SELECT 1 FROM local_budget_periods WHERE workspace_id=NEW.workspace_id AND scope_key=NEW.scope_key AND unit=NEW.unit AND starts_at_us<NEW.ends_at_us AND ends_at_us>NEW.starts_at_us
  );
 END;
 CREATE TRIGGER local_budget_periods_overlap_update BEFORE UPDATE ON local_budget_periods BEGIN
  SELECT RAISE(ABORT,'overlapping budget period') WHERE EXISTS (
-   SELECT 1 FROM local_budget_periods WHERE workspace_id=NEW.workspace_id AND id<>NEW.id AND scope_key=NEW.scope_key AND unit=NEW.unit AND currency IS NEW.currency AND starts_at_us<NEW.ends_at_us AND ends_at_us>NEW.starts_at_us
+   SELECT 1 FROM local_budget_periods WHERE workspace_id=NEW.workspace_id AND id<>NEW.id AND scope_key=NEW.scope_key AND unit=NEW.unit AND starts_at_us<NEW.ends_at_us AND ends_at_us>NEW.starts_at_us
  );
 END;
 

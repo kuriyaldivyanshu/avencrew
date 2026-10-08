@@ -150,9 +150,15 @@ mod boot_tests {
                 .close()
                 .await
                 .unwrap();
-            assert!(LocalStore::open_existing_for_diagnostics(&root.0)
-                .await
-                .is_err());
+            for _ in 0..20 {
+                assert!(LocalStore::open_existing_for_diagnostics(&root.0)
+                    .await
+                    .is_err());
+                // Rejection must finish closing SQLite before releasing the
+                // writer lock. No background worker may retain its sidecars.
+                assert!(!root.0.join("execution.sqlite3-wal").exists());
+                assert!(!root.0.join("execution.sqlite3-shm").exists());
+            }
             let mut old = LocalStore::open_to(&root.0, 1).await.unwrap();
             let version: i64 = sqlx::query_scalar("PRAGMA user_version")
                 .fetch_one(&mut old.connection)

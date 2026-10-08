@@ -575,6 +575,11 @@ impl LocalStore {
         let uid = fs::symlink_metadata(&source)?.uid();
         directory(destination, uid)?;
         File::open(destination.parent().ok_or(BackupError::InvalidPath)?)?.sync_all()?;
+        // Establish the durable non-live marker BEFORE any retained database
+        // bytes can appear here. Keep this file until final manifest publication.
+        let mut pending_manifest = new_file(destination, "manifest.pending", uid)?;
+        pending_manifest.sync_all()?;
+        File::open(destination)?.sync_all()?;
         let snapshot = new_file(destination, "execution.sqlite3", uid)?;
         sqlx::query("VACUUM INTO ?")
             .bind(
@@ -604,6 +609,8 @@ impl LocalStore {
         .await;
         conn.close().await?;
         checked?;
+        #[cfg(test)]
+        tests::publication_barrier(destination, "after_snapshot")?;
         let database_size = fs::metadata(destination.join("execution.sqlite3"))?.len();
         let database_hash = stream(
             open_file(destination, "execution.sqlite3", uid, MAX_DB)?,
@@ -668,10 +675,9 @@ impl LocalStore {
         };
         let bytes = canonical(&manifest)?;
         let result = receipt(&manifest, &bytes)?;
-        let mut file = new_file(destination, "manifest.pending", uid)?;
-        file.write_all(&bytes)?;
-        file.sync_all()?;
-        drop(file);
+        pending_manifest.write_all(&bytes)?;
+        pending_manifest.sync_all()?;
+        drop(pending_manifest);
         #[cfg(test)]
         tests::publication_barrier(destination, "before_publish")?;
         fs::hard_link(

@@ -231,231 +231,37 @@ fn allowed_root(purpose: Purpose, table: &str) -> bool {
     }
 }
 fn allowed_record(purpose: Purpose, table: &str, schema: &str) -> bool {
-    match (purpose, table) {
-        (Purpose::Checkpoint, "checkpoints") => schema == "server-v1:S0",
-        (Purpose::Checkpoint, "manifests" | "manifest_entries") => schema == "server-v1:target",
-        (Purpose::Task, "resources") => matches!(
-            schema,
-            "server-v1:S0"
-                | "server-v1:S1"
-                | "server-v1:S2"
-                | "server-v1:S3"
-                | "server-v1:S4"
-                | "server-v1:S5"
-                | "server-v1:S6"
-                | "server-v1:target"
-        ),
-        (Purpose::Task, "resource_versions") => matches!(
-            schema,
-            "server-v1:S0"
-                | "server-v1:S1"
-                | "server-v1:S2"
-                | "server-v1:S3"
-                | "server-v1:S4"
-                | "server-v1:S5"
-                | "server-v1:S6"
-                | "server-v1:target"
-        ),
-        (Purpose::Task, "blobs") => matches!(
-            schema,
-            "server-v1:S0"
-                | "server-v1:S1"
-                | "server-v1:S2"
-                | "server-v1:S3"
-                | "server-v1:S4"
-                | "server-v1:S5"
-                | "server-v1:S6"
-                | "server-v1:target"
-        ),
-        (Purpose::Task, "tasks") => matches!(
-            schema,
-            "server-v1:S0"
-                | "server-v1:S1"
-                | "server-v1:S2"
-                | "server-v1:S3"
-                | "server-v1:S4"
-                | "server-v1:S5"
-                | "server-v1:S6"
-                | "server-v1:target"
-        ),
-        (Purpose::Task, "task_revisions") => matches!(
-            schema,
-            "server-v1:S0"
-                | "server-v1:S1"
-                | "server-v1:S2"
-                | "server-v1:S3"
-                | "server-v1:S4"
-                | "server-v1:S5"
-                | "server-v1:S6"
-                | "server-v1:target"
-        ),
-        (Purpose::Task, "task_checks") => matches!(
-            schema,
-            "server-v1:S0"
-                | "server-v1:S1"
-                | "server-v1:S2"
-                | "server-v1:S3"
-                | "server-v1:S4"
-                | "server-v1:S5"
-                | "server-v1:S6"
-                | "server-v1:target"
-        ),
-        (Purpose::Task, "checks") => matches!(
-            schema,
-            "server-v1:S0"
-                | "server-v1:S1"
-                | "server-v1:S2"
-                | "server-v1:S3"
-                | "server-v1:S4"
-                | "server-v1:S5"
-                | "server-v1:S6"
-                | "server-v1:target"
-        ),
-        (Purpose::Task, "check_results") => matches!(
-            schema,
-            "server-v1:S0"
-                | "server-v1:S1"
-                | "server-v1:S2"
-                | "server-v1:S3"
-                | "server-v1:S4"
-                | "server-v1:S5"
-                | "server-v1:S6"
-                | "server-v1:target"
-        ),
-        (Purpose::Task, "principals") => matches!(
-            schema,
-            "server-v1:S0"
-                | "server-v1:S1"
-                | "server-v1:S2"
-                | "server-v1:S3"
-                | "server-v1:S4"
-                | "server-v1:S5"
-                | "server-v1:S6"
-                | "server-v1:target"
-        ),
-        (Purpose::Task, "policy_versions") => matches!(schema, "server-v1:target"),
-        (Purpose::Artifact, "resources") => matches!(
-            schema,
-            "server-v1:S0"
-                | "server-v1:S1"
-                | "server-v1:S2"
-                | "server-v1:S3"
-                | "server-v1:S4"
-                | "server-v1:S5"
-                | "server-v1:S6"
-                | "server-v1:target"
-        ),
-        (Purpose::Artifact, "resource_versions") => matches!(
-            schema,
-            "server-v1:S0"
-                | "server-v1:S1"
-                | "server-v1:S2"
-                | "server-v1:S3"
-                | "server-v1:S4"
-                | "server-v1:S5"
-                | "server-v1:S6"
-                | "server-v1:target"
-        ),
-        (Purpose::Artifact, "blobs") => matches!(
-            schema,
-            "server-v1:S0"
-                | "server-v1:S1"
-                | "server-v1:S2"
-                | "server-v1:S3"
-                | "server-v1:S4"
-                | "server-v1:S5"
-                | "server-v1:S6"
-                | "server-v1:target"
-        ),
-        (Purpose::Artifact, "artifacts") => matches!(
-            schema,
-            "server-v1:S0"
-                | "server-v1:S1"
-                | "server-v1:S2"
-                | "server-v1:S3"
-                | "server-v1:S4"
-                | "server-v1:S5"
-                | "server-v1:S6"
-                | "server-v1:target"
-        ),
-        (Purpose::Artifact, "artifact_versions") => matches!(
-            schema,
-            "server-v1:S0"
-                | "server-v1:S1"
-                | "server-v1:S2"
-                | "server-v1:S3"
-                | "server-v1:S4"
-                | "server-v1:S5"
-                | "server-v1:S6"
-                | "server-v1:target"
-        ),
-        (Purpose::Artifact, "checks") => matches!(
-            schema,
-            "server-v1:S0"
-                | "server-v1:S1"
-                | "server-v1:S2"
-                | "server-v1:S3"
-                | "server-v1:S4"
-                | "server-v1:S5"
-                | "server-v1:S6"
-                | "server-v1:target"
-        ),
-        (Purpose::Artifact, "check_results") => matches!(
-            schema,
-            "server-v1:S0"
-                | "server-v1:S1"
-                | "server-v1:S2"
-                | "server-v1:S3"
-                | "server-v1:S4"
-                | "server-v1:S5"
-                | "server-v1:S6"
-                | "server-v1:target"
-        ),
-        (Purpose::Artifact, "principals") => matches!(
-            schema,
-            "server-v1:S0"
-                | "server-v1:S1"
-                | "server-v1:S2"
-                | "server-v1:S3"
-                | "server-v1:S4"
-                | "server-v1:S5"
-                | "server-v1:S6"
-                | "server-v1:target"
-        ),
-        (Purpose::Artifact, "policy_versions") => matches!(schema, "server-v1:target"),
-        (Purpose::Enrollment, "workspaces") => matches!(
-            schema,
-            "server-v1:S0"
-                | "server-v1:S1"
-                | "server-v1:S2"
-                | "server-v1:S3"
-                | "server-v1:S4"
-                | "server-v1:S5"
-                | "server-v1:S6"
-                | "server-v1:target"
-        ),
-        (Purpose::Enrollment, "principals") => matches!(
-            schema,
-            "server-v1:S0"
-                | "server-v1:S1"
-                | "server-v1:S2"
-                | "server-v1:S3"
-                | "server-v1:S4"
-                | "server-v1:S5"
-                | "server-v1:S6"
-                | "server-v1:target"
-        ),
-        (Purpose::Enrollment, "devices") => matches!(
-            schema,
-            "server-v1:S0"
-                | "server-v1:S1"
-                | "server-v1:S2"
-                | "server-v1:S3"
-                | "server-v1:S4"
-                | "server-v1:S5"
-                | "server-v1:S6"
-                | "server-v1:target"
-        ),
+    let allowed = match (purpose, table) {
+        (Purpose::Checkpoint, "checkpoints") => return schema == "server-v1:S0",
+        (Purpose::Checkpoint, "manifests" | "manifest_entries") => {
+            return schema == "server-v1:target"
+        }
+        (Purpose::Task | Purpose::Artifact, "policy_versions") => {
+            return schema == "server-v1:target"
+        }
+        (
+            Purpose::Task,
+            "resources" | "resource_versions" | "blobs" | "tasks" | "task_revisions"
+            | "task_checks" | "checks" | "check_results" | "principals",
+        ) => true,
+        (
+            Purpose::Artifact,
+            "resources" | "resource_versions" | "blobs" | "artifacts" | "artifact_versions"
+            | "checks" | "check_results" | "principals",
+        ) => true,
+        (Purpose::Enrollment, "workspaces" | "principals" | "devices") => true,
         _ => false,
-    }
+    };
+    allowed
+        && matches!(
+            schema,
+            "server-v1:S0"
+                | "server-v1:S1"
+                | "server-v1:S2"
+                | "server-v1:S3"
+                | "server-v1:S4"
+                | "server-v1:S5"
+                | "server-v1:S6"
+                | "server-v1:target"
+        )
 }

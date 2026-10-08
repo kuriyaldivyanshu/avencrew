@@ -166,6 +166,9 @@ impl LocalStore {
             .synchronous(SqliteSynchronous::Full)
             .busy_timeout(Duration::from_millis(5000));
         let mut connection = SqliteConnection::connect_with(&options).await?;
+        // A rejected boot must await the SQLite worker's close while the
+        // writer lock remains held; Drop only schedules asynchronous cleanup.
+        let opened: Result<StoreStatus, StoreError> = async {
         verify_settings(&mut connection).await?;
         let version: i64 = sqlx::query_scalar("PRAGMA user_version")
             .fetch_one(&mut connection)
@@ -223,10 +226,19 @@ impl LocalStore {
             validate_optional_file(&root.join(format!("execution.sqlite3{suffix}")))?;
         }
         File::open(&root)?.sync_all()?;
-        let status = StoreStatus {
+        Ok(StoreStatus {
             database_path: database,
             schema_version: current,
             domain_tables: if current == 1 { 6 } else { 19 },
+        })
+        }.await;
+        let status = match opened {
+            Ok(status) => status,
+            Err(error) => {
+                connection.close().await?;
+                ownership.unlock()?;
+                return Err(error);
+            }
         };
         Ok(Self {
             connection,
@@ -428,6 +440,7 @@ async fn snapshot_before_upgrade(
     }
     validate_file(&path)?;
     File::open(backups)?.sync_all()?;
+    File::open(root)?.sync_all()?;
     Ok(())
 }
 

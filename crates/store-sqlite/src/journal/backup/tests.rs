@@ -255,7 +255,7 @@ fn backup_crash_child() {
 }
 #[test]
 fn kill_around_manifest_publication_never_exposes_partial_backup_as_complete() {
-    for stage in ["before_publish", "after_publish"] {
+    for stage in ["after_snapshot", "before_publish", "after_publish"] {
         let root = Root::new();
         let parent = Root::new();
         let dest = parent.0.join("snapshot");
@@ -293,6 +293,10 @@ fn kill_around_manifest_publication_never_exposes_partial_backup_as_complete() {
                 LocalStore::inspect_backup(&dest).await.is_ok(),
                 stage == "after_publish"
             );
+            assert!(LocalStore::open(&dest).await.is_err());
+            assert!(LocalStore::open_existing_for_diagnostics(&dest)
+                .await
+                .is_err());
             LocalStore::open(&root.0)
                 .await
                 .unwrap()
@@ -447,4 +451,35 @@ fn rehashed_snapshot_with_wrong_actual_schema_is_still_refused() {
         ));
         s.close().await.unwrap();
     });
+}
+
+#[test]
+fn oversized_manifest_is_already_rejected_by_the_producer_canonicalizer() {
+    let manifest = Manifest {
+        schema_version: FORMAT.into(),
+        backup_id: id(800),
+        created_at: at(),
+        sqlite_version: ENGINE_VERSION.into(),
+        journal_schema_version: SCHEMA_VERSION,
+        database_sha256: hash(b"snapshot").unwrap(),
+        database_bytes: count(1).unwrap(),
+        blobs: (0..4096)
+            .map(|n| Blob {
+                workspace_id: id(1),
+                blob_id: id(1000 + n),
+                sha256: hash(b"blob").unwrap(),
+                byte_size: count(1).unwrap(),
+                media_type: "application/vnd.avencrew.vault-bytes".into(),
+                storage_relpath: format!(
+                    "blobs/{}/vault/{}.bin",
+                    id(1).as_str(),
+                    id(1000 + n).as_str()
+                ),
+            })
+            .collect(),
+    };
+    assert!(serde_json::to_vec(&manifest).unwrap().len() > MAX_JSON as usize);
+    // This is the exact helper called before create_backup writes or publishes
+    // its manifest. It enforces the contracts' existing 1 MiB input cap.
+    assert!(canonical(&manifest).is_err());
 }

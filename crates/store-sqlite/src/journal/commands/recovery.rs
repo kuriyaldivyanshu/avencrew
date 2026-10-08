@@ -14,6 +14,7 @@ pub enum RecoveryGate {
     CancellationPending,
     ReconciliationRequired,
     AwaitingControlConsumer,
+    HistoryLimit,
 }
 /// Contains sensitive input; deliberately has no Debug or logging representation.
 pub struct RecoveredControl {
@@ -35,10 +36,12 @@ pub struct RecoveredRun {
     pub last_event: PositiveCounter,
     pub gate: RecoveryGate,
     pub pending_controls: Vec<RecoveredControl>,
+    pub history_complete: bool,
 }
 /// Internal snapshot, not a portable wire message, checkpoint or permission grant.
 pub struct RecoverySnapshot {
     pub runs: Vec<RecoveredRun>,
+    pub next_after: Option<DomainId>,
 }
 impl LocalStore {
     pub async fn recover_local_controls(
@@ -46,12 +49,28 @@ impl LocalStore {
         workspace: &DomainId,
         actor: &DomainId,
     ) -> Result<RecoverySnapshot, ControlError> {
+        self.recover_local_controls_page(workspace, actor, None)
+            .await
+    }
+    /// Bounded keyset page. A next cursor means this is not a complete snapshot.
+    pub async fn recover_local_controls_page(
+        &mut self,
+        workspace: &DomainId,
+        actor: &DomainId,
+        after: Option<&DomainId>,
+    ) -> Result<RecoverySnapshot, ControlError> {
         let identity = self.verified_identity(workspace, actor).await?;
-        let ids:Vec<String>=sqlx::query_scalar("SELECT r.id FROM local_runs r JOIN local_tasks t ON t.workspace_id=r.workspace_id AND t.id=r.task_id WHERE r.workspace_id=? AND t.owner_actor_id=? ORDER BY r.id LIMIT ?")
-            .bind(workspace.as_str()).bind(actor.as_str()).bind(MAX_RUNS+1).fetch_all(&mut self.connection).await?;
-        if ids.len() > MAX_RUNS as usize {
-            return Err(invalid("recovery run limit exceeded").into());
-        }
+        let mut ids:Vec<String>=sqlx::query_scalar("SELECT r.id FROM local_runs r JOIN local_tasks t ON t.workspace_id=r.workspace_id AND t.id=r.task_id WHERE r.workspace_id=? AND t.owner_actor_id=? AND (? IS NULL OR r.id>?) ORDER BY r.id LIMIT ?")
+            .bind(workspace.as_str()).bind(actor.as_str()).bind(after.map(DomainId::as_str)).bind(after.map(DomainId::as_str)).bind(MAX_RUNS+1).fetch_all(&mut self.connection).await?;
+        let next_after = if ids.len() > MAX_RUNS as usize {
+            Some(
+                DomainId::new(ids[MAX_RUNS as usize - 1].clone())
+                    .map_err(|_| ControlError::Conflict)?,
+            )
+        } else {
+            None
+        };
+        ids.truncate(MAX_RUNS as usize);
         let mut runs = Vec::with_capacity(ids.len());
         let mut byte_count = 0usize;
         for id in ids {
@@ -63,6 +82,57 @@ impl LocalStore {
             let task = self.read_task_bundle(workspace, actor, &row.task).await?;
             if task.receipt.version_id != row.revision {
                 return Err(ControlError::Conflict);
+            }
+            // Count/sequence projections remain cheap even when history outgrows
+            // this page's replay budget. Oversized history holds only this run.
+            let (event_count, event_max): (i64, i64) = sqlx::query_as(
+                "SELECT count(*),coalesce(max(seq),0) FROM local_events WHERE workspace_id=? AND run_id=?"
+            ).bind(workspace.as_str()).bind(run.as_str()).fetch_one(&mut self.connection).await?;
+            let (command_count, command_max, command_bytes): (i64, i64, i64) = sqlx::query_as(
+                "SELECT count(*),coalesce(max(c.seq),0),coalesce(sum(b.byte_size),0) FROM local_commands c LEFT JOIN local_blobs b ON b.workspace_id=c.workspace_id AND b.id=c.payload_blob_id WHERE c.workspace_id=? AND c.run_id=?"
+            ).bind(workspace.as_str()).bind(run.as_str()).fetch_one(&mut self.connection).await?;
+            if event_count != row.event
+                || event_max != event_count
+                || event_count == 0
+                || command_count != row.accepted
+                || command_max != command_count
+                || command_bytes < 0
+            {
+                return Err(ControlError::Conflict);
+            }
+            if event_count > MAX_EVENTS
+                || command_count > MAX_COMMANDS
+                || usize::try_from(command_bytes)
+                    .ok()
+                    .and_then(|n| byte_count.checked_add(n))
+                    .is_none_or(|n| n > MAX_BYTES)
+            {
+                let gate = if matches!(row.status.as_str(), "completed" | "cancelled" | "failed") {
+                    RecoveryGate::Terminal
+                } else if row.authority != "local"
+                    || row.device.as_deref() != Some(identity.device().as_str())
+                {
+                    RecoveryGate::AuthorityHeld
+                } else if row.cancelled || row.status == "cancelling" {
+                    RecoveryGate::CancellationPending
+                } else {
+                    RecoveryGate::HistoryLimit
+                };
+                runs.push(RecoveredRun {
+                    run,
+                    task: row.task,
+                    task_revision: row.revision,
+                    state,
+                    version: positive(row.version)?,
+                    epoch: counter(row.epoch)?,
+                    accepted: counter(row.accepted)?,
+                    applied: counter(row.applied)?,
+                    last_event: positive(row.event)?,
+                    gate,
+                    pending_controls: Vec::new(),
+                    history_complete: false,
+                });
+                continue;
             }
             let events = sqlx::query(
                 "SELECT * FROM local_events WHERE workspace_id=? AND run_id=? ORDER BY seq LIMIT ?",
@@ -250,9 +320,10 @@ impl LocalStore {
                 last_event: positive(row.event)?,
                 gate,
                 pending_controls,
+                history_complete: true,
             });
         }
         identity.check_live(&mut self.connection).await?;
-        Ok(RecoverySnapshot { runs })
+        Ok(RecoverySnapshot { runs, next_after })
     }
 }

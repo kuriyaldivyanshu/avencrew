@@ -834,3 +834,74 @@ fn recovery_rejects_corrupt_bytes_gaps_cursors_and_revoked_identity() {
         }
     });
 }
+
+#[test]
+fn retained_runs_are_recovered_in_bounded_pages_without_lifetime_exhaustion() {
+    run(async {
+        let root = Root::new();
+        let mut s = setup(&root).await;
+        for n in 0..257 {
+            s.register_local_run(LocalRunRegistration {
+                workspace: &id(1),
+                actor: &id(2),
+                task: &id(100),
+                task_revision: &id(103),
+                run: &id(1000 + n),
+                event: &id(3000 + n),
+                queue: &id(5000 + n),
+                payload_blob: &id(7000 + n),
+                at: &at(),
+            })
+            .await
+            .unwrap();
+        }
+        let page = s.recover_local_controls(&id(1), &id(2)).await.unwrap();
+        assert_eq!(page.runs.len(), 256);
+        let page = s
+            .recover_local_controls_page(&id(1), &id(2), page.next_after.as_ref())
+            .await
+            .unwrap();
+        assert_eq!(page.runs.len(), 1);
+        assert_eq!(page.runs[0].run, id(1256));
+        assert!(page.next_after.is_none());
+        s.close().await.unwrap();
+    });
+}
+
+#[test]
+fn oversized_control_history_holds_only_its_run_and_stop_remains_accepted() {
+    run(async {
+        let root = Root::new();
+        let mut s = setup(&root).await;
+        register(&mut s).await.unwrap();
+        for n in 0..1025 {
+            accept(&mut s, &command(60000 + n, "steer", n + 1))
+                .await
+                .unwrap();
+        }
+        s.register_local_run(LocalRunRegistration {
+            workspace: &id(1),
+            actor: &id(2),
+            task: &id(100),
+            task_revision: &id(103),
+            run: &id(400),
+            event: &id(401),
+            queue: &id(402),
+            payload_blob: &id(403),
+            at: &at(),
+        })
+        .await
+        .unwrap();
+        let page = s.recover_local_controls(&id(1), &id(2)).await.unwrap();
+        assert_eq!(page.runs[0].gate, RecoveryGate::HistoryLimit);
+        assert!(!page.runs[0].history_complete);
+        assert!(page.runs[0].pending_controls.is_empty());
+        assert_eq!(page.runs[1].gate, RecoveryGate::AwaitingControlConsumer);
+        assert!(page.runs[1].history_complete);
+        accept(&mut s, &command(62000, "stop", 1026)).await.unwrap();
+        let page = s.recover_local_controls(&id(1), &id(2)).await.unwrap();
+        assert_eq!(page.runs[0].gate, RecoveryGate::CancellationPending);
+        assert!(!page.runs[0].history_complete);
+        s.close().await.unwrap();
+    });
+}

@@ -584,6 +584,15 @@ fn budget_overlap_denied_but_real_overruns_remain_recordable() {
         .execute(&mut *c)
         .await
         .is_err());
+        // Currency does not partition the documented period uniqueness scope.
+        assert!(sqlx::query(
+            "INSERT INTO local_budget_periods VALUES (?,?,0,'workspace','money','EUR',5,15,0,0,0)"
+        )
+        .bind(R)
+        .bind(W)
+        .execute(&mut *c)
+        .await
+        .is_err());
         sqlx::query(
             "INSERT INTO local_budget_periods VALUES (?,?,0,'workspace','money','USD',10,20,0,0,0)",
         )

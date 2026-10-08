@@ -179,6 +179,7 @@ impl LocalStore {
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
             Err(e) => return Err(e.into()),
         }
+        let mut created_link = None;
         let result = (|| {
             let mut out = OpenOptions::new()
                 .write(true)
@@ -207,6 +208,7 @@ impl LocalStore {
                 return Err(invalid("vault import digest or size mismatch"));
             }
             out.sync_all()?;
+            let written = out.metadata()?;
             drop(out);
             match fs::symlink_metadata(&final_path) {
                 Ok(_) => {
@@ -214,6 +216,7 @@ impl LocalStore {
                 }
                 Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
                     fs::hard_link(&pending, &final_path)?;
+                    created_link = Some((written.dev(), written.ino()));
                 }
                 Err(e) => return Err(e.into()),
             }
@@ -226,6 +229,7 @@ impl LocalStore {
         if result.is_err() {
             let _ = fs::remove_file(&pending);
         }
+        let published: Result<VaultReceipt, StoreError> = async {
         result?;
         let mut tx = self.connection.begin().await?;
         identity.check_live(&mut tx).await?;
@@ -251,7 +255,36 @@ impl LocalStore {
             sha256: input.sha256.clone(),
             byte_size: input.byte_size.clone(),
         })
+        }.await;
+        if published.is_err() {
+            if let Some((dev, ino)) = created_link {
+                // Commit errors can be uncertain. Remove only our own final
+                // link after a successful authoritative absence query.
+                let referenced = sqlx::query_scalar::<_, bool>(
+                    "SELECT EXISTS(SELECT 1 FROM local_blobs WHERE storage_relpath=?)",
+                )
+                .bind(locator(input.workspace, input.id))
+                .fetch_one(&mut self.connection)
+                .await;
+                if matches!(referenced, Ok(false)) {
+                    if let Ok(m) = fs::symlink_metadata(&final_path) {
+                        if m.is_file()
+                            && m.dev() == dev
+                            && m.ino() == ino
+                            && m.nlink() == 1
+                            && m.uid() == uid
+                            && m.mode() & 0o777 == 0o600
+                        {
+                            fs::remove_file(&final_path)?;
+                            File::open(&folder)?.sync_all()?;
+                        }
+                    }
+                }
+            }
+        }
+        published
     }
+
     pub async fn open_vault_blob(
         &mut self,
         w: &DomainId,

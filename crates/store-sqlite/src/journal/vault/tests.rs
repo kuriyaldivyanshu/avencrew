@@ -118,13 +118,13 @@ fn input_failures_and_actual_rollback_publish_no_receipt() {
         sqlx::query("CREATE TEMP TRIGGER fail_vault BEFORE INSERT ON local_blobs WHEN NEW.media_type='application/vnd.avencrew.vault-bytes' BEGIN SELECT RAISE(ABORT,'vault rollback'); END").execute(&mut s.connection).await.unwrap();
         assert!(import(&mut s, 700, b"payload").await.is_err());
         assert_eq!(count(&mut s).await, 0);
-        assert!(root.0.join(locator(&id(1), &id(700))).exists());
+        assert!(!root.0.join(locator(&id(1), &id(700))).exists());
         assert!(s.open_vault_blob(&id(1), &id(2), &id(700)).await.is_err());
         sqlx::query("DROP TRIGGER fail_vault")
             .execute(&mut s.connection)
             .await
             .unwrap();
-        import(&mut s, 700, b"payload").await.unwrap();
+        import(&mut s, 700, b"different retry bytes").await.unwrap();
         assert_eq!(count(&mut s).await, 1);
         assert!(import(&mut s, 20, b"payload").await.is_err()); // Cannot reuse enrollment blob as raw bytes.
         s.close().await.unwrap();
