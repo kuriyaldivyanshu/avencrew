@@ -3,9 +3,12 @@
 
 mod journal;
 pub use journal::{
-    BundlePublication, CommandAcceptance, ControlError, LocalRunReceipt, LocalRunRegistration,
-    LocalStore, Payload, PublicationReceipt, PublishedBundle, RecordAllocation,
-    RegistrationReceipt, StoreError, StoreStatus,
+    BackupError, BackupInspection, BackupReceipt, BlobImport, BundlePublication, CheckpointFile,
+    CheckpointPublication, CheckpointReceipt, CommandAcceptance, ControlError, DiagnosticCounts,
+    FileCoverage, LocalDiagnostics, LocalRunReceipt, LocalRunRegistration, LocalStore, Payload,
+    PublicationReceipt, PublishedBundle, RecordAllocation, RecoveredControl, RecoveredRun,
+    RecoveryGate, RecoverySnapshot, RegistrationReceipt, RestoreReceipt, RestoredCheckpoint,
+    StagingCleanup, StoreError, StoreStatus, VaultReceipt,
 };
 
 use avencrew_contracts::BuildInfo;

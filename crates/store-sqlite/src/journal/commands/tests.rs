@@ -11,7 +11,7 @@ fn id(n: u32) -> DomainId {
 fn at() -> Instant {
     Instant::new("2026-10-08T01:00:00.000000Z").unwrap()
 }
-async fn setup(root: &Root) -> LocalStore {
+pub(crate) async fn setup(root: &Root) -> LocalStore {
     let mut s = LocalStore::open(&root.0).await.unwrap();
     s.bootstrap_standalone(
         &serde_json::to_vec(&identity_fixture()).unwrap(),
@@ -35,7 +35,7 @@ async fn setup(root: &Root) -> LocalStore {
     .unwrap();
     s
 }
-async fn register(s: &mut LocalStore) -> Result<LocalRunReceipt, ControlError> {
+pub(crate) async fn register(s: &mut LocalStore) -> Result<LocalRunReceipt, ControlError> {
     s.register_local_run(LocalRunRegistration {
         workspace: &id(1),
         actor: &id(2),
@@ -625,6 +625,211 @@ fn actual_sqlite_busy_and_full_refuse_acknowledgement() {
                     .unwrap();
             }
             accept(&mut s, &command(400, "stop", 1)).await.unwrap();
+            s.close().await.unwrap();
+        }
+    });
+}
+
+#[test]
+fn recovery_reopens_exact_ordered_controls_without_applying_or_claiming() {
+    run(async {
+        let root = Root::new();
+        let mut s = setup(&root).await;
+        register(&mut s).await.unwrap();
+        // UUID/key order deliberately differs from acceptance order.
+        let first = command(450, "steer", 1);
+        let second = command(400, "pause", 2);
+        let r1 = accept(&mut s, &first).await.unwrap();
+        let r2 = accept(&mut s, &second).await.unwrap();
+        let before = counts(&mut s).await;
+        s.close().await.unwrap();
+        let mut s = LocalStore::open(&root.0).await.unwrap();
+        for _ in 0..2 {
+            let snapshot = s.recover_local_controls(&id(1), &id(2)).await.unwrap();
+            assert_eq!(snapshot.runs.len(), 1);
+            let r = &snapshot.runs[0];
+            assert_eq!(r.gate, RecoveryGate::AwaitingControlConsumer);
+            assert_eq!(
+                (r.accepted.value(), r.applied.value(), r.epoch.value()),
+                (2, 0, 0)
+            );
+            assert_eq!(r.pending_controls.len(), 2);
+            assert_eq!(r.pending_controls[0].sequence.value(), 1);
+            assert_eq!(r.pending_controls[1].sequence.value(), 2);
+            assert_eq!(
+                serde_json::to_value(&r.pending_controls[0].command).unwrap(),
+                first
+            );
+            assert_eq!(
+                serde_json::to_value(&r.pending_controls[1].command).unwrap(),
+                second
+            );
+            assert_eq!(r.pending_controls[0].original_receipt, r1);
+            assert_eq!(r.pending_controls[1].original_receipt, r2);
+            assert_eq!(counts(&mut s).await, before);
+            assert_eq!(
+                run_row(&mut s.connection, &id(1), &id(300), &id(2))
+                    .await
+                    .unwrap()
+                    .status,
+                "queued"
+            );
+        }
+        accept(&mut s, &command(460, "stop", 3)).await.unwrap();
+        let before = counts(&mut s).await;
+        let snapshot = s.recover_local_controls(&id(1), &id(2)).await.unwrap();
+        assert_eq!(snapshot.runs[0].gate, RecoveryGate::CancellationPending);
+        assert_eq!(snapshot.runs[0].pending_controls.len(), 3);
+        assert_eq!(snapshot.runs[0].applied.value(), 0);
+        assert_eq!(counts(&mut s).await, before);
+        s.close().await.unwrap();
+    });
+}
+
+#[test]
+fn recovery_holds_terminal_authority_and_execution_states_without_revival() {
+    run(async {
+        for (status, authority, epoch, expected) in [
+            ("completed", "local", 0, RecoveryGate::Terminal),
+            ("cancelled", "local", 0, RecoveryGate::Terminal),
+            ("failed", "local", 0, RecoveryGate::Terminal),
+            ("queued", "sealed", 0, RecoveryGate::AuthorityHeld),
+            ("queued", "transfer_staging", 0, RecoveryGate::AuthorityHeld),
+            ("waiting", "local", 0, RecoveryGate::ReconciliationRequired),
+            ("running", "local", 2, RecoveryGate::ReconciliationRequired),
+            ("blocked", "local", 0, RecoveryGate::ReconciliationRequired),
+            ("paused", "local", 0, RecoveryGate::AwaitingControlConsumer),
+        ] {
+            let root = Root::new();
+            let mut s = setup(&root).await;
+            register(&mut s).await.unwrap();
+            let guard: String = sqlx::query_scalar(
+                "SELECT sql FROM sqlite_schema WHERE name='local_runs_state_guard'",
+            )
+            .fetch_one(&mut s.connection)
+            .await
+            .unwrap();
+            sqlx::query("DROP TRIGGER local_runs_state_guard")
+                .execute(&mut s.connection)
+                .await
+                .unwrap();
+            sqlx::query("UPDATE local_runs SET status=?,authority=?,fencing_epoch=? WHERE id=?")
+                .bind(status)
+                .bind(authority)
+                .bind(epoch)
+                .bind(id(300).as_str())
+                .execute(&mut s.connection)
+                .await
+                .unwrap();
+            sqlx::query(sqlx::AssertSqlSafe(guard.as_str()))
+                .execute(&mut s.connection)
+                .await
+                .unwrap();
+            let before = counts(&mut s).await;
+            let snapshot = s.recover_local_controls(&id(1), &id(2)).await.unwrap();
+            assert_eq!(snapshot.runs[0].gate, expected);
+            assert_eq!(counts(&mut s).await, before);
+            let row = run_row(&mut s.connection, &id(1), &id(300), &id(2))
+                .await
+                .unwrap();
+            assert_eq!(
+                (row.status.as_str(), row.authority.as_str(), row.epoch),
+                (status, authority, epoch)
+            );
+            s.close().await.unwrap();
+        }
+        // Retained attempt and uninterpreted effect history cannot grant restart.
+        for attempt in [true, false] {
+            let root = Root::new();
+            let mut s = setup(&root).await;
+            register(&mut s).await.unwrap();
+            if attempt {
+                sqlx::query("INSERT INTO local_attempts (id,workspace_id,created_at_us,run_id,epoch,placement,state,harness_build_digest,protocol_version,boot_id,started_at_us) VALUES (?,?,0,?,1,'local','lost',?,1,'previous-boot',0)")
+                    .bind(id(610).as_str()).bind(id(1).as_str()).bind(id(300).as_str()).bind("a".repeat(64)).execute(&mut s.connection).await.unwrap();
+            } else {
+                sqlx::query("INSERT INTO local_events (id,workspace_id,created_at_us,run_id,seq,epoch,event_type,schema_version,occurred_at_us,payload_blob_id) VALUES (?,?,0,?,2,0,'tool.unknown',1,0,?)")
+                    .bind(id(610).as_str()).bind(id(1).as_str()).bind(id(300).as_str()).bind(id(303).as_str()).execute(&mut s.connection).await.unwrap();
+                sqlx::query("UPDATE local_runs SET last_event_seq=2,row_version=2")
+                    .execute(&mut s.connection)
+                    .await
+                    .unwrap();
+            }
+            let before = counts(&mut s).await;
+            assert_eq!(
+                s.recover_local_controls(&id(1), &id(2)).await.unwrap().runs[0].gate,
+                RecoveryGate::ReconciliationRequired
+            );
+            assert_eq!(counts(&mut s).await, before);
+            s.close().await.unwrap();
+        }
+        // A durable wake intent is held, never interpreted as a timer firing.
+        let root = Root::new();
+        let mut s = setup(&root).await;
+        register(&mut s).await.unwrap();
+        sqlx::query("INSERT INTO local_work_queue VALUES (?,?,0,?,'wake','wait-test',0,'claimed','old-claim',100,1,?,NULL)").bind(id(600).as_str()).bind(id(1).as_str()).bind(id(300).as_str()).bind(id(303).as_str()).execute(&mut s.connection).await.unwrap();
+        assert_eq!(
+            s.recover_local_controls(&id(1), &id(2)).await.unwrap().runs[0].gate,
+            RecoveryGate::ReconciliationRequired
+        );
+        let token: String =
+            sqlx::query_scalar("SELECT claim_token FROM local_work_queue WHERE id=?")
+                .bind(id(600).as_str())
+                .fetch_one(&mut s.connection)
+                .await
+                .unwrap();
+        assert_eq!(token, "old-claim");
+        s.close().await.unwrap();
+    });
+}
+
+#[test]
+fn recovery_rejects_corrupt_bytes_gaps_cursors_and_revoked_identity() {
+    run(async {
+        for mode in 0..6 {
+            let root = Root::new();
+            let mut s = setup(&root).await;
+            register(&mut s).await.unwrap();
+            accept(&mut s, &command(400, "steer", 1)).await.unwrap();
+            accept(&mut s, &command(401, "pause", 2)).await.unwrap();
+            match mode {
+                0 => {
+                    sqlx::query("UPDATE local_commands SET seq=3 WHERE id=?")
+                        .bind(id(401).as_str())
+                        .execute(&mut s.connection)
+                        .await
+                        .unwrap();
+                }
+                1 => {
+                    sqlx::query("DELETE FROM local_events WHERE seq=2")
+                        .execute(&mut s.connection)
+                        .await
+                        .unwrap();
+                }
+                2 => {
+                    sqlx::query("UPDATE local_runs SET accepted_command_seq=3")
+                        .execute(&mut s.connection)
+                        .await
+                        .unwrap();
+                }
+                3 => {
+                    sqlx::query("UPDATE local_runs SET applied_command_seq=1")
+                        .execute(&mut s.connection)
+                        .await
+                        .unwrap();
+                }
+                4 => {
+                    std::fs::write(root.0.join(relative(&id(1), &id(30400))), b"corrupt").unwrap();
+                }
+                _ => {
+                    sqlx::query("UPDATE local_actors SET status='disabled'")
+                        .execute(&mut s.connection)
+                        .await
+                        .unwrap();
+                }
+            }
+            let before = counts(&mut s).await;
+            assert!(s.recover_local_controls(&id(1), &id(2)).await.is_err());
+            assert_eq!(counts(&mut s).await, before);
             s.close().await.unwrap();
         }
     });

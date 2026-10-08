@@ -4,7 +4,7 @@ use avencrew_contracts::{
     scalars::{Digest, DomainId, Instant},
     wire::{RpcRequest, RpcRequestHandshakeBodyClientKind},
 };
-use avencrew_store_sqlite::{CommandAcceptance, ControlError, LocalStore};
+use avencrew_store_sqlite::{CommandAcceptance, ControlError, LocalStore, RecoverySnapshot};
 use hmac::{Hmac, KeyInit, Mac};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -354,6 +354,7 @@ pub struct Supervisor {
     listener: UnixListener,
     endpoint: Endpoint,
     session: Arc<Session>,
+    startup_recovery: RecoverySnapshot,
 }
 impl Supervisor {
     pub async fn open(root: &Path, context: LaunchContext) -> io::Result<Self> {
@@ -374,6 +375,10 @@ impl Supervisor {
             )?;
             store
                 .resolve_standalone(&context.workspace_id, &context.actor_id)
+                .await
+                .map_err(store_error)?;
+            let startup_recovery = store
+                .recover_local_controls(&context.workspace_id, &context.actor_id)
                 .await
                 .map_err(store_error)?;
             let root = store
@@ -443,15 +448,16 @@ impl Supervisor {
                 build: binary_digest()?,
                 manifest: hash(&canonical_bytes(MANIFEST.as_bytes()).map_err(|_| invalid())?),
             });
-            Ok((listener, endpoint, session))
+            Ok((listener, endpoint, session, startup_recovery))
         }
         .await;
         match result {
-            Ok((listener, endpoint, session)) => Ok(Self {
+            Ok((listener, endpoint, session, startup_recovery)) => Ok(Self {
                 store,
                 listener,
                 endpoint,
                 session,
+                startup_recovery,
             }),
             Err(error) => {
                 // Close SQLite before releasing ownership, even on rejected startup.
@@ -459,6 +465,10 @@ impl Supervisor {
                 Err(error)
             }
         }
+    }
+    /// Verified startup snapshot only; not live state or a dispatch grant.
+    pub fn startup_recovery(&self) -> &RecoverySnapshot {
+        &self.startup_recovery
     }
     pub fn grant(&self) -> &LaunchGrant {
         &self.session.grant
@@ -469,6 +479,7 @@ impl Supervisor {
             listener,
             endpoint,
             session,
+            startup_recovery: _,
         } = self;
         let store = Arc::new(Mutex::new(store));
         let mut tasks: Vec<tokio::task::JoinHandle<()>> = Vec::new();

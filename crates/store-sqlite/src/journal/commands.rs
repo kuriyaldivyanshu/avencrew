@@ -11,6 +11,13 @@ use serde::{Deserialize, Serialize};
 use sqlx::{Connection, Row, SqliteConnection};
 use std::fmt;
 
+pub(super) mod checkpoints;
+mod recovery;
+pub use checkpoints::{
+    CheckpointFile, CheckpointPublication, CheckpointReceipt, FileCoverage, RestoredCheckpoint,
+};
+pub use recovery::{RecoveredControl, RecoveredRun, RecoveryGate, RecoverySnapshot};
+
 const COMMAND_MEDIA: &str = "application/vnd.avencrew.control-command+json";
 const EVENT_MEDIA: &str = "application/vnd.avencrew.control-accepted+json";
 const RUN_MEDIA: &str = "application/vnd.avencrew.local-run-registration+json";
@@ -741,7 +748,7 @@ async fn verify_event(
     Ok(())
 }
 #[cfg(test)]
-mod tests;
+pub(super) mod tests;
 #[cfg(test)]
 fn commit_barrier(database: &std::path::Path, stage: &str) -> Result<(), StoreError> {
     if std::env::var("AVENCREW_CONTROL_CRASH_STAGE").as_deref() != Ok(stage)

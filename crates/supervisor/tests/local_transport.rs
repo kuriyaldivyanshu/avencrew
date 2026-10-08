@@ -294,51 +294,8 @@ fn wrapper(table: &str, record: Value) -> Value {
 #[test]
 fn committed_command_survives_lost_reply_and_reconnect() {
     run(async {
-        use avencrew_contracts::scalars::Instant;
-        use avencrew_store_sqlite::{BundlePublication, LocalRunRegistration, RecordAllocation};
         let root = Root::new();
-        seed(&root).await;
-        let mut store = LocalStore::open(&root.0).await.unwrap();
-        let bundle = task_bundle();
-        let bytes = canonical(&bundle).unwrap();
-        let allocations: Vec<_> = bundle["records"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .enumerate()
-            .map(|(n, r)| RecordAllocation {
-                table: r["table"].as_str().unwrap().into(),
-                id: DomainId::new(r["id"].as_str().unwrap()).unwrap(),
-                blob_id: domain(1000 + n as u32),
-            })
-            .collect();
-        store
-            .publish_bundle(BundlePublication {
-                workspace: &domain(1),
-                actor: &domain(2),
-                bundle_blob_id: &domain(900),
-                bytes: &bytes,
-                sha256: digest(&bytes),
-                record_blobs: &allocations,
-                payloads: &[],
-            })
-            .await
-            .unwrap();
-        store
-            .register_local_run(LocalRunRegistration {
-                workspace: &domain(1),
-                actor: &domain(2),
-                task: &domain(100),
-                task_revision: &domain(103),
-                run: &domain(300),
-                event: &domain(301),
-                queue: &domain(302),
-                payload_blob: &domain(303),
-                at: &Instant::new("2026-10-08T01:00:00.000000Z").unwrap(),
-            })
-            .await
-            .unwrap();
-        store.close().await.unwrap();
+        seed_run(&root).await;
         let supervisor = Supervisor::open(&root.0, context()).await.unwrap();
         let grant: LaunchGrant =
             serde_json::from_value(serde_json::to_value(supervisor.grant()).unwrap()).unwrap();
@@ -447,5 +404,104 @@ fn node_launcher_inherited_socket_pair_and_cross_language_proof() {
             String::from_utf8_lossy(&output.stderr)
         );
         assert_eq!(output.stdout, b"node launch and proof verified\n");
+    });
+}
+
+async fn seed_run(root: &Root) {
+    use avencrew_contracts::scalars::Instant;
+    use avencrew_store_sqlite::{BundlePublication, LocalRunRegistration, RecordAllocation};
+    seed(root).await;
+    let mut store = LocalStore::open(&root.0).await.unwrap();
+    let bundle = task_bundle();
+    let bytes = canonical(&bundle).unwrap();
+    let allocations: Vec<_> = bundle["records"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .enumerate()
+        .map(|(n, r)| RecordAllocation {
+            table: r["table"].as_str().unwrap().into(),
+            id: DomainId::new(r["id"].as_str().unwrap()).unwrap(),
+            blob_id: domain(1000 + n as u32),
+        })
+        .collect();
+    store
+        .publish_bundle(BundlePublication {
+            workspace: &domain(1),
+            actor: &domain(2),
+            bundle_blob_id: &domain(900),
+            bytes: &bytes,
+            sha256: digest(&bytes),
+            record_blobs: &allocations,
+            payloads: &[],
+        })
+        .await
+        .unwrap();
+    store
+        .register_local_run(LocalRunRegistration {
+            workspace: &domain(1),
+            actor: &domain(2),
+            task: &domain(100),
+            task_revision: &domain(103),
+            run: &domain(300),
+            event: &domain(301),
+            queue: &domain(302),
+            payload_blob: &domain(303),
+            at: &Instant::new("2026-10-08T01:00:00.000000Z").unwrap(),
+        })
+        .await
+        .unwrap();
+    store.close().await.unwrap();
+}
+
+#[test]
+fn startup_restores_committed_control_and_denies_corrupt_history_before_grant() {
+    run(async {
+        use avencrew_contracts::scalars::Instant;
+        use avencrew_store_sqlite::{CommandAcceptance, RecoveryGate};
+        let root = Root::new();
+        seed_run(&root).await;
+        let mut store = LocalStore::open(&root.0).await.unwrap();
+        let bytes=serde_json::to_vec(&json!({"kind":"steer","command_id":id(400),"run_id":id(300),"idempotency_key":"restart-control","payload":{"text":"Retain this exact steering","expected_revision":"1"}})).unwrap();
+        let receipt = store
+            .accept_command(CommandAcceptance {
+                workspace: &domain(1),
+                actor: &domain(2),
+                bytes: &bytes,
+                event: &domain(401),
+                queue: &domain(402),
+                command_blob: &domain(403),
+                event_blob: &domain(404),
+                at: &Instant::new("2026-10-08T01:00:00.000000Z").unwrap(),
+            })
+            .await
+            .unwrap();
+        store.close().await.unwrap();
+        let supervisor = Supervisor::open(&root.0, context()).await.unwrap();
+        let restored = &supervisor.startup_recovery().runs[0];
+        assert_eq!(restored.gate, RecoveryGate::AwaitingControlConsumer);
+        assert_eq!(restored.applied.value(), 0);
+        assert_eq!(restored.pending_controls[0].original_receipt, receipt);
+        assert_eq!(
+            restored.pending_controls[0].canonical_bytes,
+            canonical_bytes(&bytes).unwrap()
+        );
+        assert_eq!(
+            canonical_bytes(&serde_json::to_vec(&restored.pending_controls[0].command).unwrap())
+                .unwrap(),
+            restored.pending_controls[0].canonical_bytes
+        );
+        let (stop, shutdown) = tokio::sync::oneshot::channel();
+        stop.send(()).unwrap();
+        supervisor.serve(shutdown).await.unwrap();
+        fs::write(
+            root.0.join(format!("blobs/{}/{}.json", id(1), id(403))),
+            b"corrupt",
+        )
+        .unwrap();
+        assert!(Supervisor::open(&root.0, context()).await.is_err());
+        assert!(!root.0.join("control/sock").exists());
+        let store = LocalStore::open(&root.0).await.unwrap();
+        store.close().await.unwrap();
     });
 }

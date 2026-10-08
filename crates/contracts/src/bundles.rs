@@ -21,6 +21,7 @@ pub enum Purpose {
     Task,
     Artifact,
     Enrollment,
+    Checkpoint,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -226,10 +227,13 @@ fn allowed_root(purpose: Purpose, table: &str) -> bool {
                 | "check_results"
         ),
         Purpose::Enrollment => matches!(table, "workspaces" | "principals" | "devices"),
+        Purpose::Checkpoint => table == "checkpoints",
     }
 }
 fn allowed_record(purpose: Purpose, table: &str, schema: &str) -> bool {
     match (purpose, table) {
+        (Purpose::Checkpoint, "checkpoints") => schema == "server-v1:S0",
+        (Purpose::Checkpoint, "manifests" | "manifest_entries") => schema == "server-v1:target",
         (Purpose::Task, "resources") => matches!(
             schema,
             "server-v1:S0"

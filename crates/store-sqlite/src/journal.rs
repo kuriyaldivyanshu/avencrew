@@ -12,15 +12,25 @@ use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqliteSynchronous};
 use sqlx::{Connection, SqlSafeStr, SqliteConnection};
 
 const SCHEMA_VERSION: i64 = 2;
+mod backup;
 mod blobs;
+pub use backup::{BackupError, BackupInspection, BackupReceipt, RestoreReceipt};
 mod commands;
+mod diagnostics;
 mod identity;
+pub use diagnostics::{DiagnosticCounts, LocalDiagnostics};
 mod publication;
-pub use commands::{CommandAcceptance, ControlError, LocalRunReceipt, LocalRunRegistration};
+mod vault;
+pub use commands::{
+    CheckpointFile, CheckpointPublication, CheckpointReceipt, CommandAcceptance, ControlError,
+    FileCoverage, LocalRunReceipt, LocalRunRegistration, RecoveredControl, RecoveredRun,
+    RecoveryGate, RecoverySnapshot, RestoredCheckpoint,
+};
 pub use identity::RegistrationReceipt;
 pub use publication::{
     BundlePublication, Payload, PublicationReceipt, PublishedBundle, RecordAllocation,
 };
+pub use vault::{BlobImport, StagingCleanup, VaultReceipt};
 const ENGINE_VERSION: &str = "3.53.4";
 const ENGINE_SOURCE: &str =
     "2026-07-24 19:02:57 bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc";
@@ -95,6 +105,45 @@ impl LocalStore {
     }
 
     async fn open_to(root: &Path, target: i64) -> Result<Self, StoreError> {
+        Self::open_mode(root, target, true).await
+    }
+
+    /// Local metadata export cannot create a database or migrate an old one.
+    pub async fn open_existing_for_diagnostics(root: &Path) -> Result<Self, StoreError> {
+        Self::open_mode(root, SCHEMA_VERSION, false).await
+    }
+
+    async fn open_mode(
+        root: &Path,
+        target: i64,
+        allow_migration: bool,
+    ) -> Result<Self, StoreError> {
+        if !allow_migration {
+            let metadata = fs::symlink_metadata(root)?;
+            if !metadata.is_dir() {
+                return Err(StoreError::Incompatible(
+                    "diagnostics requires existing root",
+                ));
+            }
+            validate_file(&root.join("execution.sqlite3"))?;
+        }
+        // Presence blocks boot even if malformed or a dangling symlink. No
+        // restored state may enter ordinary boot before authority/deletion replay.
+        for marker in [
+            "restore-quarantine.json",
+            "manifest.json",
+            "manifest.pending",
+        ] {
+            match fs::symlink_metadata(root.join(marker)) {
+                Ok(_) => {
+                    return Err(StoreError::Incompatible(
+                        "backup or restored store requires quarantine inspection",
+                    ))
+                }
+                Err(e) if e.kind() == io::ErrorKind::NotFound => (),
+                Err(e) => return Err(e.into()),
+            }
+        }
         let root = private_root(root)?;
         let ownership = private_file(&root.join("supervisor.lock"))?;
         match ownership.try_lock() {
@@ -124,6 +173,11 @@ impl LocalStore {
         if version > target || version < 0 {
             return Err(StoreError::Incompatible(
                 "unsupported newer schema; no downgrade",
+            ));
+        }
+        if !allow_migration && version != target {
+            return Err(StoreError::Incompatible(
+                "diagnostics requires current schema",
             ));
         }
         let table_count: i64 = sqlx::query_scalar("SELECT count(*) FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name<>'_sqlx_migrations'")
