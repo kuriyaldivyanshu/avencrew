@@ -18,7 +18,7 @@ Planned capabilities include:
 
 ## Current status
 
-The Electron desktop scaffold, managed toolchain, static SQLite build, canonical Rust wire contracts, generated TypeScript validation and fixture development commands are implemented. Durable application storage, harness execution, workers and cloud services remain future work. The local private [architecture draft](docs/ARCHITECTURE_DRAFT_1.md) and database plans describe the intended application; a public checkout builds without these design documents.
+The Electron desktop scaffold, managed toolchain, static SQLite build, canonical Rust wire contracts, generated TypeScript validation and fixture development commands are implemented. The P2 local journal now boots 19 STRICT tables with exclusive supervisor ownership and transactional migrations. Standalone human registration and private first-version task/draft-artifact canonical publication are implemented in the store, with digest/closure checks and atomic references. Trusted local run registration and steer/pause/stop acceptance now persist command receipts, events and reconciliation intents atomically. The supervisor now owns a restricted Unix socket with OS peer/session authentication, bounded wire frames and durable command receipts; client disconnection does not shut it down. Startup now verifies retained run/control history and reconstructs ordered pending inputs without resuming execution. The raw blob vault supports bounded streaming imports, verified reads and conservative staging cleanup. Typed local checkpoint storage now seals verified file inventories and journal cuts atomically; startup validates current checkpoints and retains explicit coverage gaps without dispatching. Local diagnostics export only fixed counts and public version metadata; they refuse missing, old-schema and quarantined restore roots. Offline backups capture SQLite and matching verified objects; isolated restore copies remain quarantined, and backup packages cannot boot as live roots. Safe-boundary control application, live filesystem capture, exact harness context and wait/effect/process reconciliation, Electron socket integration, executable model admission, harness execution, workers and cloud services remain future work. The local private [architecture draft](docs/ARCHITECTURE_DRAFT_1.md) and database plans describe the intended application; a public checkout builds without these design documents.
 
 Start with the [documentation review order](docs/README.md).
 
@@ -85,3 +85,22 @@ Formatting: `bash tools/bootstrap/dev-env.sh pnpm format`; checking:
 `bash tools/bootstrap/dev-env.sh pnpm lint`. Generated contracts stay
 generator-owned. Dependency inventories and known redistribution limitations
 are described in the verification guide.
+
+## Local journal boot
+
+The supervisor now supports `store-check --data-root ABSOLUTE_DIRECTORY`,
+which migrates/validates the journal and closes it. Use a disposable directory
+while developing; see [local migrations and recovery checks](migrations/sqlite/README.md).
+It does not execute tasks or start a harness.
+
+To export local diagnostic metadata from an existing current-schema journal:
+
+```sh
+bash tools/bootstrap/dev-env.sh cargo run -p avencrew-supervisor --locked -- diagnostics --data-root /absolute/existing/data-root
+```
+
+This emits canonical JSON with fixed row counts and version metadata. It includes
+no task text, command payloads, IDs, credential references, paths or logs and sends
+nothing over the network. It requires exclusive store ownership; it does not
+initialize a missing database, upgrade an old schema or activate quarantined data.
+Offline private backup creation, read-only inventory verification and isolated quarantined restore copying are now implemented. Restored execution activation remains disabled. See supervisor help for the exact backup, backup-check and restore-check command grammar; private local runbooks describe the retention/authority limits.

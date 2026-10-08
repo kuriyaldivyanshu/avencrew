@@ -44,7 +44,13 @@ def main():
     host = re.search(r'^host: (.+)$', command('rustc', '-vV'), re.M).group(1)
     metadata = json.loads(command('cargo', 'metadata', '--format-version', '1',
                                   '--all-features', '--locked', '--filter-platform', host))
-    active = {node['id'] for node in metadata['resolve']['nodes']}
+    # metadata's resolution includes inactive optional packages. Use the actual
+    # all-feature host build tree, including build/dev edges, for consumed scope.
+    tree = command('cargo', 'tree', '--workspace', '--all-features', '--locked',
+                   '--target', host, '--edges', 'normal,build,dev', '--prefix',
+                   'none', '--no-dedupe', '--format', '{p}')
+    active = {tuple(match.groups()) for line in tree.splitlines()
+              if (match := re.match(r'^([\w-]+) v([^ ]+)', line))}
     locked = {(p['name'], p['version']): p for p in
               tomllib.loads((ROOT / 'Cargo.lock').read_text())['package']}
     components, inventories, notices, problems, limitations = [], [], [], [], []
@@ -81,7 +87,7 @@ def main():
             notices.append(f'\n--- {path} ---\n{data.decode("utf-8", errors="replace")}\n')
 
     for package in metadata['packages']:
-        if package['id'] not in active or package['source'] is None:
+        if (package['name'], package['version']) not in active or package['source'] is None:
             continue  # First-party workspace code is proprietary, not third-party.
         name, version = package['name'], package['version']
         expected = locked[(name, version)]['checksum']

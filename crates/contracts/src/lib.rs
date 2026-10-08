@@ -4,6 +4,7 @@
 //! never unchecked `serde_json::from_slice`. Validation does not authenticate a
 //! caller, grant a lease, or establish a broker permission decision.
 //! Contracts have no dependency on harness, storage, Electron, or providers.
+pub mod bundles;
 pub mod framing;
 mod json;
 pub mod scalars;

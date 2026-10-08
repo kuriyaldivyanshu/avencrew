@@ -20,3 +20,15 @@ path = "src/main.rs"
 avencrew-contracts.workspace = true
 avencrew-harness.workspace = true
 avencrew-store-sqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+uuid = { workspace = true, features = ["v7"] }
+# Consumed authentication primitives already present at these versions in Cargo.lock.
+hmac = { version = "=0.13.0", default-features = false }
+sha2-auth = { package = "sha2", version = "=0.11.0", default-features = false }
+getrandom = { version = "=0.3.4", default-features = false }
+tokio = { workspace = true, features = ["net", "io-util"] }
+
+# Safe OS identity and inherited launch-channel checks; no application FFI.
+nix = { version = "=0.31.3", default-features = false, features = ["user", "process", "socket"] }

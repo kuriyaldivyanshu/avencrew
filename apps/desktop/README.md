@@ -17,7 +17,8 @@ Use the project-managed toolchain. From the repository root:
 
 ```sh
 bash tools/bootstrap/bootstrap.sh          # once
-source tools/bootstrap/dev-env.sh          # or prefix each command
+bash                                     # enter Bash before sourcing
+source tools/bootstrap/dev-env.sh          # or use bash tools/bootstrap/dev-env.sh <command>
 ```
 
 That gives the pinned Rust, Node, pnpm, TypeScript and esbuild under
