@@ -10,6 +10,7 @@ pub struct DiagnosticCounts {
     pub tasks: Counter,
     pub runs: Counter,
     pub attempts: Counter,
+    pub turns: Counter,
     pub commands: Counter,
     pub events: Counter,
     pub checkpoints: Counter,
@@ -36,9 +37,9 @@ impl LocalStore {
         }
         // One statement gives a consistent SQLite read snapshot. All names are
         // literals, and no caller can extend the report with a column or query.
-        let values: (i64,i64,i64,i64,i64,i64,i64,i64,i64,i64,i64) = sqlx::query_as("SELECT (SELECT count(*) FROM local_workspaces), (SELECT count(*) FROM local_actors), (SELECT count(*) FROM local_tasks), (SELECT count(*) FROM local_runs), (SELECT count(*) FROM local_attempts), (SELECT count(*) FROM local_commands), (SELECT count(*) FROM local_events), (SELECT count(*) FROM local_checkpoints), (SELECT count(*) FROM local_manifests), (SELECT count(*) FROM local_blobs), (SELECT count(*) FROM local_erasure_fences)").fetch_one(&mut self.connection).await?;
+        let values: (i64,i64,i64,i64,i64,i64,i64,i64,i64,i64,i64,i64) = sqlx::query_as("SELECT (SELECT count(*) FROM local_workspaces), (SELECT count(*) FROM local_actors), (SELECT count(*) FROM local_tasks), (SELECT count(*) FROM local_runs), (SELECT count(*) FROM local_attempts), (SELECT count(*) FROM local_commands), (SELECT count(*) FROM local_events), (SELECT count(*) FROM local_checkpoints), (SELECT count(*) FROM local_manifests), (SELECT count(*) FROM local_blobs), (SELECT count(*) FROM local_erasure_fences), (SELECT count(*) FROM local_turns)").fetch_one(&mut self.connection).await?;
         Ok(LocalDiagnostics {
-            schema_version: "avencrew.local-diagnostics/1",
+            schema_version: "avencrew.local-diagnostics/2",
             journal_schema_version: self.status.schema_version,
             sqlite_version: super::ENGINE_VERSION,
             domain_tables: count(self.status.domain_tables as i64)?,
@@ -48,6 +49,7 @@ impl LocalStore {
                 tasks: count(values.2)?,
                 runs: count(values.3)?,
                 attempts: count(values.4)?,
+                turns: count(values.11)?,
                 commands: count(values.5)?,
                 events: count(values.6)?,
                 checkpoints: count(values.7)?,
@@ -113,7 +115,7 @@ mod tests {
             let value: Value = serde_json::from_slice(&bytes).unwrap();
             assert_eq!(
                 value,
-                json!({"schema_version":"avencrew.local-diagnostics/1","journal_schema_version":2,"sqlite_version":"3.53.4","domain_tables":"19","counts":{"workspaces":"1","actors":"1","tasks":"1","runs":"1","attempts":"0","commands":"1","events":"2","checkpoints":"0","manifests":"0","erasure_fences":"0","blobs":value["counts"]["blobs"]},"execution_enabled":false,"profile":"local-storage-only"})
+                json!({"schema_version":"avencrew.local-diagnostics/2","journal_schema_version":4,"sqlite_version":"3.53.4","domain_tables":"27","counts":{"workspaces":"1","actors":"1","tasks":"1","runs":"1","attempts":"0","turns":"0","commands":"1","events":"2","checkpoints":"0","manifests":"0","erasure_fences":"0","blobs":value["counts"]["blobs"]},"execution_enabled":false,"profile":"local-storage-only"})
             );
             let actual: i64 = sqlx::query_scalar("SELECT count(*) FROM local_blobs")
                 .fetch_one(&mut store.connection)

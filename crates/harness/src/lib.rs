@@ -1,19 +1,21 @@
 //! Bounded agent execution harness.
 //!
-//! Intended to own exactly one reasoning/execution loop, shared by local runs,
-//! cloud agents and worker jobs. That behaviour is P1-03/P3 work and is **not**
-//! implemented here.
+//! The bounded turn engine consumes normalized model responses through one
+//! sealed invocation broker. Trusted host ports own persistence and authority.
+//! The fixture consumer exercises this loop; production coordinator composition
+//! and live inference are not enabled. Model final text is only a candidate.
 //!
 //! # Dependency boundary
 //!
-//! Depends on `avencrew-contracts` only. It cannot reach the SQLite adapter,
+//! It depends on contracts and the broker. It cannot reach SQLite,
 //! because Cargo will not let it: `store-sqlite` is not in this crate's
 //! dependency list. That is the enforcement mechanism, not a comment.
 //!
-//! Deliberately **not** present: a turn engine, model adapters, a tool dispatcher,
-//! context assembly, compaction, or a stub agent. An empty loop that returns a
-//! fabricated completion would be worse than no loop, because it would look like
-//! a working harness. This crate reports build provenance and nothing else.
+//! Live model adapters and context compaction remain later work.
+
+pub mod artifacts;
+pub mod engine;
+pub mod model;
 
 use avencrew_contracts::BuildInfo;
 

@@ -1,21 +1,13 @@
 //! Per-user Avencrew coordinator process.
 //!
-//! # What this binary does in this scaffold
-//!
-//! Reports build provenance, boots/checks/closes the local durable store, or owns
-//! the authenticated local control socket. Task execution remains disabled.
-//!
-//! It deliberately accepts **no** task execution subcommands. A supervisor that
-//! answered `run` or `submit` without a coordinator, a journal or a harness would
-//! be claiming authority it does not have. An honest "not implemented" is the
-//! correct scaffold behaviour; see the batch rule against fake run completions,
-//! no-op database methods and stub agents.
+//! Reports build provenance, manages the durable store and authenticated control
+//! socket, and runs an explicit finite synthetic fixture through the owned
+//! engine, broker and journal. Production admission and environments are disabled.
 //!
 //! # Dependency boundary
 //!
-//! This is the only crate that depends on all three others, so it is the only
-//! place that can report whole-workspace build state. Consuming each component
-//! here is what makes those dependency edges real rather than decorative.
+//! The supervisor composes the portable engine/broker with SQLite and OS clocks;
+//! neither the store nor portable harness acquires a supervisor dependency.
 
 use std::process::ExitCode;
 
@@ -41,6 +33,7 @@ avencrew-supervisor — per-user coordinator foundation
 USAGE:
     avencrew-supervisor --version
     avencrew-supervisor --build-info
+    avencrew-supervisor fixture-run --data-root EMPTY_TEMP_DIRECTORY --input FIXTURE_JSON
     avencrew-supervisor store-check --data-root ABSOLUTE_DIRECTORY
     avencrew-supervisor serve --data-root ABSOLUTE_DIRECTORY
     avencrew-supervisor diagnostics --data-root ABSOLUTE_DIRECTORY
@@ -52,10 +45,14 @@ store-check boots and validates the durable SQLite journal, then closes it.
 serve requires a private, framed main-session launch context on stdin/stdout.
 Backups contain private data; they are not redacted diagnostics or encrypted exports.
 restore-check copies into a fresh quarantined directory; ordinary boot remains blocked.
-No executable task admission, harness, scheduling or environment behavior yet.";
+fixture-run executes only zero-priced synthetic model/source inputs in a fresh temporary root.
+Production task admission, scheduling and execution environments remain disabled.";
 
 fn main() -> ExitCode {
     let args: Vec<_> = std::env::args().skip(1).collect();
+    if args.first().map(String::as_str) == Some("fixture-run") {
+        return fixture_run(&args[1..]);
+    }
     if matches!(
         args.first().map(String::as_str),
         Some("backup" | "backup-check" | "restore-check")
@@ -92,6 +89,90 @@ fn main() -> ExitCode {
             eprintln!("avencrew-supervisor: unsupported argument {unknown:?}");
             eprintln!("{USAGE}");
             ExitCode::from(2)
+        }
+    }
+}
+
+fn fixture_run(args: &[String]) -> ExitCode {
+    use avencrew_supervisor::execution::{
+        execute_fixture_turn, prepare_fixture_turn, FixtureLaunch,
+    };
+    use std::{fs, io::Read, path::Path, sync::Arc};
+    use tokio::sync::Mutex;
+    if args.len() != 4 || args[0] != "--data-root" || args[2] != "--input" {
+        eprintln!("usage: avencrew-supervisor fixture-run --data-root EMPTY_TEMP_DIRECTORY --input FIXTURE_JSON");
+        return ExitCode::from(2);
+    }
+    let input = (|| -> Result<(std::path::PathBuf, FixtureLaunch), Box<dyn std::error::Error>> {
+        let root = Path::new(&args[1]);
+        let metadata = fs::symlink_metadata(root)?;
+        if !root.is_absolute() || !metadata.is_dir() || metadata.file_type().is_symlink() {
+            return Err("fixture root must be a fresh temporary directory".into());
+        }
+        let root = root.canonicalize()?;
+        let temp = std::env::temp_dir().canonicalize()?;
+        if root == temp || !root.starts_with(temp) || fs::read_dir(&root)?.next().is_some() {
+            return Err("fixture root must be an empty temporary subdirectory".into());
+        }
+        let file = fs::File::open(&args[3])?;
+        let mut bytes = Vec::new();
+        file.take(1_048_577).read_to_end(&mut bytes)?;
+        let value = avencrew_contracts::decode_json(&bytes)?;
+        let launch: FixtureLaunch = serde_json::from_value(value)?;
+        if launch.schema_version != "avencrew.fixture-launch/1"
+            || launch.profile.provider != "fixture"
+            || launch.profile.rate_micro != "0"
+        {
+            return Err("fixture profile unavailable".into());
+        }
+        Ok((root, launch))
+    })();
+    let (root, launch) = match input {
+        Ok(input) => input,
+        Err(_) => {
+            eprintln!("fixture-run: invalid fixture or temporary root; nothing executed");
+            return ExitCode::from(2);
+        }
+    };
+    let runtime = match tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    {
+        Ok(r) => r,
+        Err(_) => {
+            eprintln!("fixture-run: runtime unavailable");
+            return ExitCode::FAILURE;
+        }
+    };
+    let result=runtime.block_on(async{
+        let mut store=avencrew_store_sqlite::LocalStore::open(&root).await.map_err(|_|())?;
+        let prepared=match prepare_fixture_turn(&mut store,&launch).await{Ok(p)=>p,Err(_)=>{let _=store.close().await;return Err(());}};
+        let store=Arc::new(Mutex::new(store));
+        let outcome=execute_fixture_turn(store.clone(),prepared.workspace.clone(),prepared.actor.clone(),prepared.turn.clone(),launch.profile,avencrew_harness::engine::EngineConfig::default()).await;
+        let budget=store.lock().await.local_execution_budget(&prepared.workspace,&prepared.actor,&prepared.turn).await;
+        let store=Arc::try_unwrap(store).map_err(|_|())?.into_inner();store.close().await.map_err(|_|())?;
+        Ok::<_,()>(serde_json::json!({"schema_version":"avencrew.fixture-run/1","profile":"fixture_only","workspace_id":prepared.workspace,"actor_id":prepared.actor,"turn_id":prepared.turn,"outcome":outcome.map_err(|_|())?,"budget":budget.map_err(|_|())?}))
+    });
+    match result {
+        Ok(report) => {
+            match avencrew_contracts::canonical_bytes(
+                &serde_json::to_vec(&report).unwrap_or_default(),
+            ) {
+                Ok(bytes) => {
+                    println!("{}", String::from_utf8_lossy(&bytes));
+                    ExitCode::SUCCESS
+                }
+                Err(_) => {
+                    eprintln!("fixture-run: report unavailable");
+                    ExitCode::FAILURE
+                }
+            }
+        }
+        Err(()) => {
+            eprintln!(
+                "fixture-run: no retained outcome acknowledged; journal preserved for inspection"
+            );
+            ExitCode::FAILURE
         }
     }
 }

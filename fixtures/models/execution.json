@@ -1,0 +1,525 @@
+{
+  "schema_version": "avencrew.fixture-launch/1",
+  "registration": {
+    "registration": {
+      "schema_version": "avencrew.local-registration/1.0",
+      "id": "01900000-0000-7000-8000-00000000000a",
+      "workspace_id": "01900000-0000-7000-8000-000000000001",
+      "actor_id": "01900000-0000-7000-8000-000000000002",
+      "device_id": "01900000-0000-7000-8000-000000000005",
+      "principal_id": "01900000-0000-7000-8000-000000000003",
+      "user_reference_id": "01900000-0000-7000-8000-000000000004",
+      "audience_policy_id": "01900000-0000-7000-8000-000000000006",
+      "execution_policy_id": "01900000-0000-7000-8000-000000000007",
+      "created_at": "2026-10-07T00:00:00.000000Z",
+      "origin_public_key": "abcd",
+      "permission_generation": "0",
+      "deletion_generation": "0",
+      "records": {
+        "user_reference": {
+          "blob_id": "01900000-0000-7000-8000-000000000014",
+          "record_id": "01900000-0000-7000-8000-000000000004",
+          "record_schema": "server-v1:target",
+          "sha256": "abef64827214ccc4db90531cd8b7937b6b795cd684637e65eea7c9fbf56a9adc",
+          "byte_size": "217"
+        },
+        "principal": {
+          "blob_id": "01900000-0000-7000-8000-000000000015",
+          "record_id": "01900000-0000-7000-8000-000000000003",
+          "record_schema": "server-v1:target",
+          "sha256": "afcb9c11ccbd99b193b420eea6f789a62b7a66afa6417daa6c4e2701da7d7916",
+          "byte_size": "318"
+        },
+        "workspace": {
+          "blob_id": "01900000-0000-7000-8000-000000000016",
+          "record_id": "01900000-0000-7000-8000-000000000001",
+          "record_schema": "server-v1:target",
+          "sha256": "19ea9ca499bfd885ecf5ad117c86444e5fd1e634165f3caf66acd72a8c382077",
+          "byte_size": "336"
+        },
+        "device": {
+          "blob_id": "01900000-0000-7000-8000-000000000017",
+          "record_id": "01900000-0000-7000-8000-000000000005",
+          "record_schema": "server-v1:target",
+          "sha256": "55ed2df91544025f269c53238a2f568a9145800bac1a875a90b0010be45cf97b",
+          "byte_size": "412"
+        },
+        "audience_policy": {
+          "blob_id": "01900000-0000-7000-8000-000000000018",
+          "record_id": "01900000-0000-7000-8000-000000000006",
+          "record_schema": "server-v1:target",
+          "sha256": "bcac8ddce3581c296cad0d6f1a93c6b9c5cacfa89cce404a473217ed47043f11",
+          "byte_size": "429"
+        },
+        "execution_policy": {
+          "blob_id": "01900000-0000-7000-8000-000000000019",
+          "record_id": "01900000-0000-7000-8000-000000000007",
+          "record_schema": "server-v1:target",
+          "sha256": "f8fe5f67ee80b25aa312677bce7c5fdfba18f8d1d73f2687c02bb037121bd275",
+          "byte_size": "409"
+        }
+      }
+    },
+    "records": {
+      "user_reference": {
+        "id": "01900000-0000-7000-8000-000000000004",
+        "created_at": "2026-10-07T00:00:00.000000Z",
+        "row_version": "1",
+        "updated_at": "2026-10-07T00:00:00.000000Z",
+        "display_name": "Synthetic human",
+        "status": "active",
+        "erased_at": null
+      },
+      "principal": {
+        "id": "01900000-0000-7000-8000-000000000003",
+        "workspace_id": "01900000-0000-7000-8000-000000000001",
+        "created_at": "2026-10-07T00:00:00.000000Z",
+        "row_version": "1",
+        "updated_at": "2026-10-07T00:00:00.000000Z",
+        "kind": "human",
+        "user_id": "01900000-0000-7000-8000-000000000004",
+        "display_name": "Synthetic human",
+        "status": "active"
+      },
+      "workspace": {
+        "id": "01900000-0000-7000-8000-000000000001",
+        "created_at": "2026-10-07T00:00:00.000000Z",
+        "row_version": "1",
+        "updated_at": "2026-10-07T00:00:00.000000Z",
+        "name": "Synthetic fixture",
+        "origin_device_key": "abcd",
+        "status": "active",
+        "permission_generation": "0",
+        "deletion_generation": "0",
+        "settings": {},
+        "last_observation_seq": "0",
+        "last_sync_seq": "0"
+      },
+      "device": {
+        "id": "01900000-0000-7000-8000-000000000005",
+        "workspace_id": "01900000-0000-7000-8000-000000000001",
+        "created_at": "2026-10-07T00:00:00.000000Z",
+        "row_version": "1",
+        "updated_at": "2026-10-07T00:00:00.000000Z",
+        "principal_id": "01900000-0000-7000-8000-000000000003",
+        "public_key": "abcd",
+        "label": "Synthetic device",
+        "os": "macos",
+        "architecture": "arm64",
+        "status": "active",
+        "last_seen_at": null,
+        "minimum_deletion_generation": "0"
+      },
+      "audience_policy": {
+        "id": "01900000-0000-7000-8000-000000000006",
+        "workspace_id": "01900000-0000-7000-8000-000000000001",
+        "created_at": "2026-10-07T00:00:00.000000Z",
+        "name": "Owner only",
+        "version_no": 1,
+        "policy_kind": "audience",
+        "schema_version": 1,
+        "rules": {
+          "allowed_principal_ids": [
+            "01900000-0000-7000-8000-000000000003"
+          ]
+        },
+        "digest": "b8c306501560042671ac941ab68618e4b951b5c632b32800d8942ba45985fec3",
+        "published_by_id": "01900000-0000-7000-8000-000000000003"
+      },
+      "execution_policy": {
+        "id": "01900000-0000-7000-8000-000000000007",
+        "workspace_id": "01900000-0000-7000-8000-000000000001",
+        "created_at": "2026-10-07T00:00:00.000000Z",
+        "name": "Deny live dispatch",
+        "version_no": 1,
+        "policy_kind": "execution",
+        "schema_version": 1,
+        "rules": {
+          "default": "deny",
+          "allowed_tools": []
+        },
+        "digest": "8fabf846ea8a191d1ae4f4a801a82ab26e823aea7ece6e00bf91945ce7c14d08",
+        "published_by_id": "01900000-0000-7000-8000-000000000003"
+      }
+    }
+  },
+  "task_bundle": {
+    "schema_version": "1.0",
+    "purpose": "task",
+    "root": {
+      "table": "tasks",
+      "id": "01900000-0000-7000-8000-000000000064"
+    },
+    "records": [
+      {
+        "table": "resources",
+        "id": "01900000-0000-7000-8000-000000000065",
+        "record_schema": "server-v1:S0",
+        "record": {
+          "workspace_id": "01900000-0000-7000-8000-000000000001",
+          "created_at": "2026-10-07T00:00:00.000000Z",
+          "id": "01900000-0000-7000-8000-000000000065",
+          "row_version": "1",
+          "updated_at": "2026-10-07T00:00:00.000000Z",
+          "project_id": null,
+          "owner_id": "01900000-0000-7000-8000-000000000003",
+          "kind": "task",
+          "visibility": "private",
+          "status": "active",
+          "acl_generation": "1",
+          "current_version_id": "01900000-0000-7000-8000-000000000066"
+        }
+      },
+      {
+        "table": "resource_versions",
+        "id": "01900000-0000-7000-8000-000000000066",
+        "record_schema": "server-v1:S0",
+        "record": {
+          "workspace_id": "01900000-0000-7000-8000-000000000001",
+          "created_at": "2026-10-07T00:00:00.000000Z",
+          "id": "01900000-0000-7000-8000-000000000066",
+          "resource_id": "01900000-0000-7000-8000-000000000065",
+          "version_no": "1",
+          "blob_id": null,
+          "inline_payload": {
+            "text": "Prepare an evidence-backed export brief; human review is required."
+          },
+          "content_digest": "88483464ce0b2b57ceb157d0f483dcc84fcf06516f6811078fca42122650cef0",
+          "observed_at": "2026-10-07T00:00:00.000000Z",
+          "effective_at": null,
+          "fresh_until": null,
+          "source_etag": null,
+          "created_by_id": "01900000-0000-7000-8000-000000000003",
+          "availability": "present",
+          "erased_at": null
+        }
+      },
+      {
+        "table": "checks",
+        "id": "01900000-0000-7000-8000-000000000068",
+        "record_schema": "server-v1:S0",
+        "record": {
+          "workspace_id": "01900000-0000-7000-8000-000000000001",
+          "created_at": "2026-10-07T00:00:00.000000Z",
+          "id": "01900000-0000-7000-8000-000000000068",
+          "resource_id": "01900000-0000-7000-8000-000000000065",
+          "version_no": 1,
+          "kind": "human",
+          "spec": {
+            "schema_version": 1,
+            "success_criteria": "Human reviews the exact version against the requested outcome"
+          },
+          "digest": "1bc921a1cdafad89fddb1ba28670b8ab019db5578b38ff481e98aa5c17c9db91",
+          "required": true
+        }
+      },
+      {
+        "table": "tasks",
+        "id": "01900000-0000-7000-8000-000000000064",
+        "record_schema": "server-v1:S0",
+        "record": {
+          "workspace_id": "01900000-0000-7000-8000-000000000001",
+          "created_at": "2026-10-07T00:00:00.000000Z",
+          "id": "01900000-0000-7000-8000-000000000064",
+          "row_version": "1",
+          "updated_at": "2026-10-07T00:00:00.000000Z",
+          "resource_id": "01900000-0000-7000-8000-000000000065",
+          "owner_id": "01900000-0000-7000-8000-000000000003",
+          "current_revision_id": "01900000-0000-7000-8000-000000000067",
+          "status": "open",
+          "priority": 0
+        }
+      },
+      {
+        "table": "task_revisions",
+        "id": "01900000-0000-7000-8000-000000000067",
+        "record_schema": "server-v1:S0",
+        "record": {
+          "workspace_id": "01900000-0000-7000-8000-000000000001",
+          "created_at": "2026-10-07T00:00:00.000000Z",
+          "id": "01900000-0000-7000-8000-000000000067",
+          "task_id": "01900000-0000-7000-8000-000000000064",
+          "version_no": 1,
+          "objective_version_id": "01900000-0000-7000-8000-000000000066",
+          "acting_principal_id": "01900000-0000-7000-8000-000000000003",
+          "audience_policy_id": "01900000-0000-7000-8000-000000000006",
+          "execution_policy_id": "01900000-0000-7000-8000-000000000007",
+          "completion_mode": "bounded",
+          "accepted_by_id": "01900000-0000-7000-8000-000000000003",
+          "accepted_at": "2026-10-07T00:00:00.000000Z"
+        }
+      },
+      {
+        "table": "task_checks",
+        "id": "01900000-0000-7000-8000-000000000069",
+        "record_schema": "server-v1:S0",
+        "record": {
+          "workspace_id": "01900000-0000-7000-8000-000000000001",
+          "created_at": "2026-10-07T00:00:00.000000Z",
+          "id": "01900000-0000-7000-8000-000000000069",
+          "task_revision_id": "01900000-0000-7000-8000-000000000067",
+          "check_id": "01900000-0000-7000-8000-000000000068",
+          "required": true
+        }
+      }
+    ],
+    "referenced_blobs": []
+  },
+  "profile": {
+    "schema_version": "avencrew.fixture-execution/1",
+    "provider": "fixture",
+    "rate_micro": "0",
+    "sources": [
+      {
+        "name": "export-evidence",
+        "workspace_id": "01900000-0000-7000-8000-000000000001",
+        "audience_ids": [
+          "01900000-0000-7000-8000-000000000003"
+        ],
+        "version_id": "01900000-0000-7000-8000-00000000006e",
+        "content": {
+          "export_rows": 50001,
+          "source": "synthetic"
+        }
+      }
+    ],
+    "episodes": [
+      {
+        "delay_ms": 0,
+        "input": {
+          "schema_version": "avencrew.fixture-model/1",
+          "seed": {
+            "model_call_id": "019a5500-0000-7000-8000-000000000010",
+            "step_id": "019a5500-0000-7000-8000-000000000011",
+            "provider_profile_id": "019a5500-0000-7000-8000-000000000013",
+            "compatibility_digest": "339c169fe55ceafadfd2d5b5d3540b17258d46ef32e07ef653d7cd67a20b6bef",
+            "bindings": [
+              {
+                "name": "workspace_read",
+                "binding_id": "019a5500-0000-7000-8000-000000000012"
+              }
+            ],
+            "invocation_slots": [
+              "019a5500-0000-7000-8000-000000000015",
+              "019a5500-0000-7000-8000-000000000016",
+              "019a5500-0000-7000-8000-000000000017"
+            ],
+            "continuation_refs": [
+              "019a5500-0000-7000-8000-000000000018"
+            ],
+            "usage_ref": "019a5500-0000-7000-8000-000000000014"
+          },
+          "events": [
+            {
+              "sequence": "1",
+              "body": {
+                "type": "tool_start",
+                "item": 0,
+                "provider_call_id": "source-call",
+                "tool_name": "fixture.read"
+              }
+            },
+            {
+              "sequence": "2",
+              "body": {
+                "type": "arguments_delta",
+                "item": 0,
+                "bytes": [
+                  123,
+                  34,
+                  115,
+                  111,
+                  117,
+                  114,
+                  99,
+                  101,
+                  95,
+                  110,
+                  97,
+                  109,
+                  101,
+                  34,
+                  58,
+                  34,
+                  101,
+                  120,
+                  112,
+                  111,
+                  114,
+                  116,
+                  45,
+                  101,
+                  118,
+                  105,
+                  100,
+                  101,
+                  110,
+                  99,
+                  101,
+                  34,
+                  125
+                ]
+              }
+            },
+            {
+              "sequence": "3",
+              "body": {
+                "type": "tool_end",
+                "item": 0
+              }
+            },
+            {
+              "sequence": "4",
+              "body": {
+                "type": "usage",
+                "input_tokens": "20",
+                "output_tokens": "10"
+              }
+            },
+            {
+              "sequence": "5",
+              "body": {
+                "type": "finish",
+                "reason": "tools"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "delay_ms": 0,
+        "input": {
+          "schema_version": "avencrew.fixture-model/1",
+          "seed": {
+            "model_call_id": "019a5500-0000-7000-8000-000000000010",
+            "step_id": "019a5500-0000-7000-8000-000000000011",
+            "provider_profile_id": "019a5500-0000-7000-8000-000000000013",
+            "compatibility_digest": "339c169fe55ceafadfd2d5b5d3540b17258d46ef32e07ef653d7cd67a20b6bef",
+            "bindings": [
+              {
+                "name": "workspace_read",
+                "binding_id": "019a5500-0000-7000-8000-000000000012"
+              }
+            ],
+            "invocation_slots": [
+              "019a5500-0000-7000-8000-000000000015",
+              "019a5500-0000-7000-8000-000000000016",
+              "019a5500-0000-7000-8000-000000000017"
+            ],
+            "continuation_refs": [
+              "019a5500-0000-7000-8000-000000000018"
+            ],
+            "usage_ref": "019a5500-0000-7000-8000-000000000014"
+          },
+          "events": [
+            {
+              "sequence": "1",
+              "body": {
+                "type": "text_start",
+                "item": 0
+              }
+            },
+            {
+              "sequence": "2",
+              "body": {
+                "type": "text_delta",
+                "item": 0,
+                "bytes": [
+                  83,
+                  121,
+                  110,
+                  116,
+                  104,
+                  101,
+                  116,
+                  105,
+                  99,
+                  32,
+                  101,
+                  120,
+                  112,
+                  111,
+                  114,
+                  116,
+                  32,
+                  101,
+                  118,
+                  105,
+                  100,
+                  101,
+                  110,
+                  99,
+                  101,
+                  58,
+                  32,
+                  53,
+                  48,
+                  48,
+                  48,
+                  49,
+                  32,
+                  114,
+                  111,
+                  119,
+                  115,
+                  46,
+                  32,
+                  68,
+                  114,
+                  97,
+                  102,
+                  116,
+                  32,
+                  114,
+                  101,
+                  113,
+                  117,
+                  105,
+                  114,
+                  101,
+                  115,
+                  32,
+                  104,
+                  117,
+                  109,
+                  97,
+                  110,
+                  32,
+                  114,
+                  101,
+                  118,
+                  105,
+                  101,
+                  119,
+                  46
+                ]
+              }
+            },
+            {
+              "sequence": "3",
+              "body": {
+                "type": "text_end",
+                "item": 0
+              }
+            },
+            {
+              "sequence": "4",
+              "body": {
+                "type": "usage",
+                "input_tokens": "30",
+                "output_tokens": "15"
+              }
+            },
+            {
+              "sequence": "5",
+              "body": {
+                "type": "finish",
+                "reason": "final"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

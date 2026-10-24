@@ -79,8 +79,8 @@ fn fresh_boot_reopen_layout_and_permissions() {
     run(async {
         let root = Root::new();
         let store = LocalStore::open(&root.0).await.unwrap();
-        assert_eq!(store.status().schema_version, 2);
-        assert_eq!(store.status().domain_tables, 19);
+        assert_eq!(store.status().schema_version, 4);
+        assert_eq!(store.status().domain_tables, 27);
         for file in [
             "execution.sqlite3",
             "execution.sqlite3-wal",
@@ -283,7 +283,8 @@ fn strict_checks_same_parent_and_partial_attempt_index() {
 fn newer_tampered_and_checksum_mismatched_databases_are_refused() {
     run(async {
         for sql in [
-            "PRAGMA user_version=3",
+            "PRAGMA user_version=5",
+            "PRAGMA user_version=2",
             "DROP INDEX local_devices_actor_id_fk",
             "UPDATE _sqlx_migrations SET checksum=zeroblob(48) WHERE version=1",
         ] {

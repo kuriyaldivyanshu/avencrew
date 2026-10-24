@@ -148,12 +148,14 @@ fn task_and_artifact_roundtrip_reopen_and_retry_derive_metadata() {
         assert_eq!(publish(&mut store, &task, &[]).await.unwrap(), t);
         assert_eq!(publish(&mut store, &artifact, &[]).await.unwrap(), a);
         assert_eq!(count(&mut store, "tasks").await, 1);
-        assert!(
-            !sqlx::query("SELECT 1 FROM sqlite_schema WHERE name='local_artifacts'")
-                .fetch_optional(&mut store.connection)
+        // L2 adds execution artifact projections; this older canonical bundle
+        // publication must not manufacture an execution candidate or checks.
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM local_artifacts")
+                .fetch_one(&mut store.connection)
                 .await
-                .unwrap()
-                .is_some()
+                .unwrap(),
+            0
         );
         store.close().await.unwrap();
         let mut reopened = LocalStore::open(&root.0).await.unwrap();

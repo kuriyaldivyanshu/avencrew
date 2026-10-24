@@ -1,10 +1,14 @@
 # Local journal migrations
 
-P2-01 implements two immutable, dependency-closed slices: `0001` is L0
+The journal uses immutable, dependency-closed slices: `0001` is L0
 (namespace, actors/devices, blobs, erasure fences, compatibility records);
 `0002` is L1 (tasks/revisions, runs/attempts, commands/events, sessions/branches,
-manifests/checkpoints, budget periods and queue). They contain 19 STRICT domain
-tables. Future L2–L5 columns/tables are absent. Correct released migrations with
+manifests/checkpoints, budget periods and queue). Those two slices contain 19
+STRICT domain tables. `0003` adds the L2 immutable prepared-turn seed and lease
+closure. `0004` adds the L2 fixture step/model/invocation/dispatch, artifact/version
+and usage records, plus a versioned runtime-progress pointer. Current schema 4
+contains 27 STRICT domain tables. Later process/wait/environment/cloud slices
+remain absent. Correct released migrations with
 new migrations; never edit an applied checksum or advertise a downgrade.
 
 `LocalStore` embeds these SQL files at compile time. Startup takes a nonblocking
@@ -61,11 +65,14 @@ Run recovery/constraint tests with:
 bash tools/bootstrap/dev-env.sh cargo test -p avencrew-store-sqlite --locked
 ```
 
-Tests cover fresh/reopen and L0 upgrade, permissions/writer exclusion,
+Tests cover fresh/reopen and upgrades, permissions/writer exclusion,
 transactional migration failure, SQLite FULL and BUSY, cross-tenant/same-parent
 references, state/attempt uniqueness/cancellation, schema/checksum tampering,
 branch ancestry cycles, and actual child process death before/after commit.
-State triggers enforce allowed transition classes; live authority, active leases
-and fresh business-check results require the later service transactions.
-No test claims atomic command acceptance, leases, broker authorization, host/VM
-containment or harness recovery; those have their own P2/P3/P4 tasks.
+State triggers enforce allowed transition classes. The explicit supervisor
+fixture profile now composes live identity/control/lease checks, bounded engine
+execution, atomic model/proposal/dispatch/result journals, exact fixture-ledger
+checkpoints and version-bound candidate checks. Process kills around actual SQL
+commits establish crash-cut behavior for that profile; they do not establish
+power-loss behavior, VM containment, live filesystem capture, restored-backup
+activation or business completion.

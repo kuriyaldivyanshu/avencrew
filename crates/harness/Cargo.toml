@@ -11,8 +11,12 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-# Direction: harness -> contracts only.
+# Direction: harness -> contracts, broker.
 #
 # `store-sqlite` is intentionally absent. The harness must never reach the local
 # journal adapter directly; persistence goes through the coordinator contract.
 avencrew-contracts.workspace = true
+avencrew-broker.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true

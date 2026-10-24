@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "profile": {
+    "provider": "fixture",
+    "profile_id": "019a5500-0000-7000-8000-000000000013",
+    "rate_usd": "0.000000",
+    "network_enabled": false,
+    "missing_usage": "unknown"
+  },
+  "responses": [
+    {
+      "name": "candidate_only",
+      "message": {
+        "schema_version": "1.0",
+        "message_kind": "normalized_model_response",
+        "payload": {
+          "model_call_id": "019a5500-0000-7000-8000-000000000010",
+          "step_id": "019a5500-0000-7000-8000-000000000011",
+          "items": [
+            {
+              "kind": "text",
+              "text": "A report draft is ready for current-version review."
+            }
+          ],
+          "finish": "final",
+          "usage_refs": [],
+          "diagnostic_error": null
+        }
+      }
+    },
+    {
+      "name": "complete_proposal",
+      "message": {
+        "schema_version": "1.0",
+        "message_kind": "normalized_model_response",
+        "payload": {
+          "model_call_id": "019a5500-0000-7000-8000-000000000010",
+          "step_id": "019a5500-0000-7000-8000-000000000011",
+          "items": [
+            {
+              "kind": "tool_proposal",
+              "provider_call_id": "provider-call-A",
+              "binding_id": "019a5500-0000-7000-8000-000000000012",
+              "arguments": {
+                "source_name": "account_snapshot"
+              }
+            }
+          ],
+          "finish": "tools",
+          "usage_refs": [],
+          "diagnostic_error": null
+        }
+      }
+    },
+    {
+      "name": "refusal",
+      "message": {
+        "schema_version": "1.0",
+        "message_kind": "normalized_model_response",
+        "payload": {
+          "model_call_id": "019a5500-0000-7000-8000-000000000010",
+          "step_id": "019a5500-0000-7000-8000-000000000011",
+          "items": [],
+          "finish": "refused",
+          "usage_refs": [],
+          "diagnostic_error": null
+        }
+      }
+    },
+    {
+      "name": "interrupted_missing_usage",
+      "message": {
+        "schema_version": "1.0",
+        "message_kind": "normalized_model_response",
+        "payload": {
+          "model_call_id": "019a5500-0000-7000-8000-000000000010",
+          "step_id": "019a5500-0000-7000-8000-000000000011",
+          "items": [],
+          "finish": "interrupted",
+          "usage_refs": [],
+          "diagnostic_error": null
+        }
+      }
+    }
+  ],
+  "fragment_inputs": [
+    {
+      "name": "complete_split_arguments",
+      "provider_call_id": "provider-call-A",
+      "argument_fragments": [
+        "{\"source_",
+        "name\":\"account_snapshot\"}"
+      ],
+      "end": "complete"
+    },
+    {
+      "name": "partial_eof",
+      "provider_call_id": "provider-call-A",
+      "argument_fragments": [
+        "{\"source_name\":"
+      ],
+      "end": "eof"
+    },
+    {
+      "name": "repeated_fragment",
+      "provider_call_id": "provider-call-A",
+      "argument_fragments": [
+        "{\"source_name\":",
+        "{\"source_name\":",
+        "\"account_snapshot\"}"
+      ],
+      "end": "complete"
+    },
+    {
+      "name": "malformed_arguments",
+      "provider_call_id": "provider-call-A",
+      "argument_fragments": [
+        "{\"source_name\":}"
+      ],
+      "end": "complete"
+    }
+  ],
+  "note": "Raw fragment inputs are fixture data, not a frozen provider stream protocol. P3-02-D defines normalization and rejection semantics."
+}

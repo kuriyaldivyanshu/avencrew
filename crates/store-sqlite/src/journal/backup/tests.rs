@@ -483,3 +483,40 @@ fn oversized_manifest_is_already_rejected_by_the_producer_canonicalizer() {
     // its manifest. It enforces the contracts' existing 1 MiB input cap.
     assert!(canonical(&manifest).is_err());
 }
+
+#[test]
+fn released_l1_backup_remains_inspectable_and_quarantined_after_l2_upgrade() {
+    run(async {
+        let root = Root::new();
+        let packages = Root::new();
+        let package = packages.0.join("l1");
+        let restored = packages.0.join("quarantined");
+        let mut old = LocalStore::open_to(&root.0, 2).await.unwrap();
+        old.bootstrap_standalone(
+            &serde_json::to_vec(&crate::journal::identity::tests::fixture()).unwrap(),
+            "keychain:test",
+        )
+        .await
+        .unwrap();
+        old.create_backup(&package, &id(800), &at()).await.unwrap();
+        old.close().await.unwrap();
+        let inspection = LocalStore::inspect_backup(&package).await.unwrap();
+        assert_eq!(inspection.journal_schema_version, 2);
+        let receipt = LocalStore::restore_backup_quarantined(&package, &restored)
+            .await
+            .unwrap();
+        assert_eq!(receipt.journal_schema_version, 2);
+        assert!(LocalStore::open(&restored).await.is_err());
+        let upgraded = LocalStore::open(&root.0).await.unwrap();
+        assert_eq!(upgraded.status().schema_version, 4);
+        assert_eq!(upgraded.status().domain_tables, 27);
+        upgraded.close().await.unwrap();
+        assert_eq!(
+            LocalStore::inspect_backup(&package)
+                .await
+                .unwrap()
+                .journal_schema_version,
+            2
+        );
+    });
+}

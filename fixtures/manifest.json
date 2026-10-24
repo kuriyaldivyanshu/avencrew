@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "kind": "avencrew-application-fixture-inventory",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 2391,
+      "sha256": "203127c0c9845bfb75789bd3aac63b44b99b3dcd241c8734b3f4726bb1805102"
+    },
+    {
+      "path": "faults/injections.json",
+      "bytes": 4774,
+      "sha256": "57aa89ca32a54326bee3fa37a25fbfb2d3675ebfd57addfa140104f75fc63105"
+    },
+    {
+      "path": "ids.json",
+      "bytes": 1486,
+      "sha256": "5e22b531eaa1782d1f671e8296196d5a745622b71ef77f7fca343b9b72403dbf"
+    },
+    {
+      "path": "models/execution.json",
+      "bytes": 17415,
+      "sha256": "0e30c944c7c925c8984da9a024a4c1bfea14fd021f511cb21f054762ba28c52e"
+    },
+    {
+      "path": "models/responses.json",
+      "bytes": 3425,
+      "sha256": "c8135fe31b147bf295214b079fc11cc9333d4e300a6c454afd320cb55e31af8a"
+    },
+    {
+      "path": "models/streams.json",
+      "bytes": 14935,
+      "sha256": "98cab1c9c03e5bdb7db2e08b30ea25824bf25608e1cd6bb0daf4ebcafcae6f66"
+    },
+    {
+      "path": "projects/export/baseline/README.md",
+      "bytes": 61,
+      "sha256": "5230845f9267a59c5d48fe318930c9e45deadcf7c7175b3939056c7c6f9fa55f"
+    },
+    {
+      "path": "projects/export/baseline/config.json",
+      "bytes": 53,
+      "sha256": "a3716c5dd7e61faacb23e934a2f19f95893162767a877c438531e81aaaa98c2d"
+    },
+    {
+      "path": "projects/export/baseline/export.mjs",
+      "bytes": 104,
+      "sha256": "516d907873a1907d547895249cf1b62dbb2985849c4af468969ec966b81a8d1c"
+    },
+    {
+      "path": "projects/export/candidate/export.mjs",
+      "bytes": 88,
+      "sha256": "414c7275e775ac4f355b572de6f3c217c281755dd8f5f98e177f34cd2bbed013"
+    },
+    {
+      "path": "projects/export/current/README.md",
+      "bytes": 107,
+      "sha256": "8cd5fd320870b21a25f420c1e86a094e7dc0db0d94a849ad078b0323da7d20a3"
+    },
+    {
+      "path": "projects/export/reproduce.mjs",
+      "bytes": 301,
+      "sha256": "c8ab68e68412f928906ceb7288140cc537ab797180f571d69aa5fc06590df02c"
+    },
+    {
+      "path": "projects/scenarios.json",
+      "bytes": 5855,
+      "sha256": "b07642aee6fdc3d0f65eb05c2f8c6f3345bb4ac4aca89251de07373f6d633907"
+    },
+    {
+      "path": "sources/evidence.json",
+      "bytes": 20360,
+      "sha256": "0d12c31d76e727cebf3dca8e62f90ed5b08c297b9b9ff072b544da0ecd3c2bd8"
+    }
+  ]
+}

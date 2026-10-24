@@ -1,0 +1,233 @@
+{
+  "schema_version": 1,
+  "note": "Declarative fault inputs; no fault injector or runtime acceptance is implemented.",
+  "faults": [
+    {
+      "id": "duplicate_same_key",
+      "boundary": "accept_command",
+      "action": "repeat_same_bytes",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "changed_digest",
+      "boundary": "accept_command",
+      "action": "same_key_changed_bytes",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "stale_revision",
+      "boundary": "review",
+      "action": "R1_after_R2",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "revoked_source",
+      "boundary": "publish",
+      "action": "revoke_independent_report",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "private_support",
+      "boundary": "draft",
+      "action": "include_private_renewal_note",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "incomplete_page",
+      "boundary": "retrieve",
+      "action": "omit_thread_page_2",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "partial_call",
+      "boundary": "model_stream",
+      "action": "eof_before_arguments_complete",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "corrupt_blob",
+      "boundary": "read_blob",
+      "action": "flip_one_byte",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "missing_blob",
+      "boundary": "read_blob",
+      "action": "missing_registered_bytes",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "disk_full",
+      "boundary": "publish",
+      "action": "write_returns_ENOSPC",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "stop_race",
+      "boundary": "dispatch",
+      "action": "stop_accepted_before_dispatch",
+      "orders": [
+        "before",
+        "after"
+      ]
+    },
+    {
+      "id": "kill_before_commit",
+      "boundary": "transaction",
+      "action": "kill_before_authoritative_commit",
+      "orders": [
+        "before",
+        "after"
+      ]
+    },
+    {
+      "id": "kill_after_commit",
+      "boundary": "transaction",
+      "action": "kill_after_commit_before_reply",
+      "orders": [
+        "before",
+        "after"
+      ]
+    },
+    {
+      "id": "wrong_tenant",
+      "boundary": "resource_link",
+      "action": "other_tenant_report",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "wrong_task",
+      "boundary": "check",
+      "action": "same_tenant_other_task",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "spawn_reply_lost",
+      "boundary": "process_launch",
+      "action": "drop_reply_after_launch",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "pid_reused",
+      "boundary": "process_reconcile",
+      "action": "new_process_same_pid",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "patch_partial_failure",
+      "boundary": "apply_patch",
+      "action": "second_file_hash_mismatch",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "symlink_escape",
+      "boundary": "file_read",
+      "action": "guest_symlink_outside_root",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "credential_access",
+      "boundary": "tool_call",
+      "action": "deny_env_keychain_ssh",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "detached_writer",
+      "boundary": "process_yield",
+      "action": "writer_outlives_launch",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "stale_generation",
+      "boundary": "wake",
+      "action": "G1_after_stop",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "history_gap",
+      "boundary": "wake",
+      "action": "missing_watermark_interval",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "event_permission_revoked",
+      "boundary": "wake",
+      "action": "revoke_before_admission",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "self_trigger_storm",
+      "boundary": "trigger",
+      "action": "new_provider_ids_same_cause",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "dst_gap_fold",
+      "boundary": "timer",
+      "action": "America_New_York_2026_gap_fold",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "late_settlement",
+      "boundary": "budget",
+      "action": "settle_original_period_after_reset",
+      "orders": [
+        "specified"
+      ]
+    },
+    {
+      "id": "stop_after_seal",
+      "boundary": "handoff",
+      "action": "partition_before_server_acceptance",
+      "orders": [
+        "specified"
+      ]
+    }
+  ]
+}

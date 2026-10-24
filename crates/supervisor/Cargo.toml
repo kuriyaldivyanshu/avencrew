@@ -19,6 +19,7 @@ path = "src/main.rs"
 # component, which is what makes it the place that can report whole-build state.
 avencrew-contracts.workspace = true
 avencrew-harness.workspace = true
+avencrew-broker.workspace = true
 avencrew-store-sqlite.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -31,4 +32,4 @@ getrandom = { version = "=0.3.4", default-features = false }
 tokio = { workspace = true, features = ["net", "io-util"] }
 
 # Safe OS identity and inherited launch-channel checks; no application FFI.
-nix = { version = "=0.31.3", default-features = false, features = ["user", "process", "socket"] }
+nix = { version = "=0.31.3", default-features = false, features = ["user", "process", "socket", "time"] }
