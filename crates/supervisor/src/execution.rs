@@ -211,27 +211,29 @@ impl engine::Host for FixtureHost {
     async fn restore(&mut self, _: &TurnSeed) -> Result<Restoration, EngineError> {
         let sample = clock::sample().map_err(|_| EngineError::StaleAuthority)?;
         let mut store = self.store.lock().await;
-        let future = store.local_execution_snapshot(
+        let future = store.reconcile_local_execution(
             &self.seed.run_spec.workspace_id,
             &self.actor,
             &self.seed.turn_id,
         );
         let snap = Box::pin(future).await.map_err(storage)?;
-        if let Some(checkpoint) = &snap.current_checkpoint {
-            let restored = store
-                .read_checkpoint(
+        if let Some(outcome) = snap.progress.outcome {
+            if snap.cancellation_requested && !matches!(outcome, TurnOutcome::Cancelled { .. }) {
+                return Err(EngineError::StaleAuthority);
+            }
+            // This immutable outcome predates any newly accepted controls. It
+            // cannot acknowledge their application or stand in for current state.
+            let inputs = store
+                .local_execution_inputs(
                     &self.seed.run_spec.workspace_id,
                     &self.actor,
-                    &self.seed.run_spec.run_id,
-                    checkpoint,
+                    &self.seed.turn_id,
                 )
                 .await
-                .map_err(|_| EngineError::Storage)?;
-            if restored.coverage.context != "exact_fixture_ledger" {
-                return Err(EngineError::InvalidState);
+                .map_err(storage)?;
+            if inputs.len() as u64 != snap.progress.state.applied_input_cut.value() {
+                return Err(EngineError::StaleAuthority);
             }
-        }
-        if let Some(outcome) = snap.progress.outcome {
             return Ok(Restoration {
                 state: snap.progress.state,
                 pending_step: None,
@@ -322,31 +324,21 @@ impl engine::Host for FixtureHost {
         .await
         .map_err(storage)?;
         if control.stopped {
-            let context = store
-                .local_execution_context(
+            let snap = store
+                .local_execution_snapshot(
                     &self.seed.run_spec.workspace_id,
                     &self.actor,
                     &self.seed.turn_id,
                 )
                 .await
                 .map_err(storage)?;
-            let mut unresolved = Vec::new();
-            for step in context["history"]
-                .as_array()
-                .ok_or(EngineError::InvalidState)?
-            {
-                for p in step["invocations"]
-                    .as_array()
-                    .ok_or(EngineError::InvalidState)?
-                {
-                    if matches!(p["state"].as_str(), Some("dispatched" | "unknown")) {
-                        unresolved.push(
-                            serde_json::from_value(p["id"].clone())
-                                .map_err(|_| EngineError::InvalidState)?,
-                        );
-                    }
-                }
-            }
+            let unresolved = snap
+                .unresolved_invocations
+                .into_iter()
+                .chain(snap.unresolved_model_calls)
+                .collect::<std::collections::BTreeSet<_>>()
+                .into_iter()
+                .collect();
             return Ok(Control::Stop {
                 applied_input_cut: control.applied_input_cut,
                 cleanup_refs: List::new(vec![]).map_err(|_| EngineError::InvalidState)?,

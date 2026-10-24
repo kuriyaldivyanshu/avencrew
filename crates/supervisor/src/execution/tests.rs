@@ -623,3 +623,5 @@ fn new_evidence_reaches_a_fourth_model_step_but_repeated_reads_hit_no_progress()
         }
     });
 }
+
+mod control_recovery;

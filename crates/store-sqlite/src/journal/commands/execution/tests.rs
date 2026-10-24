@@ -200,6 +200,17 @@ fn execution_crash_child() {
             )
             .await
             .unwrap();
+        } else if stage.starts_with("controls_") {
+            s.apply_local_controls(access(), &id(1300)).await.unwrap();
+        } else if stage.starts_with("outcome_") {
+            let snap = s
+                .local_execution_snapshot(&id(1), &id(2), &id(700))
+                .await
+                .unwrap();
+            let outcome = control_recovery::cancellation(&snap, id(1500));
+            s.commit_local_outcome(access(), &snap.progress.state, &outcome, &id(1600))
+                .await
+                .unwrap();
         } else if stage.starts_with("dispatch_") {
             s.claim_local_dispatch(
                 access(),
@@ -1031,3 +1042,39 @@ fn artifact_checks_pin_audience_and_reject_digest_valid_cross_audience_records()
         s.close().await.unwrap();
     });
 }
+
+#[test]
+fn applied_control_projection_drift_is_rejected_before_reapplication() {
+    native_run(|| async {
+        let root = Root::new();
+        let mut s = ready(&root).await;
+        let bytes=serde_json::to_vec(&json!({"kind":"stop","command_id":id(970),"run_id":id(300),"idempotency_key":"replay-stop","payload":{"reason":"Stop"}})).unwrap();
+        s.accept_command(CommandAcceptance {
+            workspace: &id(1),
+            actor: &id(2),
+            bytes: &bytes,
+            event: &id(971),
+            queue: &id(972),
+            command_blob: &id(973),
+            event_blob: &id(974),
+            at: &now(),
+        })
+        .await
+        .unwrap();
+        s.apply_local_controls(access(), &id(975)).await.unwrap();
+        sqlx::query("UPDATE local_commands SET state='rejected' WHERE id=?")
+            .bind(id(970).as_str())
+            .execute(&mut s.connection)
+            .await
+            .unwrap();
+        s.close().await.unwrap();
+        let mut s = LocalStore::open(&root.0).await.unwrap();
+        assert!(
+            s.apply_local_controls(access(), &id(976)).await.is_err(),
+            "replay accepted applied/rejected drift"
+        );
+        s.close().await.unwrap();
+    });
+}
+
+mod control_recovery;

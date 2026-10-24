@@ -458,7 +458,30 @@ impl LocalStore {
         if row.accepted != state.applied_input_cut.value() as i64 {
             return Err(TurnError::StaleAuthority);
         }
-        let unresolved:i64=sqlx::query_scalar("SELECT count(*) FROM local_invocations i JOIN local_steps s ON s.workspace_id=i.workspace_id AND s.id=i.step_id WHERE s.workspace_id=? AND s.turn_id=? AND i.state IN ('dispatched','unknown')").bind(a.workspace.as_str()).bind(a.turn.as_str()).fetch_one(&mut self.connection).await?;
+        let unresolved: std::collections::BTreeSet<_> = snap
+            .unresolved_invocations
+            .iter()
+            .chain(&snap.unresolved_model_calls)
+            .cloned()
+            .collect();
+        if let TurnOutcome::Cancelled {
+            cleanup_refs,
+            unresolved_receipt_refs,
+            ..
+        } = outcome
+        {
+            if !cleanup_refs.as_slice().is_empty()
+                || unresolved_receipt_refs.as_slice().len() != unresolved.len()
+                || unresolved_receipt_refs
+                    .as_slice()
+                    .iter()
+                    .cloned()
+                    .collect::<std::collections::BTreeSet<_>>()
+                    != unresolved
+            {
+                return Err(TurnError::Conflict);
+            }
+        }
         if let TurnOutcome::CandidateResult {
             artifact_refs,
             check_result_refs,
@@ -499,7 +522,7 @@ impl LocalStore {
         }
         let status = match outcome {
             TurnOutcome::Cancelled { .. } if row.cancelled => {
-                if unresolved == 0 {
+                if unresolved.is_empty() {
                     "cancelled"
                 } else {
                     "blocked"
@@ -558,7 +581,14 @@ impl LocalStore {
             .bind(seed.run_spec.run_id.as_str())
             .execute(&mut *tx)
             .await?;
-        sqlx::query("UPDATE local_attempts SET state='released',ended_at_us=? WHERE workspace_id=? AND id=? AND state IN ('claimed','running','draining')").bind(a.now.unix_micros()).bind(a.workspace.as_str()).bind(seed.lease.attempt_id.as_str()).execute(&mut *tx).await?;
+        // Unknown dispatched work retains the attempt reservation. No process
+        // cleanup or safe release can be inferred from an interrupted caller.
+        let changed=sqlx::query("UPDATE local_attempts SET state=?,ended_at_us=? WHERE workspace_id=? AND id=? AND state IN ('claimed','running','draining') AND epoch=?")
+            .bind(if unresolved.is_empty(){"released"}else{"draining"}).bind(if unresolved.is_empty(){Some(a.now.unix_micros())}else{None})
+            .bind(a.workspace.as_str()).bind(seed.lease.attempt_id.as_str()).bind(seed.lease.epoch.value() as i64).execute(&mut *tx).await?;
+        if changed.rows_affected() != 1 {
+            return Err(TurnError::StaleAuthority);
+        }
         save_progress(
             &mut tx,
             &a,
@@ -569,7 +599,11 @@ impl LocalStore {
             &bytes,
         )
         .await?;
+        #[cfg(test)]
+        tests::barrier(&self.status.database_path, "outcome_before_commit")?;
         tx.commit().await?;
+        #[cfg(test)]
+        tests::barrier(&self.status.database_path, "outcome_after_commit")?;
         Ok(())
     }
 }

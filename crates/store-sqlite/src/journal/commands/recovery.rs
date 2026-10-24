@@ -266,6 +266,24 @@ impl LocalStore {
                     });
                 }
             }
+            // The executable fixture consumer owns typed applied dispositions
+            // and retained execution records. Verify them on startup too, while
+            // keeping this projection held and entirely read-only.
+            let turns:Vec<String>=sqlx::query_scalar("SELECT id FROM local_turns WHERE workspace_id=? AND run_id=? ORDER BY ordinal LIMIT 51")
+                .bind(workspace.as_str()).bind(run.as_str()).fetch_all(&mut self.connection).await?;
+            if turns.len() > 50 {
+                return Err(ControlError::Conflict);
+            }
+            for turn in turns {
+                let turn = DomainId::new(turn).map_err(|_| ControlError::Conflict)?;
+                match self
+                    .reconcile_local_execution(workspace, actor, &turn)
+                    .await
+                {
+                    Ok(_) | Err(TurnError::Unsupported | TurnError::StaleAuthority) => {} // stays held
+                    Err(_) => return Err(ControlError::Conflict),
+                }
+            }
             let has_attempt: bool = sqlx::query_scalar(
                 "SELECT EXISTS(SELECT 1 FROM local_attempts WHERE workspace_id=? AND run_id=?)",
             )

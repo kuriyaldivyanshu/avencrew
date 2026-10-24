@@ -76,3 +76,10 @@ checkpoints and version-bound candidate checks. Process kills around actual SQL
 commits establish crash-cut behavior for that profile; they do not establish
 power-loss behavior, VM containment, live filesystem capture, restored-backup
 activation or business completion.
+
+Fixture restart also verifies historical applied/superseded control dispositions
+against the original receipts and current journal cursors. Accepted stop cannot
+be cleared by restart or duplicate requests. Unresolved model intents and tool
+dispatches remain in cancellation outcomes; their attempt stays `draining`
+without an end time until a future reconciliation owner can prove safe release.
+No additional migration or automatic execution/cleanup grant is involved.
