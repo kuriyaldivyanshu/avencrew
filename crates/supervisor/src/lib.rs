@@ -1,4 +1,6 @@
-//! Restricted supervisor control transport. No renderer, SQL or execution bridge.
+//! Restricted control transport and explicit journal-backed fixture execution.
+//! Transport grants no production execution or renderer SQL access.
+pub mod execution;
 use avencrew_contracts::{
     canonical_bytes, decode_client_request, decode_internal_message, encode_message,
     scalars::{Digest, DomainId, Instant},
@@ -26,7 +28,7 @@ use tokio::{
 const MAX: usize = 1_048_576;
 const DEADLINE: Duration = Duration::from_secs(5);
 const IDLE_TIMEOUT: Duration = Duration::from_secs(60);
-const MANIFEST: &str = r#"{"operation_names":["handshake","describe_capabilities","submit_command"],"profiles":[{"id":"local-controls-steer-pause-stop","enabled":true,"reason":null},{"id":"harness-execution","enabled":false,"reason":"Harness and executable admission are not implemented"}],"schema_versions":["sqlite:L0-L1"]}"#;
+const MANIFEST: &str = r#"{"operation_names":["handshake","describe_capabilities","submit_command"],"profiles":[{"id":"local-controls-steer-pause-stop","enabled":true,"reason":null},{"id":"harness-execution","enabled":false,"reason":"Only explicit fixture execution is implemented; production admission and environments are disabled"}],"schema_versions":["sqlite:L0-L2"]}"#;
 fn denied() -> io::Error {
     io::Error::new(
         io::ErrorKind::PermissionDenied,
@@ -303,7 +305,7 @@ async fn client(
         .resolve_standalone(&session.context.workspace_id, &session.context.actor_id)
         .await
         .map_err(store_error)?;
-    reply(&mut stream,&request,Ok(json!({"selected_version":"1.0","supervisor_generation":session.grant.generation,"schema_min":"sqlite:L0-L1","schema_max":"sqlite:L0-L1","capability_manifest_digest":session.manifest,"max_frame_bytes":MAX,"authenticated_scope_id":session.grant.scope_id}))).await?;
+    reply(&mut stream,&request,Ok(json!({"selected_version":"1.0","supervisor_generation":session.grant.generation,"schema_min":"sqlite:L0-L2","schema_max":"sqlite:L0-L2","capability_manifest_digest":session.manifest,"max_frame_bytes":MAX,"authenticated_scope_id":session.grant.scope_id}))).await?;
     for _ in 0..256 {
         let request = match read_frame(&mut stream, IDLE_TIMEOUT).await {
             Ok(bytes) => decode_client_request(&bytes).map_err(|_| invalid())?,

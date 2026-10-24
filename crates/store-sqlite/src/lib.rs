@@ -5,10 +5,13 @@ mod journal;
 pub use journal::{
     BackupError, BackupInspection, BackupReceipt, BlobImport, BundlePublication, CheckpointFile,
     CheckpointPublication, CheckpointReceipt, CommandAcceptance, ControlError, DiagnosticCounts,
-    FileCoverage, LocalDiagnostics, LocalRunReceipt, LocalRunRegistration, LocalStore, Payload,
-    PublicationReceipt, PublishedBundle, RecordAllocation, RecoveredControl, RecoveredRun,
+    FileCoverage, LocalArtifact, LocalArtifactPublication, LocalArtifactReceipt,
+    LocalArtifactTarget, LocalControlSnapshot, LocalDiagnostics, LocalDispatch,
+    LocalExecutionAccess, LocalExecutionBudget, LocalExecutionCheckpoint, LocalExecutionSnapshot,
+    LocalRunReceipt, LocalRunRegistration, LocalStore, LocalTurnPublication, LocalTurnReceipt,
+    Payload, PublicationReceipt, PublishedBundle, RecordAllocation, RecoveredControl, RecoveredRun,
     RecoveryGate, RecoverySnapshot, RegistrationReceipt, RestoreReceipt, RestoredCheckpoint,
-    StagingCleanup, StoreError, StoreStatus, VaultReceipt,
+    RetainedLocalTurn, StagingCleanup, StoreError, StoreStatus, TurnError, VaultReceipt,
 };
 
 use avencrew_contracts::BuildInfo;

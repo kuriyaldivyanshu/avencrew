@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/contracts",
     "crates/harness",
+    "crates/broker",
     "crates/store-sqlite",
     "crates/supervisor",
 ]
@@ -22,9 +23,10 @@ unsafe_code = "forbid"
 # Dependency direction is enforced by Cargo, not by convention:
 #
 #   contracts  <- no internal dependencies at all
-#   harness       -> contracts
+#   broker        -> contracts
+#   harness       -> contracts, broker
 #   store-sqlite  -> contracts
-#   supervisor    -> contracts, harness, store-sqlite
+#   supervisor    -> contracts, harness, broker, store-sqlite
 #
 # `contracts` cannot reach provider, Electron, harness or storage types because it
 # has no internal dependencies. `harness` cannot reach the SQLite adapter because
@@ -46,6 +48,7 @@ sha2 = { version = "=0.10.9", default-features = false }
 # deserialization, extension loading and unlock-notify.
 avencrew-contracts = { path = "crates/contracts" }
 avencrew-harness = { path = "crates/harness" }
+avencrew-broker = { path = "crates/broker" }
 avencrew-store-sqlite = { path = "crates/store-sqlite" }
 
 sqlx = { version = "=0.9.0", default-features = false, features = [

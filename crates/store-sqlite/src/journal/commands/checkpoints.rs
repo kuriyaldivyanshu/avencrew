@@ -108,6 +108,7 @@ pub struct RestoredCheckpoint {
     pub canonical_bytes: Vec<u8>,
     pub coverage: FileCoverage,
     pub files: Vec<CheckpointFile>,
+    pub execution: Option<serde_json::Value>,
 }
 struct Closure {
     candidate: BundleCandidate,
@@ -183,6 +184,7 @@ fn decode_checkpoint(bytes: &[u8], w: &DomainId) -> Result<Closure, ControlError
     }
     let mut keys = BTreeSet::new();
     let mut coverage = None;
+    let mut execution = false;
     let mut blobs = BTreeSet::new();
     let mut total = 0u64;
     for e in &entries {
@@ -211,6 +213,18 @@ fn decode_checkpoint(bytes: &[u8], w: &DomainId) -> Result<Closure, ControlError
                 serde_json::from_value::<FileCoverage>(e.metadata.clone())
                     .map_err(|_| invalid("invalid checkpoint coverage"))?,
             );
+        } else if e.entry_key == "execution" {
+            if execution
+                || e.kind != "metadata"
+                || e.disposition != "declared"
+                || e.blob_id.0.is_some()
+                || e.sha256.0.is_some()
+                || e.byte_size.0.is_some()
+                || e.mode_bits.0.is_some()
+            {
+                return Err(ControlError::Conflict);
+            }
+            execution = true;
         } else {
             let path = e
                 .entry_key
@@ -242,11 +256,21 @@ fn decode_checkpoint(bytes: &[u8], w: &DomainId) -> Result<Closure, ControlError
         }
     }
     let coverage = coverage.ok_or(ControlError::Conflict)?;
-    let files = entries.len().checked_sub(1).ok_or(ControlError::Conflict)?;
+    let files = entries
+        .len()
+        .checked_sub(1 + usize::from(execution))
+        .ok_or(ControlError::Conflict)?;
     if coverage.schema_version != "avencrew.checkpoint-coverage/1"
-        || coverage.context != "not_captured"
-        || coverage.effects != "unverified"
-        || coverage.processes != "unverified"
+        || if execution {
+            coverage.context != "exact_fixture_ledger"
+                || coverage.effects != "fixture_reads_only"
+                || coverage.processes != "none"
+                || files != 0
+        } else {
+            coverage.context != "not_captured"
+                || coverage.effects != "unverified"
+                || coverage.processes != "unverified"
+        }
         || coverage.protocol_version != 1
         || coverage.gaps.is_empty()
         || coverage.gaps.len() > 128
@@ -307,7 +331,7 @@ async fn attempt(
     }
     Ok(())
 }
-fn digest_bytes(s: &str) -> Vec<u8> {
+pub(super) fn digest_bytes(s: &str) -> Vec<u8> {
     s.as_bytes()
         .as_chunks::<2>()
         .0
@@ -325,12 +349,13 @@ fn digest_bytes(s: &str) -> Vec<u8> {
         .collect()
 }
 fn cut(row: &RunRow, c: &Closure, version: &PositiveCounter) -> Result<(), ControlError> {
-    if row.cancelled || row.status == "cancelling" {
+    if (row.cancelled || row.status == "cancelling") && c.coverage.context != "exact_fixture_ledger"
+    {
         return Err(ControlError::Cancelled);
     }
     if !matches!(
         row.status.as_str(),
-        "preparing" | "running" | "waiting" | "paused" | "verifying" | "recovering"
+        "preparing" | "running" | "waiting" | "paused" | "verifying" | "recovering" | "cancelling"
     ) || row.version != version.value() as i64
         || row.epoch != c.coverage.attempt_epoch.value() as i64
         || row.event != c.checkpoint.event_seq.value() as i64
@@ -347,10 +372,16 @@ impl LocalStore {
         w: &DomainId,
         a: &DomainId,
         c: &Closure,
+        current: bool,
     ) -> Result<Vec<CheckpointFile>, ControlError> {
         let mut files = Vec::new();
         for e in &c.entries {
             if e.entry_key == "coverage" {
+                continue;
+            }
+            if e.entry_key == "execution" {
+                self.verify_execution_manifest(w, a, &e.metadata, current)
+                    .await?;
                 continue;
             }
             let id = e.blob_id.0.as_ref().ok_or(ControlError::Conflict)?;
@@ -447,7 +478,8 @@ impl LocalStore {
         cut(&row, &c, i.expected_version)?;
         self.checkpoint_task(i.workspace, i.actor, &c, &row).await?;
         attempt(&mut self.connection, i.workspace, &c, true).await?;
-        self.checkpoint_files(i.workspace, i.actor, &c).await?;
+        self.checkpoint_files(i.workspace, i.actor, &c, true)
+            .await?;
         let created: i64 = sqlx::query_scalar(
             "SELECT created_at_us FROM local_runs WHERE workspace_id=? AND id=?",
         )
@@ -611,11 +643,16 @@ impl LocalStore {
         {
             return Err(ControlError::Conflict);
         }
-        let files = self.checkpoint_files(w, a, &c).await?;
+        let files = self.checkpoint_files(w, a, &c, false).await?;
         identity.check_live(&mut self.connection).await?;
         Ok(RestoredCheckpoint {
             receipt,
             canonical_bytes: bytes,
+            execution: c
+                .entries
+                .iter()
+                .find(|e| e.entry_key == "execution")
+                .map(|e| e.metadata.clone()),
             coverage: c.coverage,
             files,
         })

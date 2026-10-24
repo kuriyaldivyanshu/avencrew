@@ -262,6 +262,18 @@ fn internal_json(media: &str) -> bool {
             | "application/vnd.avencrew.control-accepted+json"
             | "application/vnd.avencrew.checkpoint-bundle+json"
             | "application/vnd.avencrew.checkpoint-committed+json"
+            | "application/vnd.avencrew.local-turn+json"
+            | "application/vnd.avencrew.lease+json"
+            | "application/vnd.avencrew.sealed-step+json"
+            | "application/vnd.avencrew.model-completion+json"
+            | "application/vnd.avencrew.turn-progress+json"
+            | "application/vnd.avencrew.sealed-catalog+json"
+            | "application/vnd.avencrew.model-profile+json"
+            | "application/vnd.avencrew.invocation-proposal+json"
+            | "application/vnd.avencrew.invocation-result+json"
+            | "application/vnd.avencrew.dispatch-policy+json"
+            | "application/vnd.avencrew.artifact-checks+json"
+            | "application/vnd.avencrew.execution-observation+json"
     )
 }
 fn locator(b: &Blob) -> Result<(), BackupError> {
@@ -336,9 +348,29 @@ fn verify_json(root: &Path, b: &Blob, uid: u32) -> Result<(), BackupError> {
     open_file(root, &b.storage_relpath, uid, MAX_JSON)?
         .take(MAX_JSON + 1)
         .read_to_end(&mut bytes)?;
-    if bytes.len() as u64 != b.byte_size.value()
-        || hash(&bytes)? != b.sha256
-        || canonical_bytes(&bytes).map_err(|_| BackupError::InventoryMismatch)? != bytes
+    let normalized = match b.media_type.as_str() {
+        "application/vnd.avencrew.model-completion+json" => {
+            avencrew_contracts::runtime::record_bytes(
+                &serde_json::from_slice::<avencrew_contracts::runtime::ModelCompletion>(&bytes)
+                    .map_err(|_| BackupError::InventoryMismatch)?,
+            )
+        }
+        "application/vnd.avencrew.invocation-proposal+json" => {
+            avencrew_contracts::runtime::record_bytes(
+                &serde_json::from_slice::<avencrew_contracts::runtime::LocalProposal>(&bytes)
+                    .map_err(|_| BackupError::InventoryMismatch)?,
+            )
+        }
+        "application/vnd.avencrew.invocation-result+json" => {
+            avencrew_contracts::runtime::record_bytes(
+                &serde_json::from_slice::<avencrew_contracts::wire::ToolResult>(&bytes)
+                    .map_err(|_| BackupError::InventoryMismatch)?,
+            )
+        }
+        _ => canonical_bytes(&bytes),
+    }
+    .map_err(|_| BackupError::InventoryMismatch)?;
+    if bytes.len() as u64 != b.byte_size.value() || hash(&bytes)? != b.sha256 || normalized != bytes
     {
         return Err(BackupError::InventoryMismatch);
     }
@@ -419,11 +451,14 @@ async fn inventory(conn: &mut SqliteConnection) -> Result<Vec<Blob>, BackupError
     }
     Ok(result)
 }
-async fn validate_database(conn: &mut SqliteConnection) -> Result<(), BackupError> {
+async fn validate_database(
+    conn: &mut SqliteConnection,
+    expected_version: i64,
+) -> Result<(), BackupError> {
     let version: i64 = sqlx::query_scalar("PRAGMA user_version")
         .fetch_one(&mut *conn)
         .await?;
-    if version != SCHEMA_VERSION {
+    if !(2..=SCHEMA_VERSION).contains(&expected_version) || version != expected_version {
         return Err(BackupError::SchemaMismatch);
     }
     super::verify_schema(conn, version).await?;
@@ -443,6 +478,7 @@ async fn validate_database(conn: &mut SqliteConnection) -> Result<(), BackupErro
     .await?;
     let expected: Vec<_> = super::migrator()
         .iter()
+        .filter(|m| m.version <= expected_version)
         .map(|m| {
             (
                 m.version,
@@ -565,7 +601,7 @@ impl LocalStore {
             return Err(BackupError::DestinationExists);
         }
         super::verify_settings(&mut self.connection).await?;
-        validate_database(&mut self.connection).await?;
+        validate_database(&mut self.connection, self.status.schema_version).await?;
         let blobs = inventory(&mut self.connection).await?;
         let estimated: u64 = blobs.iter().map(|b| b.byte_size.value()).sum();
         if estimated > MAX_TOTAL {
@@ -600,7 +636,7 @@ impl LocalStore {
         )
         .await?;
         let checked = async {
-            validate_database(&mut conn).await?;
+            validate_database(&mut conn, self.status.schema_version).await?;
             if inventory(&mut conn).await? != blobs {
                 return Err(BackupError::InventoryMismatch);
             }
@@ -668,7 +704,7 @@ impl LocalStore {
             backup_id: backup_id.clone(),
             created_at: at.clone(),
             sqlite_version: ENGINE_VERSION.into(),
-            journal_schema_version: SCHEMA_VERSION,
+            journal_schema_version: self.status.schema_version,
             database_sha256: database_hash,
             database_bytes: count(database_size)?,
             blobs,
@@ -704,7 +740,7 @@ impl LocalStore {
         if canonical_bytes(&bytes).map_err(|_| BackupError::InvalidManifest)? != bytes
             || m.schema_version != FORMAT
             || m.sqlite_version != ENGINE_VERSION
-            || m.journal_schema_version != SCHEMA_VERSION
+            || !(2..=SCHEMA_VERSION).contains(&m.journal_schema_version)
             || m.database_bytes.value() > MAX_DB
             || m.blobs.len() > MAX_BLOBS
         {
@@ -738,7 +774,7 @@ impl LocalStore {
         )
         .await?;
         let checked = async {
-            validate_database(&mut conn).await?;
+            validate_database(&mut conn, m.journal_schema_version).await?;
             if inventory(&mut conn).await? != m.blobs {
                 return Err(BackupError::InventoryMismatch);
             }
@@ -763,7 +799,7 @@ impl LocalStore {
         }
         Ok(BackupInspection {
             receipt: result,
-            journal_schema_version: SCHEMA_VERSION,
+            journal_schema_version: m.journal_schema_version,
             disposition: "verified_private_backup",
         })
     }
@@ -858,7 +894,7 @@ impl LocalStore {
         )
         .await?;
         let checked = async {
-            validate_database(&mut conn).await?;
+            validate_database(&mut conn, m.journal_schema_version).await?;
             if inventory(&mut conn).await? != m.blobs {
                 return Err(BackupError::InventoryMismatch);
             }
@@ -884,7 +920,7 @@ impl LocalStore {
         let result = RestoreReceipt {
             backup_id: m.backup_id,
             manifest_sha256: inspection.receipt.manifest_sha256,
-            journal_schema_version: SCHEMA_VERSION,
+            journal_schema_version: m.journal_schema_version,
             disposition: "quarantined".into(),
             reasons: vec![
                 "authority_currency_unverified".into(),

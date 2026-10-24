@@ -7,10 +7,12 @@
 pub mod bundles;
 pub mod framing;
 mod json;
+pub mod runtime;
 pub mod scalars;
 mod semantics;
 pub mod wire;
 
+pub use json::parse as decode_json;
 pub use json::{canonical_bytes, decode_client_request, decode_internal_message, encode_message};
 
 /// Bounded, payload-free errors safe to report at a transport boundary.

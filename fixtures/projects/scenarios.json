@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "scenarios": [
+    {
+      "id": "F01",
+      "title": "Account report and unsent follow-up",
+      "workspace_id": "019a5500-0000-7000-8000-000000000001",
+      "project_id": "019a5500-0000-7000-8000-000000000007",
+      "acting_principal_id": "019a5500-0000-7000-8000-000000000003",
+      "reviewer_id": "019a5500-0000-7000-8000-000000000004",
+      "source_names": [
+        "account_snapshot",
+        "private_renewal_note",
+        "customer_export_report"
+      ],
+      "events": [
+        {
+          "sequence": "1",
+          "kind": "review",
+          "subject": "R1"
+        },
+        {
+          "sequence": "2",
+          "kind": "human_edit",
+          "subject": "R2"
+        },
+        {
+          "sequence": "3",
+          "kind": "late_review",
+          "subject": "R1"
+        }
+      ],
+      "external_effects_enabled": false
+    },
+    {
+      "id": "F02",
+      "title": "Feedback brief and product decision",
+      "workspace_id": "019a5500-0000-7000-8000-000000000001",
+      "project_id": "019a5500-0000-7000-8000-000000000007",
+      "acting_principal_id": "019a5500-0000-7000-8000-000000000003",
+      "reviewer_id": "019a5500-0000-7000-8000-000000000004",
+      "source_names": [
+        "customer_export_report",
+        "forward_one",
+        "forward_two",
+        "independent_report",
+        "progress_request",
+        "thread_coverage",
+        "pm_correction"
+      ],
+      "events": [
+        {
+          "sequence": "1",
+          "kind": "question",
+          "subject": "numeric correctness or progress"
+        },
+        {
+          "sequence": "2",
+          "kind": "authorized_correction",
+          "subject": "numeric correctness only"
+        },
+        {
+          "sequence": "3",
+          "kind": "source_revoked",
+          "subject": "independent_report"
+        }
+      ],
+      "external_effects_enabled": false
+    },
+    {
+      "id": "F03",
+      "title": "Bounded engineering investigation and reviewed patch",
+      "workspace_id": "019a5500-0000-7000-8000-000000000001",
+      "project_id": "019a5500-0000-7000-8000-000000000007",
+      "acting_principal_id": "019a5500-0000-7000-8000-000000000003",
+      "reviewer_id": "019a5500-0000-7000-8000-000000000004",
+      "source_names": [
+        "repository_docs",
+        "ci_b1",
+        "ci_b2"
+      ],
+      "events": [
+        {
+          "sequence": "1",
+          "kind": "human_edit",
+          "subject": "current/README.md"
+        },
+        {
+          "sequence": "2",
+          "kind": "spawn_reply_lost",
+          "subject": "same invocation lookup"
+        },
+        {
+          "sequence": "3",
+          "kind": "harness_killed",
+          "subject": "running check"
+        },
+        {
+          "sequence": "4",
+          "kind": "import_preview",
+          "subject": "baseline/current/candidate"
+        }
+      ],
+      "external_effects_enabled": false
+    },
+    {
+      "id": "F04",
+      "title": "Connected evidence and delivery question",
+      "workspace_id": "019a5500-0000-7000-8000-000000000001",
+      "project_id": "019a5500-0000-7000-8000-000000000007",
+      "acting_principal_id": "019a5500-0000-7000-8000-000000000003",
+      "reviewer_id": "019a5500-0000-7000-8000-000000000004",
+      "source_names": [
+        "customer_export_report",
+        "decision_d1",
+        "ci_b2",
+        "merge_observation",
+        "beta_promise",
+        "engineering_estimate",
+        "deployed_configuration",
+        "rollout_observation"
+      ],
+      "events": [
+        {
+          "sequence": "1",
+          "kind": "merge",
+          "subject": "B2"
+        },
+        {
+          "sequence": "2",
+          "kind": "requirement_correction",
+          "subject": "D2"
+        },
+        {
+          "sequence": "3",
+          "kind": "delayed_rollout",
+          "subject": "B2/D1"
+        }
+      ],
+      "external_effects_enabled": false
+    },
+    {
+      "id": "F05",
+      "title": "Continuing work, lost wakes and stop",
+      "workspace_id": "019a5500-0000-7000-8000-000000000001",
+      "project_id": "019a5500-0000-7000-8000-000000000007",
+      "acting_principal_id": "019a5500-0000-7000-8000-000000000003",
+      "reviewer_id": "019a5500-0000-7000-8000-000000000004",
+      "source_names": [
+        "ci_b1",
+        "ci_b2"
+      ],
+      "events": [
+        {
+          "sequence": "1",
+          "kind": "check",
+          "subject": "B1"
+        },
+        {
+          "sequence": "2",
+          "kind": "check",
+          "subject": "B2"
+        },
+        {
+          "sequence": "3",
+          "kind": "duplicate_check",
+          "subject": "B2"
+        },
+        {
+          "sequence": "4",
+          "kind": "stop_responsibility",
+          "subject": "G1"
+        },
+        {
+          "sequence": "5",
+          "kind": "delayed_occurrence",
+          "subject": "G1"
+        }
+      ],
+      "external_effects_enabled": false
+    }
+  ],
+  "wait_input": {
+    "responsibility_id": "019a5500-0000-7000-8000-00000000000d",
+    "responsibility_generation": "1",
+    "trigger_id": "019a5500-0000-7000-8000-00000000000e",
+    "trigger_generation": "1",
+    "watermark": "10",
+    "condition": {
+      "subject_revision": "019a5500-0000-7000-8000-00000000000c",
+      "status": "passed"
+    },
+    "registration_orders": [
+      "event_before_wait",
+      "event_after_wait"
+    ],
+    "deliveries": [
+      {
+        "sequence": "11",
+        "delivery_key": "check-b1",
+        "subject_revision": "019a5500-0000-7000-8000-00000000000b"
+      },
+      {
+        "sequence": "12",
+        "delivery_key": "check-b2",
+        "subject_revision": "019a5500-0000-7000-8000-00000000000c"
+      },
+      {
+        "sequence": "12",
+        "delivery_key": "check-b2",
+        "subject_revision": "019a5500-0000-7000-8000-00000000000c"
+      }
+    ]
+  }
+}

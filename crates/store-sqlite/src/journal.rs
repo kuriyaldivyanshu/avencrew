@@ -11,7 +11,7 @@ use sqlx::migrate::{MigrateError, Migration, MigrationType, Migrator};
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqliteSynchronous};
 use sqlx::{Connection, SqlSafeStr, SqliteConnection};
 
-const SCHEMA_VERSION: i64 = 2;
+const SCHEMA_VERSION: i64 = 4;
 mod backup;
 mod blobs;
 pub use backup::{BackupError, BackupInspection, BackupReceipt, RestoreReceipt};
@@ -23,8 +23,11 @@ mod publication;
 mod vault;
 pub use commands::{
     CheckpointFile, CheckpointPublication, CheckpointReceipt, CommandAcceptance, ControlError,
-    FileCoverage, LocalRunReceipt, LocalRunRegistration, RecoveredControl, RecoveredRun,
-    RecoveryGate, RecoverySnapshot, RestoredCheckpoint,
+    FileCoverage, LocalArtifact, LocalArtifactPublication, LocalArtifactReceipt,
+    LocalArtifactTarget, LocalControlSnapshot, LocalDispatch, LocalExecutionAccess,
+    LocalExecutionBudget, LocalExecutionCheckpoint, LocalExecutionSnapshot, LocalRunReceipt,
+    LocalRunRegistration, LocalTurnPublication, LocalTurnReceipt, RecoveredControl, RecoveredRun,
+    RecoveryGate, RecoverySnapshot, RestoredCheckpoint, RetainedLocalTurn, TurnError,
 };
 pub use identity::RegistrationReceipt;
 pub use publication::{
@@ -34,7 +37,7 @@ pub use vault::{BlobImport, StagingCleanup, VaultReceipt};
 const ENGINE_VERSION: &str = "3.53.4";
 const ENGINE_SOURCE: &str =
     "2026-07-24 19:02:57 bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc";
-const MIGRATIONS: [(i64, &str, &str); 2] = [
+const MIGRATIONS: [(i64, &str, &str); 4] = [
     (
         1,
         "L0 namespace",
@@ -44,6 +47,16 @@ const MIGRATIONS: [(i64, &str, &str); 2] = [
         2,
         "L1 journal",
         include_str!("../../../migrations/sqlite/0002_l1_journal.sql"),
+    ),
+    (
+        3,
+        "L2 prepared turns",
+        include_str!("../../../migrations/sqlite/0003_l2_turns.sql"),
+    ),
+    (
+        4,
+        "L2 execution",
+        include_str!("../../../migrations/sqlite/0004_l2_execution.sql"),
     ),
 ];
 
@@ -229,7 +242,8 @@ impl LocalStore {
         Ok(StoreStatus {
             database_path: database,
             schema_version: current,
-            domain_tables: if current == 1 { 6 } else { 19 },
+            domain_tables: sqlx::query_scalar::<_, i64>("SELECT count(*) FROM sqlite_schema WHERE type='table' AND name GLOB 'local_*'")
+                .fetch_one(&mut connection).await? as usize,
         })
         }.await;
         let status = match opened {

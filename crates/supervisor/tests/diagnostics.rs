@@ -44,7 +44,7 @@ fn diagnostic_cli_is_metadata_only_and_refuses_missing_root() {
     assert!(output.status.success());
     assert!(output.stderr.is_empty());
     let v: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    assert_eq!(v["schema_version"], "avencrew.local-diagnostics/1");
+    assert_eq!(v["schema_version"], "avencrew.local-diagnostics/2");
     assert_eq!(v["execution_enabled"], false);
     assert_eq!(v["counts"]["runs"], "0");
     assert!(!String::from_utf8(output.stdout)

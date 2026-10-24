@@ -1,0 +1,745 @@
+{
+  "schema_version": "avencrew.fixture-model-catalog/1",
+  "input_schema_version": "avencrew.fixture-model/1",
+  "seed": {
+    "model_call_id": "019a5500-0000-7000-8000-000000000010",
+    "step_id": "019a5500-0000-7000-8000-000000000011",
+    "provider_profile_id": "019a5500-0000-7000-8000-000000000013",
+    "compatibility_digest": "339c169fe55ceafadfd2d5b5d3540b17258d46ef32e07ef653d7cd67a20b6bef",
+    "bindings": [
+      {
+        "name": "workspace_read",
+        "binding_id": "019a5500-0000-7000-8000-000000000012"
+      }
+    ],
+    "invocation_slots": [
+      "019a5500-0000-7000-8000-000000000015",
+      "019a5500-0000-7000-8000-000000000016",
+      "019a5500-0000-7000-8000-000000000017"
+    ],
+    "continuation_refs": [
+      "019a5500-0000-7000-8000-000000000018"
+    ],
+    "usage_ref": "019a5500-0000-7000-8000-000000000014"
+  },
+  "cases": [
+    {
+      "name": "candidate_only",
+      "events": [
+        {
+          "sequence": "1",
+          "body": {
+            "type": "text_start",
+            "item": 0
+          }
+        },
+        {
+          "sequence": "2",
+          "body": {
+            "type": "text_delta",
+            "item": 0,
+            "bytes": [
+              65,
+              32,
+              114,
+              101,
+              112,
+              111,
+              114,
+              116,
+              32,
+              100,
+              114,
+              97,
+              102,
+              116,
+              32,
+              105,
+              115,
+              32,
+              114,
+              101,
+              97,
+              100,
+              121,
+              32,
+              102,
+              111,
+              114,
+              32,
+              99,
+              117,
+              114,
+              114,
+              101,
+              110,
+              116,
+              45,
+              118,
+              101,
+              114,
+              115,
+              105,
+              111,
+              110,
+              32,
+              114,
+              101,
+              118,
+              105,
+              101,
+              119,
+              46
+            ]
+          }
+        },
+        {
+          "sequence": "3",
+          "body": {
+            "type": "text_end",
+            "item": 0
+          }
+        },
+        {
+          "sequence": "4",
+          "body": {
+            "type": "finish",
+            "reason": "final"
+          }
+        }
+      ]
+    },
+    {
+      "name": "complete_split_arguments",
+      "events": [
+        {
+          "sequence": "1",
+          "body": {
+            "type": "tool_start",
+            "item": 0,
+            "provider_call_id": "provider-call-A",
+            "tool_name": "workspace_read"
+          }
+        },
+        {
+          "sequence": "2",
+          "body": {
+            "type": "arguments_delta",
+            "item": 0,
+            "bytes": [
+              123,
+              34,
+              115,
+              111,
+              117,
+              114,
+              99,
+              101,
+              95
+            ]
+          }
+        },
+        {
+          "sequence": "3",
+          "body": {
+            "type": "arguments_delta",
+            "item": 0,
+            "bytes": [
+              110,
+              97,
+              109,
+              101,
+              34,
+              58,
+              34,
+              97,
+              99,
+              99,
+              111,
+              117,
+              110,
+              116,
+              95,
+              115,
+              110,
+              97,
+              112,
+              115,
+              104,
+              111,
+              116,
+              34,
+              125
+            ]
+          }
+        },
+        {
+          "sequence": "4",
+          "body": {
+            "type": "tool_end",
+            "item": 0
+          }
+        },
+        {
+          "sequence": "5",
+          "body": {
+            "type": "finish",
+            "reason": "tools"
+          }
+        }
+      ]
+    },
+    {
+      "name": "exact_fragment_replay",
+      "events": [
+        {
+          "sequence": "1",
+          "body": {
+            "type": "tool_start",
+            "item": 0,
+            "provider_call_id": "provider-call-A",
+            "tool_name": "workspace_read"
+          }
+        },
+        {
+          "sequence": "2",
+          "body": {
+            "type": "arguments_delta",
+            "item": 0,
+            "bytes": [
+              123,
+              34,
+              115,
+              111,
+              117,
+              114,
+              99,
+              101,
+              95
+            ]
+          }
+        },
+        {
+          "sequence": "2",
+          "body": {
+            "type": "arguments_delta",
+            "item": 0,
+            "bytes": [
+              123,
+              34,
+              115,
+              111,
+              117,
+              114,
+              99,
+              101,
+              95
+            ]
+          }
+        },
+        {
+          "sequence": "3",
+          "body": {
+            "type": "arguments_delta",
+            "item": 0,
+            "bytes": [
+              110,
+              97,
+              109,
+              101,
+              34,
+              58,
+              34,
+              97,
+              99,
+              99,
+              111,
+              117,
+              110,
+              116,
+              95,
+              115,
+              110,
+              97,
+              112,
+              115,
+              104,
+              111,
+              116,
+              34,
+              125
+            ]
+          }
+        },
+        {
+          "sequence": "4",
+          "body": {
+            "type": "tool_end",
+            "item": 0
+          }
+        },
+        {
+          "sequence": "5",
+          "body": {
+            "type": "finish",
+            "reason": "tools"
+          }
+        }
+      ]
+    },
+    {
+      "name": "changed_fragment_replay",
+      "events": [
+        {
+          "sequence": "1",
+          "body": {
+            "type": "tool_start",
+            "item": 0,
+            "provider_call_id": "provider-call-A",
+            "tool_name": "workspace_read"
+          }
+        },
+        {
+          "sequence": "2",
+          "body": {
+            "type": "arguments_delta",
+            "item": 0,
+            "bytes": [
+              123,
+              34,
+              115,
+              111,
+              117,
+              114,
+              99,
+              101,
+              95
+            ]
+          }
+        },
+        {
+          "sequence": "2",
+          "body": {
+            "type": "arguments_delta",
+            "item": 0,
+            "bytes": [
+              34,
+              99,
+              104,
+              97,
+              110,
+              103,
+              101,
+              100,
+              34
+            ]
+          }
+        },
+        {
+          "sequence": "3",
+          "body": {
+            "type": "arguments_delta",
+            "item": 0,
+            "bytes": [
+              110,
+              97,
+              109,
+              101,
+              34,
+              58,
+              34,
+              97,
+              99,
+              99,
+              111,
+              117,
+              110,
+              116,
+              95,
+              115,
+              110,
+              97,
+              112,
+              115,
+              104,
+              111,
+              116,
+              34,
+              125
+            ]
+          }
+        },
+        {
+          "sequence": "4",
+          "body": {
+            "type": "tool_end",
+            "item": 0
+          }
+        },
+        {
+          "sequence": "5",
+          "body": {
+            "type": "finish",
+            "reason": "tools"
+          }
+        }
+      ]
+    },
+    {
+      "name": "partial_eof",
+      "events": [
+        {
+          "sequence": "1",
+          "body": {
+            "type": "tool_start",
+            "item": 0,
+            "provider_call_id": "provider-call-A",
+            "tool_name": "workspace_read"
+          }
+        },
+        {
+          "sequence": "2",
+          "body": {
+            "type": "arguments_delta",
+            "item": 0,
+            "bytes": [
+              123,
+              34,
+              115,
+              111,
+              117,
+              114,
+              99,
+              101,
+              95,
+              110,
+              97,
+              109,
+              101,
+              34,
+              58
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "repeated_fragment_new_sequence",
+      "events": [
+        {
+          "sequence": "1",
+          "body": {
+            "type": "tool_start",
+            "item": 0,
+            "provider_call_id": "provider-call-A",
+            "tool_name": "workspace_read"
+          }
+        },
+        {
+          "sequence": "2",
+          "body": {
+            "type": "arguments_delta",
+            "item": 0,
+            "bytes": [
+              123,
+              34,
+              115,
+              111,
+              117,
+              114,
+              99,
+              101,
+              95,
+              110,
+              97,
+              109,
+              101,
+              34,
+              58
+            ]
+          }
+        },
+        {
+          "sequence": "3",
+          "body": {
+            "type": "arguments_delta",
+            "item": 0,
+            "bytes": [
+              123,
+              34,
+              115,
+              111,
+              117,
+              114,
+              99,
+              101,
+              95,
+              110,
+              97,
+              109,
+              101,
+              34,
+              58
+            ]
+          }
+        },
+        {
+          "sequence": "4",
+          "body": {
+            "type": "arguments_delta",
+            "item": 0,
+            "bytes": [
+              34,
+              97,
+              99,
+              99,
+              111,
+              117,
+              110,
+              116,
+              95,
+              115,
+              110,
+              97,
+              112,
+              115,
+              104,
+              111,
+              116,
+              34,
+              125
+            ]
+          }
+        },
+        {
+          "sequence": "5",
+          "body": {
+            "type": "tool_end",
+            "item": 0
+          }
+        },
+        {
+          "sequence": "6",
+          "body": {
+            "type": "finish",
+            "reason": "tools"
+          }
+        }
+      ]
+    },
+    {
+      "name": "interrupted_after_closed_tool",
+      "events": [
+        {
+          "sequence": "1",
+          "body": {
+            "type": "tool_start",
+            "item": 0,
+            "provider_call_id": "provider-call-A",
+            "tool_name": "workspace_read"
+          }
+        },
+        {
+          "sequence": "2",
+          "body": {
+            "type": "arguments_delta",
+            "item": 0,
+            "bytes": [
+              123,
+              34,
+              115,
+              111,
+              117,
+              114,
+              99,
+              101,
+              95
+            ]
+          }
+        },
+        {
+          "sequence": "3",
+          "body": {
+            "type": "arguments_delta",
+            "item": 0,
+            "bytes": [
+              110,
+              97,
+              109,
+              101,
+              34,
+              58,
+              34,
+              97,
+              99,
+              99,
+              111,
+              117,
+              110,
+              116,
+              95,
+              115,
+              110,
+              97,
+              112,
+              115,
+              104,
+              111,
+              116,
+              34,
+              125
+            ]
+          }
+        },
+        {
+          "sequence": "4",
+          "body": {
+            "type": "tool_end",
+            "item": 0
+          }
+        },
+        {
+          "sequence": "5",
+          "body": {
+            "type": "finish",
+            "reason": "interrupted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "usage_known_zero",
+      "events": [
+        {
+          "sequence": "1",
+          "body": {
+            "type": "usage",
+            "input_tokens": "0",
+            "output_tokens": "0"
+          }
+        },
+        {
+          "sequence": "2",
+          "body": {
+            "type": "finish",
+            "reason": "final"
+          }
+        }
+      ]
+    },
+    {
+      "name": "refusal",
+      "events": [
+        {
+          "sequence": "1",
+          "body": {
+            "type": "finish",
+            "reason": "refused"
+          }
+        }
+      ]
+    },
+    {
+      "name": "failed",
+      "events": [
+        {
+          "sequence": "1",
+          "body": {
+            "type": "finish",
+            "reason": "failed"
+          }
+        }
+      ]
+    },
+    {
+      "name": "new_event_after_finish",
+      "events": [
+        {
+          "sequence": "1",
+          "body": {
+            "type": "finish",
+            "reason": "final"
+          }
+        },
+        {
+          "sequence": "2",
+          "body": {
+            "type": "usage",
+            "input_tokens": "1",
+            "output_tokens": "1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "split_utf8_text",
+      "events": [
+        {
+          "sequence": "1",
+          "body": {
+            "type": "text_start",
+            "item": 0
+          }
+        },
+        {
+          "sequence": "2",
+          "body": {
+            "type": "text_delta",
+            "item": 0,
+            "bytes": [
+              240,
+              159
+            ]
+          }
+        },
+        {
+          "sequence": "3",
+          "body": {
+            "type": "text_delta",
+            "item": 0,
+            "bytes": [
+              152,
+              128
+            ]
+          }
+        },
+        {
+          "sequence": "4",
+          "body": {
+            "type": "text_end",
+            "item": 0
+          }
+        },
+        {
+          "sequence": "5",
+          "body": {
+            "type": "finish",
+            "reason": "final"
+          }
+        }
+      ]
+    },
+    {
+      "name": "opaque_compatible",
+      "events": [
+        {
+          "sequence": "1",
+          "body": {
+            "type": "opaque",
+            "item": 0,
+            "provider_profile_id": "019a5500-0000-7000-8000-000000000013",
+            "compatibility_digest": "339c169fe55ceafadfd2d5b5d3540b17258d46ef32e07ef653d7cd67a20b6bef",
+            "blob_ref": "019a5500-0000-7000-8000-000000000018"
+          }
+        },
+        {
+          "sequence": "2",
+          "body": {
+            "type": "finish",
+            "reason": "final"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -12,11 +12,19 @@ use sqlx::{Connection, Row, SqliteConnection};
 use std::fmt;
 
 pub(super) mod checkpoints;
+mod execution;
 mod recovery;
+mod turns;
 pub use checkpoints::{
     CheckpointFile, CheckpointPublication, CheckpointReceipt, FileCoverage, RestoredCheckpoint,
 };
+pub use execution::{
+    LocalArtifact, LocalArtifactPublication, LocalArtifactReceipt, LocalArtifactTarget,
+    LocalControlSnapshot, LocalDispatch, LocalExecutionAccess, LocalExecutionBudget,
+    LocalExecutionCheckpoint, LocalExecutionSnapshot,
+};
 pub use recovery::{RecoveredControl, RecoveredRun, RecoveryGate, RecoverySnapshot};
+pub use turns::{LocalTurnPublication, LocalTurnReceipt, RetainedLocalTurn, TurnError};
 
 const COMMAND_MEDIA: &str = "application/vnd.avencrew.control-command+json";
 const EVENT_MEDIA: &str = "application/vnd.avencrew.control-accepted+json";

@@ -66,7 +66,7 @@ impl<'de> Visitor<'de> for StrictJson {
         Ok(Value::Object(values))
     }
 }
-fn parse(bytes: &[u8]) -> Result<Value, ContractError> {
+pub fn parse(bytes: &[u8]) -> Result<Value, ContractError> {
     if bytes.is_empty() || bytes.len() > MAX_FRAME_BYTES {
         return Err(ContractError::Limit("frame bytes"));
     }

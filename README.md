@@ -18,7 +18,9 @@ Planned capabilities include:
 
 ## Current status
 
-The Electron desktop scaffold, managed toolchain, static SQLite build, canonical Rust wire contracts, generated TypeScript validation and fixture development commands are implemented. The P2 local journal now boots 19 STRICT tables with exclusive supervisor ownership and transactional migrations. Standalone human registration and private first-version task/draft-artifact canonical publication are implemented in the store, with digest/closure checks and atomic references. Trusted local run registration and steer/pause/stop acceptance now persist command receipts, events and reconciliation intents atomically. The supervisor now owns a restricted Unix socket with OS peer/session authentication, bounded wire frames and durable command receipts; client disconnection does not shut it down. Startup now verifies retained run/control history and reconstructs ordered pending inputs without resuming execution. The raw blob vault supports bounded streaming imports, verified reads and conservative staging cleanup. Typed local checkpoint storage now seals verified file inventories and journal cuts atomically; startup validates current checkpoints and retains explicit coverage gaps without dispatching. Local diagnostics export only fixed counts and public version metadata; they refuse missing, old-schema and quarantined restore roots. Offline backups capture SQLite and matching verified objects; isolated restore copies remain quarantined, and backup packages cannot boot as live roots. Safe-boundary control application, live filesystem capture, exact harness context and wait/effect/process reconciliation, Electron socket integration, executable model admission, harness execution, workers and cloud services remain future work. The local private [architecture draft](docs/ARCHITECTURE_DRAFT_1.md) and database plans describe the intended application; a public checkout builds without these design documents.
+The Electron desktop scaffold, managed toolchain, static SQLite build, canonical Rust wire contracts and generated TypeScript validation are implemented. The local journal now uses schema 4 with 27 STRICT domain tables, exclusive supervisor ownership and transactional migrations. Canonical task publication, authenticated local controls, verified blob/checkpoint storage, private offline backups and quarantined restore copying are implemented.
+
+An explicit fixture command now runs the owned bounded engine and invocation broker against SQLite. It records model intent before generation, retains responses and known/unknown usage, fences tool dispatch against current controls and authority, and saves exact fixture-ledger checkpoints and versioned candidate artifact bytes. Text, JSON, CSV and scoped patch checks never replace required business checks or human review. Recovery retains ambiguous work without automatic reissue; zero-priced fixtures still obey resource limits. Production task admission, Electron execution integration, live providers, process/VM/PTC environments, filesystem capture, durable waits, workers and cloud services remain disabled. The local private [checklist](docs/checklist.md) records scoped evidence and open phase exits; the [architecture draft](docs/ARCHITECTURE_DRAFT_1.md) describes the intended application. A public checkout builds without these design documents.
 
 Start with the [documentation review order](docs/README.md).
 
@@ -61,6 +63,19 @@ bash tools/bootstrap/dev-env.sh pnpm dev
 
 The desktop does not consume fixture seeds yet. Electron distribution and launch
 are macOS-only; the Linux CI lane builds portable Rust/contracts and bundles.
+
+To execute the synthetic model/source fixture through the real supervisor journal:
+
+```sh
+FIXTURE_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/avencrew-execution.XXXXXX")
+bash tools/bootstrap/dev-env.sh cargo run -p avencrew-supervisor --locked -- \
+  fixture-run --data-root "$FIXTURE_ROOT" --input fixtures/models/execution.json
+```
+
+The root must be an existing empty temporary subdirectory; it is never reused or
+overwritten by this command. Output contains outcome references and resource
+counts. Candidate bytes and checks remain in the private journal for inspection.
+This finite fixture uses no network or model credentials and has no paid fallback.
 
 ## Continuous integration
 
