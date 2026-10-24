@@ -196,7 +196,11 @@ fn apply_patch<'a>(
         let (old_range, new_range) = header.split_once(' ').ok_or("invalid_patch_hunk")?;
         let (old_start, old_count) = range(old_range, '-')?;
         let (new_start, new_count) = range(new_range, '+')?;
-        let start = if old_start == 0 { 0 } else { old_start - 1 };
+        let start = if old_count == 0 {
+            old_start
+        } else {
+            old_start.checked_sub(1).ok_or("invalid_patch_old_range")?
+        };
         if start < cursor || start > source.len() {
             return Err("overlapping_patch_hunks");
         }
@@ -271,6 +275,28 @@ fn apply_patch<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn zero_context_insertions_use_the_line_after_the_old_range() {
+        let bases = BTreeMap::from([("a.txt".into(), "a\nb\nc\n".into())]);
+        for (range, expected) in [
+            ("-0,0 +1,1", "d\na\nb\nc\n"),
+            ("-1,0 +2,1", "a\nd\nb\nc\n"),
+            ("-3,0 +4,1", "a\nb\nc\nd\n"),
+        ] {
+            let patch = format!("--- a/a.txt\n+++ b/a.txt\n@@ {range} @@\n+d\n");
+            let report = validate(ArtifactFormat::Patch, patch.as_bytes(), &bases);
+            assert_eq!(
+                report.status,
+                CheckStatus::Passed,
+                "{range}: {:?}",
+                report.codes
+            );
+            assert_eq!(
+                report.result_sha256,
+                Some(content_digest(expected.as_bytes()))
+            );
+        }
+    }
     #[test]
     fn structured_formats_reject_false_or_incomplete_validation() {
         let bases = BTreeMap::new();

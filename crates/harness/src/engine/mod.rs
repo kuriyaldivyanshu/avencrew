@@ -2,7 +2,7 @@
 //! checkpoint capture, model IO and candidate staging. No database or scheduler
 //! is reachable here; final model text cannot produce business completion.
 use crate::model::fixture::{
-    commit_fixture_proposals, FixtureFailure, FixtureResult, FixtureUsage,
+    commit_fixture_proposals, FixtureError, FixtureFailure, FixtureResult, FixtureUsage,
 };
 use avencrew_broker::{Broker, BrokerError, Invocation, Outcome as InvocationOutcome};
 use avencrew_contracts::{
@@ -147,6 +147,16 @@ pub trait Host: avencrew_broker::Host {
         observations: &[Observation],
         state: &TurnState,
     ) -> Result<Digest, EngineError>;
+    /// A dropped/ambiguous tool future cannot run its own broker cleanup.
+    /// Retain an explicit unknown under the already committed dispatch before
+    /// acknowledging observations. Preserve any result that committed first.
+    async fn record_tool_unknown(
+        &mut self,
+        seed: &TurnSeed,
+        step: &ModelStep,
+        invocation: &DomainId,
+        code: ErrorCode,
+    ) -> Result<(), EngineError>;
     async fn stage_candidate(
         &mut self,
         seed: &TurnSeed,
@@ -435,6 +445,22 @@ fn remaining(seed: &TurnSeed, state: &TurnState) -> Duration {
     )
 }
 
+fn adapter_failure(code: FixtureError) -> (ErrorCode, Retry) {
+    match code {
+        FixtureError::Cancelled => (ErrorCode::Cancelled, Retry::ReconcileFirst),
+        FixtureError::Timeout => (ErrorCode::Timeout, Retry::ReconcileFirst),
+        FixtureError::LimitExceeded => (ErrorCode::ResourceLimit, Retry::Remediation),
+        FixtureError::InvalidArguments => (ErrorCode::InvalidArgument, Retry::Remediation),
+        FixtureError::UnknownBinding => (ErrorCode::Denied, Retry::Remediation),
+        FixtureError::IncompatibleVersion => (ErrorCode::Incompatible, Retry::Remediation),
+        FixtureError::IncompatibleContinuation => (ErrorCode::Incompatible, Retry::ReconcileFirst),
+        FixtureError::ReplayMismatch | FixtureError::DuplicateCall => {
+            (ErrorCode::IdempotencyMismatch, Retry::Remediation)
+        }
+        _ => (ErrorCode::InvalidMessage, Retry::Remediation),
+    }
+}
+
 async fn observe<H: Host>(
     host: &mut H,
     seed: &TurnSeed,
@@ -504,7 +530,6 @@ pub async fn run_turn<H: Host>(
             return Err(EngineError::InvalidState);
         }
         state.active_elapsed_ms = elapsed(started, restored_ms);
-        state.active_elapsed_ms = elapsed(started, restored_ms);
         if remaining(seed, &state).is_zero() {
             return finish(host, seed, &state, End::Yield(Yield::TurnLimit)).await;
         }
@@ -552,7 +577,7 @@ pub async fn run_turn<H: Host>(
                     Ok(result) => result,
                     Err(_) => {
                         let result = Err(FixtureFailure {
-                            code: crate::model::fixture::FixtureError::InvalidFinish,
+                            code: FixtureError::Timeout,
                             usage: FixtureUsage::Unknown,
                         });
                         state.active_elapsed_ms = elapsed(started, restored_ms);
@@ -596,14 +621,9 @@ pub async fn run_turn<H: Host>(
         };
         let result = match result {
             Ok(result) => result,
-            Err(_) => {
-                return finish(
-                    host,
-                    seed,
-                    &state,
-                    End::Fail(ErrorCode::InvalidMessage, Retry::Remediation),
-                )
-                .await
+            Err(failure) => {
+                let (code, retry) = adapter_failure(failure.code);
+                return finish(host, seed, &state, End::Fail(code, retry)).await;
             }
         };
         // Controls are drained again after inference and before each tool. The
@@ -708,6 +728,7 @@ pub async fn run_turn<H: Host>(
             let invoked =
                 tokio::time::timeout(remaining(seed, &state), step.broker.invoke(host, request))
                     .await;
+            let timed_out = invoked.is_err();
             let result = invoked.unwrap_or(Err(BrokerError::UnknownOutcome));
             let unresolved = matches!(
                 &result,
@@ -724,6 +745,19 @@ pub async fn run_turn<H: Host>(
                     | BrokerError::Cancelled
                     | BrokerError::Unsupported)
             );
+            if unresolved {
+                host.record_tool_unknown(
+                    seed,
+                    &step,
+                    proposal.invocation_id(),
+                    if timed_out {
+                        ErrorCode::Timeout
+                    } else {
+                        ErrorCode::UnknownOutcome
+                    },
+                )
+                .await?;
+            }
             observations.push(Observation {
                 invocation_id: proposal.invocation_id().clone(),
                 result,

@@ -4,6 +4,7 @@ use avencrew_contracts::scalars::PositiveCounter;
 use avencrew_store_sqlite::{
     BundlePublication, LocalRunRegistration, LocalTurnPublication, RecordAllocation,
 };
+use sha2_auth::{Digest as _, Sha256};
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

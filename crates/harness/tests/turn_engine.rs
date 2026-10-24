@@ -314,16 +314,51 @@ impl engine::Host for EngineFixture {
         self.pending = None;
         Ok(progress)
     }
+    async fn record_tool_unknown(
+        &mut self,
+        _: &RpcRequestHarnessStartTurnBody,
+        _: &ModelStep,
+        invocation: &DomainId,
+        _: ErrorCode,
+    ) -> Result<(), EngineError> {
+        self.cut("tool_unknown")?;
+        let row = self
+            .tools
+            .rows
+            .get_mut(invocation)
+            .ok_or(EngineError::Storage)?;
+        if matches!(row.1, Retained::Started) {
+            row.1 = Retained::Unknown;
+        }
+        Ok(())
+    }
     async fn stage_candidate(
         &mut self,
         _: &RpcRequestHarnessStartTurnBody,
         _: &ModelStep,
-        _: &FixtureResult,
+        response: &FixtureResult,
     ) -> Result<Candidate, EngineError> {
         self.cut("candidate")?;
+        let text = response
+            .response
+            .items
+            .as_slice()
+            .iter()
+            .filter_map(|item| match item {
+                NormalizedModelResponseItemsItem::Text { text } => Some(text.as_str()),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
         Ok(Candidate {
-            artifacts: List::new(vec![]).unwrap(),
-            checks: List::new(vec![]).unwrap(),
+            artifacts: List::new(vec![ArtifactRef {
+                artifact_id: id(610),
+                version_id: id(611),
+                sha256: avencrew_contracts::runtime::content_digest(text.as_bytes()),
+                byte_size: Counter::new(text.len().to_string()).unwrap(),
+            }])
+            .unwrap(),
+            checks: List::new(vec![id(612)]).unwrap(),
         })
     }
     async fn checkpoint(
@@ -356,6 +391,20 @@ fn complete_turn_has_intent_response_proposals_ordered_results_and_candidate_onl
         let outcome = run_turn(&mut host, &seed(), EngineConfig::default())
             .await
             .unwrap();
+        let TurnOutcome::CandidateResult {
+            artifact_refs,
+            check_result_refs,
+            ..
+        } = &outcome
+        else {
+            panic!("candidate missing")
+        };
+        assert_eq!(artifact_refs.as_slice().len(), 1);
+        assert_eq!(check_result_refs.as_slice(), &[id(612)]);
+        assert_eq!(
+            artifact_refs.as_slice()[0].sha256,
+            avencrew_contracts::runtime::content_digest(b"done; candidate only")
+        );
         assert!(
             matches!(outcome,TurnOutcome::CandidateResult {objective_version_id,..} if objective_version_id==id(11))
         );
@@ -612,6 +661,69 @@ fn interrupted_failed_refused_length_and_malformed_results_do_not_dispatch() {
     });
 }
 #[test]
+fn adapter_failures_keep_their_safe_code_and_retry_class() {
+    execute(async {
+        for (code, expected, retry) in [
+            (
+                FixtureError::Timeout,
+                ErrorCode::Timeout,
+                TurnOutcomeFailedRetryClass::ReconcileFirst,
+            ),
+            (
+                FixtureError::InvalidArguments,
+                ErrorCode::InvalidArgument,
+                TurnOutcomeFailedRetryClass::Remediation,
+            ),
+            (
+                FixtureError::LimitExceeded,
+                ErrorCode::ResourceLimit,
+                TurnOutcomeFailedRetryClass::Remediation,
+            ),
+            (
+                FixtureError::Cancelled,
+                ErrorCode::Cancelled,
+                TurnOutcomeFailedRetryClass::ReconcileFirst,
+            ),
+            (
+                FixtureError::IncompatibleVersion,
+                ErrorCode::Incompatible,
+                TurnOutcomeFailedRetryClass::Remediation,
+            ),
+            (
+                FixtureError::IncompatibleContinuation,
+                ErrorCode::Incompatible,
+                TurnOutcomeFailedRetryClass::ReconcileFirst,
+            ),
+        ] {
+            let mut host = EngineFixture::new(vec![Err(FixtureFailure {
+                code,
+                usage: FixtureUsage::Unknown,
+            })]);
+            host.lost_model_reply = true;
+            assert_eq!(
+                run_turn(&mut host, &seed(), EngineConfig::default())
+                    .await
+                    .err(),
+                Some(EngineError::UnknownOutcome)
+            );
+            host.lost_model_reply = false;
+            let outcome = run_turn(&mut host, &seed(), EngineConfig::default())
+                .await
+                .unwrap();
+            let TurnOutcome::Failed {
+                error, retry_class, ..
+            } = outcome
+            else {
+                panic!("failure missing")
+            };
+            assert_eq!(error.code, expected, "{code:?}");
+            assert_eq!(retry_class, retry, "{code:?}");
+            assert_eq!(host.generated, 1);
+            assert_eq!(host.tools.dispatch_count, 0);
+        }
+    });
+}
+#[test]
 fn model_and_tool_timeouts_preserve_unknown_without_retry() {
     execute(async {
         let mut limited = seed();
@@ -654,7 +766,7 @@ fn model_and_tool_timeouts_preserve_unknown_without_retry() {
             .tools
             .rows
             .values()
-            .any(|(_, state)| matches!(state, Retained::Started)));
+            .any(|(_, state)| matches!(state, Retained::Unknown)));
     });
 }
 
@@ -787,7 +899,7 @@ fn current_denial_unknown_result_and_post_staging_stop_never_continue() {
         ));
         assert_eq!(host.generated, 1);
         assert_eq!(host.tools.dispatch_count, 0);
-        assert!(matches!(host.tools.rows[&id(400)].1, Retained::Started));
+        assert!(matches!(host.tools.rows[&id(400)].1, Retained::Unknown));
         assert!(matches!(host.tools.rows[&id(401)].1, Retained::Proposed));
         let mut host = EngineFixture::new(vec![final_response()]);
         host.stop_at = 3;

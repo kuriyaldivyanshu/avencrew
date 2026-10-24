@@ -457,6 +457,72 @@ fn editing_a_candidate_creates_new_checks_and_rejects_stale_versions() {
             original_saved.receipt.check_result_id,
             edited.check_result_id
         );
+        // A real accepted stop after the verifying-state human edit must fence
+        // further versions, while retaining the already committed revision.
+        let seed = store
+            .lock()
+            .await
+            .read_local_turn(&p.workspace, &p.actor, &p.turn)
+            .await
+            .unwrap()
+            .seed;
+        let stop=serde_json::to_vec(&json!({"kind":"stop","command_id":id(),"run_id":seed.run_spec.run_id,"idempotency_key":"stop-before-human-edit","payload":{"reason":"Stop editing"}})).unwrap();
+        let sample = clock::sample().unwrap();
+        store
+            .lock()
+            .await
+            .accept_command(CommandAcceptance {
+                workspace: &p.workspace,
+                actor: &p.actor,
+                bytes: &stop,
+                event: &id(),
+                queue: &id(),
+                command_blob: &id(),
+                event_blob: &id(),
+                at: &sample.now,
+            })
+            .await
+            .unwrap();
+        let before = store
+            .lock()
+            .await
+            .diagnostics()
+            .await
+            .unwrap()
+            .counts
+            .blobs
+            .value();
+        assert!(store
+            .lock()
+            .await
+            .publish_local_artifact(LocalArtifactPublication {
+                access: access(&sample, &p.workspace, &p.actor, &p.turn),
+                target: LocalArtifactTarget::Edit {
+                    artifact: &edited.artifact.artifact_id,
+                    expected_version: &edited.artifact.version_id
+                },
+                version: &id(),
+                content_blob: &id(),
+                checks_manifest: &id(),
+                checks_blob: &id(),
+                result: &id(),
+                bytes: body,
+                validation: &validation,
+            })
+            .await
+            .is_err());
+        assert_eq!(
+            store
+                .lock()
+                .await
+                .diagnostics()
+                .await
+                .unwrap()
+                .counts
+                .blobs
+                .value(),
+            before
+        );
         close(store).await;
         let mut reopened = LocalStore::open(&root.0).await.unwrap();
         let mut read = reopened
@@ -488,5 +554,72 @@ fn editing_a_candidate_creates_new_checks_and_rejects_stale_versions() {
             .await
             .is_err());
         reopened.close().await.unwrap();
+    });
+}
+
+#[test]
+fn new_evidence_reaches_a_fourth_model_step_but_repeated_reads_hit_no_progress() {
+    run(|| async {
+        for distinct in [true, false] {
+            let root = Root::new();
+            let (store, p, mut profile) = setup(&root).await;
+            let read = profile.episodes[0].clone();
+            let final_step = profile.episodes[1].clone();
+            let source = profile.sources[0].clone();
+            profile.sources.clear();
+            profile.episodes.clear();
+            let reads = if distinct { 3 } else { 4 };
+            for n in 0..reads {
+                let mut source = source.clone();
+                if distinct {
+                    source.name = format!("evidence-{n}");
+                    source.version_id = id();
+                }
+                let mut episode = read.clone();
+                for event in &mut episode.input.events {
+                    if let avencrew_harness::model::fixture::FixtureEventBody::ArgumentsDelta {
+                        bytes,
+                        ..
+                    } = &mut event.body
+                    {
+                        *bytes = serde_json::to_vec(&json!({"source_name":source.name})).unwrap();
+                    }
+                }
+                if distinct || n == 0 {
+                    profile.sources.push(source);
+                }
+                profile.episodes.push(episode);
+            }
+            profile.episodes.push(final_step);
+            let outcome = execute_fixture_turn(
+                store.clone(),
+                p.workspace.clone(),
+                p.actor.clone(),
+                p.turn.clone(),
+                profile,
+                EngineConfig::default(),
+            )
+            .await
+            .unwrap();
+            if distinct {
+                assert!(matches!(outcome, TurnOutcome::CandidateResult { .. }));
+            } else {
+                assert!(
+                    matches!(outcome,TurnOutcome::Failed {error,..} if error.code==avencrew_contracts::wire::ErrorCode::ResourceLimit)
+                );
+            }
+            let saved = store
+                .lock()
+                .await
+                .local_execution_snapshot(&p.workspace, &p.actor, &p.turn)
+                .await
+                .unwrap();
+            assert_eq!(saved.progress.state.steps_started, 4);
+            assert_eq!(
+                saved.progress.state.no_progress_steps,
+                if distinct { 0 } else { 3 }
+            );
+            close(store).await;
+        }
     });
 }

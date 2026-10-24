@@ -8,6 +8,60 @@ pub struct LocalControlSnapshot {
 }
 
 impl LocalStore {
+    /// Digest verified semantic evidence, excluding fresh invocation IDs so a
+    /// repeated read of the same source/version/result cannot fake progress.
+    pub(super) async fn execution_progress_digest(
+        &mut self,
+        w: &DomainId,
+        actor: &DomainId,
+        seed: &avencrew_contracts::wire::RpcRequestHarnessStartTurnBody,
+    ) -> Result<avencrew_contracts::scalars::Digest, TurnError> {
+        use avencrew_contracts::{
+            runtime::{content_digest, record_bytes},
+            wire::ToolResult,
+        };
+        let rows:Vec<String>=sqlx::query_scalar("SELECT id FROM local_invocations WHERE workspace_id=? AND run_id=? AND state='result' ORDER BY id LIMIT 101")
+            .bind(w.as_str()).bind(seed.run_spec.run_id.as_str()).fetch_all(&mut self.connection).await?;
+        if rows.len() > 100 {
+            return Err(TurnError::Conflict);
+        }
+        let mut evidence = std::collections::BTreeSet::new();
+        for id in rows {
+            let id = DomainId::new(id).map_err(|_| TurnError::Conflict)?;
+            let proposal = self.read_local_proposal(w, actor, &id).await?;
+            let result = self.read_local_tool_result(w, actor, &id).await?;
+            if let ToolResult::Succeeded {
+                data,
+                artifact_refs,
+                receipt_ref,
+                ..
+            } = result
+            {
+                if !data.value.is_null()
+                    || !artifact_refs.as_slice().is_empty()
+                    || receipt_ref.0.is_some()
+                {
+                    let bytes=record_bytes(&serde_json::json!({"adapter":proposal.adapter_digest,"binding":proposal.context.binding_id,"arguments":proposal.arguments_digest,"data":data,"artifacts":artifact_refs,"receipt":receipt_ref})).map_err(|_|TurnError::Conflict)?;
+                    evidence.insert(content_digest(&bytes).as_str().to_owned());
+                }
+            }
+        }
+        let artifacts=sqlx::query("SELECT a.id,a.current_version_id FROM local_artifacts a WHERE a.workspace_id=? AND a.owner_actor_id=? AND a.id IN (SELECT artifact_id FROM local_artifact_versions WHERE workspace_id=? AND run_id=?) ORDER BY a.id LIMIT 129")
+            .bind(w.as_str()).bind(actor.as_str()).bind(w.as_str()).bind(seed.run_spec.run_id.as_str()).fetch_all(&mut self.connection).await?;
+        if artifacts.len() > 128 {
+            return Err(TurnError::Conflict);
+        }
+        let mut versions = Vec::new();
+        for row in artifacts {
+            let id =
+                DomainId::new(row.try_get::<String, _>("id")?).map_err(|_| TurnError::Conflict)?;
+            let version = DomainId::new(row.try_get::<String, _>("current_version_id")?)
+                .map_err(|_| TurnError::Conflict)?;
+            let saved = self.read_local_artifact(w, actor, &id, &version).await?;
+            versions.push(saved.receipt);
+        }
+        Ok(content_digest(&record_bytes(&serde_json::json!({"domain":"avencrew.fixture-progress/1","objective":seed.run_spec.objective_version_id,"audience":seed.run_spec.audience_policy_id,"checks":seed.run_spec.check_refs,"evidence":evidence,"versions":versions})).map_err(|_|TurnError::Conflict)?))
+    }
     /// Cheap target-local cancellation observation; no disposition or lease change.
     pub async fn local_execution_stop_requested(
         &mut self,
@@ -114,6 +168,7 @@ impl LocalStore {
             version: snap.version + 1,
             progress,
             input_dispositions: vec![],
+            observed_invocation_ids: vec![],
         })
         .map_err(|_| TurnError::Conflict)?;
         // The event retains exact per-command applied/superseded dispositions.
@@ -168,6 +223,7 @@ impl LocalStore {
         &mut self,
         a: LocalExecutionAccess<'_>,
         step: &DomainId,
+        observations: &[DomainId],
         state: &TurnState,
         event: &DomainId,
     ) -> Result<avencrew_contracts::scalars::Digest, TurnError> {
@@ -178,20 +234,65 @@ impl LocalStore {
         if snap.progress.pending_step_id.as_ref() != Some(step)
             || state.steps_started != snap.progress.state.steps_started
             || state.applied_input_cut != snap.progress.state.applied_input_cut
+            || state.no_progress_steps != snap.progress.state.no_progress_steps
+            || state.progress_digest != snap.progress.state.progress_digest
+            || state.active_elapsed_ms < snap.progress.state.active_elapsed_ms
         {
             return Err(TurnError::Conflict);
         }
-        // Reads alone do not establish business progress; no model text increments it.
-        let digest = state.progress_digest.clone();
+        let completion = snap
+            .model
+            .as_ref()
+            .and_then(|r| r.as_ref().ok())
+            .ok_or(TurnError::Conflict)?;
+        if observations.len() > completion.proposal_identities.len()
+            || observations
+                .iter()
+                .zip(&completion.proposal_identities)
+                .any(|(id, p)| *id != p.invocation_id)
+        {
+            return Err(TurnError::Conflict);
+        }
+        for id in observations {
+            let p = self.read_local_proposal(a.workspace, a.actor, id).await?;
+            if p.context.step_id != *step {
+                return Err(TurnError::Conflict);
+            }
+            let dispatched: bool = sqlx::query_scalar(
+                "SELECT state='dispatched' FROM local_invocations WHERE workspace_id=? AND id=?",
+            )
+            .bind(a.workspace.as_str())
+            .bind(id.as_str())
+            .fetch_one(&mut self.connection)
+            .await?;
+            if dispatched {
+                return Err(TurnError::Conflict);
+            }
+        }
+        let digest = self
+            .execution_progress_digest(a.workspace, a.actor, &seed)
+            .await?;
         let mut progress = snap.progress;
         progress.state = state.clone();
-        progress.state.no_progress_steps = state
-            .no_progress_steps
-            .checked_add(1)
-            .filter(|v| *v <= 50)
-            .ok_or(TurnError::Conflict)?;
+        progress.state.no_progress_steps = if digest == state.progress_digest {
+            state
+                .no_progress_steps
+                .checked_add(1)
+                .filter(|v| *v <= 50)
+                .ok_or(TurnError::Conflict)?
+        } else {
+            0
+        };
+        progress.state.progress_digest = digest.clone();
         progress.pending_step_id = None;
-        let bytes = progress_bytes(a.turn, snap.version + 1, &progress)?;
+        let bytes = canonical(&ProgressRecord {
+            schema_version: 1,
+            turn_id: a.turn.clone(),
+            version: snap.version + 1,
+            progress,
+            input_dispositions: vec![],
+            observed_invocation_ids: observations.to_vec(),
+        })?;
         self.put_canonical(a.workspace, event, &bytes)?;
         let identity = self.verified_identity(a.workspace, a.actor).await?;
         let mut tx = self.connection.begin().await?;

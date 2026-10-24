@@ -39,17 +39,19 @@ pub struct LocalArtifact {
     pub receipt: LocalArtifactReceipt,
     pub validation: ArtifactValidation,
     pub pending_checks: Vec<DomainId>,
+    pub audience_policy_id: DomainId,
     pub file: std::fs::File,
 }
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Checks {
+pub(super) struct Checks {
     schema_version: String,
     receipt: LocalArtifactReceipt,
     workspace_id: DomainId,
     actor_id: DomainId,
     task_id: DomainId,
     objective_version_id: DomainId,
+    audience_policy_id: DomainId,
     source_context_blob_id: DomainId,
     validation: ArtifactValidation,
     pending_checks: Vec<DomainId>,
@@ -63,6 +65,33 @@ fn kind(format: ArtifactFormat) -> &'static str {
         ArtifactFormat::Patch => "patch",
     }
 }
+// Human edits are permitted after the candidate outcome enters verifying.
+// They still require this turn's current, unexpired local authority and no stop.
+async fn check_edit_cut(
+    conn: &mut SqliteConnection,
+    a: &LocalExecutionAccess<'_>,
+    seed: &avencrew_contracts::wire::RpcRequestHarnessStartTurnBody,
+    device: &DomainId,
+) -> Result<(), TurnError> {
+    check_lease_cut(a, seed)?;
+    let row = run_row(conn, a.workspace, &seed.run_spec.run_id, a.actor).await?;
+    require_local(&row, device)?;
+    if row.cancelled {
+        return Err(TurnError::Cancelled);
+    }
+    if row.epoch != seed.lease.epoch.value() as i64
+        || row.task != seed.run_spec.task_id
+        || row.revision != seed.run_spec.task_revision_id
+        || row.accepted != row.applied
+        || !matches!(
+            row.status.as_str(),
+            "preparing" | "running" | "paused" | "verifying"
+        )
+    {
+        return Err(TurnError::StaleAuthority);
+    }
+    Ok(())
+}
 impl LocalStore {
     pub async fn publish_local_artifact(
         &mut self,
@@ -70,6 +99,10 @@ impl LocalStore {
     ) -> Result<LocalArtifactReceipt, TurnError> {
         let a = &p.access;
         let retained = self.read_local_turn(a.workspace, a.actor, a.turn).await?;
+        let identity = self.verified_identity(a.workspace, a.actor).await?;
+        if matches!(&p.target, LocalArtifactTarget::Edit { .. }) {
+            check_edit_cut(&mut self.connection, a, &retained.seed, identity.device()).await?;
+        }
         let (artifact, base, step, ordinal, source) = match &p.target {
             LocalArtifactTarget::Candidate { step, artifact } => {
                 let seed = self.authorize_local_execution(a, false).await?;
@@ -205,12 +238,13 @@ impl LocalStore {
             check_result_id: p.result.clone(),
         };
         let checks = Checks {
-            schema_version: "avencrew.artifact-checks/1".into(),
+            schema_version: "avencrew.artifact-checks/2".into(),
             receipt: receipt.clone(),
             workspace_id: a.workspace.clone(),
             actor_id: a.actor.clone(),
             task_id: retained.seed.run_spec.task_id.clone(),
             objective_version_id: retained.seed.run_spec.objective_version_id.clone(),
+            audience_policy_id: retained.seed.run_spec.audience_policy_id.clone(),
             source_context_blob_id: source,
             validation: p.validation.clone(),
             pending_checks: retained.seed.run_spec.check_refs.as_slice().to_vec(),
@@ -235,6 +269,8 @@ impl LocalStore {
         identity.check_live(&mut tx).await?;
         if step.is_some() {
             check_dispatch_cut(&mut tx, a, &retained.seed).await?;
+        } else {
+            check_edit_cut(&mut tx, a, &retained.seed, identity.device()).await?;
         }
         blob(
             &mut tx,
@@ -262,7 +298,7 @@ impl LocalStore {
         Ok(receipt)
     }
 
-    async fn read_artifact_checks(
+    pub(super) async fn read_artifact_checks(
         &mut self,
         w: &DomainId,
         actor: &DomainId,
@@ -274,7 +310,7 @@ impl LocalStore {
         let bytes = self.read_registered_blob(w, actor, &id, MEDIA).await?;
         let checks: Checks = serde_json::from_slice(&bytes).map_err(|_| TurnError::Conflict)?;
         if canonical(&checks)? != bytes
-            || checks.schema_version != "avencrew.artifact-checks/1"
+            || checks.schema_version != "avencrew.artifact-checks/2"
             || checks.workspace_id != *w
             || checks.actor_id != *actor
             || checks.receipt != *receipt
@@ -286,6 +322,28 @@ impl LocalStore {
         }
         self.read_registered_blob(w, actor, &checks.source_context_blob_id, STEP_MEDIA)
             .await?;
+        let source = sqlx::query(
+            "SELECT id,turn_id FROM local_steps WHERE workspace_id=? AND context_blob_id=?",
+        )
+        .bind(w.as_str())
+        .bind(checks.source_context_blob_id.as_str())
+        .fetch_one(&mut self.connection)
+        .await?;
+        let turn = DomainId::new(source.try_get::<String, _>("turn_id")?)
+            .map_err(|_| TurnError::Conflict)?;
+        let step =
+            DomainId::new(source.try_get::<String, _>("id")?).map_err(|_| TurnError::Conflict)?;
+        self.read_local_step(w, actor, &turn, &step).await?;
+        let retained = self.read_local_turn(w, actor, &turn).await?;
+        let identity = self.verified_identity(w, actor).await?;
+        if checks.task_id != retained.seed.run_spec.task_id
+            || checks.objective_version_id != retained.seed.run_spec.objective_version_id
+            || checks.audience_policy_id != retained.seed.run_spec.audience_policy_id
+            || checks.audience_policy_id != identity.audience
+            || checks.pending_checks != retained.seed.run_spec.check_refs.as_slice()
+        {
+            return Err(TurnError::Conflict);
+        }
         Ok(checks)
     }
 
@@ -347,6 +405,7 @@ impl LocalStore {
             receipt,
             validation: checks.validation,
             pending_checks: checks.pending_checks,
+            audience_policy_id: checks.audience_policy_id,
             file,
         })
     }

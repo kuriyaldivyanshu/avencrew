@@ -7,7 +7,7 @@ use avencrew_broker::{
     PolicySnapshot, PreparedInvocation, SealedCatalog,
 };
 use avencrew_contracts::{
-    runtime::{record_bytes, LocalStep, ModelCompletion},
+    runtime::{content_digest as hash, record_bytes, LocalStep, ModelCompletion},
     scalars::{Counter, Digest, DomainId, List},
     wire::{
         RpcRequestHarnessStartTurnBody as TurnSeed, StepBinding, ToolResult, TrustedContext,
@@ -28,7 +28,6 @@ use avencrew_store_sqlite::{LocalDispatch, LocalExecutionAccess, LocalStore, Tur
 pub use launch::{prepare_fixture_turn, FixtureLaunch, PreparedFixtureTurn};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use sha2_auth::{Digest as _, Sha256};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -59,15 +58,6 @@ pub struct FixtureProfile {
     pub output_format: avencrew_contracts::runtime::ArtifactFormat,
     #[serde(default)]
     pub patch_bases: std::collections::BTreeMap<String, String>,
-}
-fn hash(bytes: &[u8]) -> Digest {
-    Digest::new(
-        Sha256::digest(bytes)
-            .iter()
-            .map(|b| format!("{b:02x}"))
-            .collect::<String>(),
-    )
-    .expect("SHA-256 encoding")
 }
 fn id() -> DomainId {
     DomainId::new(uuid::Uuid::now_v7().to_string()).expect("OS UUIDv7 allocation")
@@ -559,7 +549,7 @@ impl engine::Host for FixtureHost {
         &mut self,
         _: &TurnSeed,
         step: &ModelStep,
-        _: &[Observation],
+        observations: &[Observation],
         state: &TurnState,
     ) -> Result<Digest, EngineError> {
         let sample = clock::sample().map_err(|_| EngineError::StaleAuthority)?;
@@ -575,6 +565,10 @@ impl engine::Host for FixtureHost {
                     &self.seed.turn_id,
                 ),
                 &step.broker.step().step_id,
+                &observations
+                    .iter()
+                    .map(|o| o.invocation_id.clone())
+                    .collect::<Vec<_>>(),
                 state,
                 &id(),
             )
@@ -584,6 +578,32 @@ impl engine::Host for FixtureHost {
             self.active = None;
         }
         result
+    }
+    async fn record_tool_unknown(
+        &mut self,
+        _: &TurnSeed,
+        step: &ModelStep,
+        invocation: &DomainId,
+        code: avencrew_contracts::wire::ErrorCode,
+    ) -> Result<(), EngineError> {
+        let sample = clock::sample().map_err(|_| EngineError::StaleAuthority)?;
+        self.store
+            .lock()
+            .await
+            .record_local_unknown_invocation(
+                access(
+                    &sample,
+                    &self.seed.run_spec.workspace_id,
+                    &self.actor,
+                    &self.seed.turn_id,
+                ),
+                &step.broker.step().step_id,
+                invocation,
+                code,
+                &id(),
+            )
+            .await
+            .map_err(storage)
     }
     async fn stage_candidate(
         &mut self,
@@ -766,9 +786,8 @@ impl broker::Host for FixtureHost {
         p: &PreparedInvocation,
     ) -> Result<PolicySnapshot, BrokerError> {
         let sample = clock::sample().map_err(|_| BrokerError::StaleAuthority)?;
-        self.store
-            .lock()
-            .await
+        let mut store = self.store.lock().await;
+        store
             .authorize_local_execution(
                 &access(
                     &sample,
@@ -780,10 +799,7 @@ impl broker::Host for FixtureHost {
             )
             .await
             .map_err(broker_storage)?;
-        let snap = self
-            .store
-            .lock()
-            .await
+        let snap = store
             .local_execution_snapshot(
                 &self.seed.run_spec.workspace_id,
                 &self.actor,
@@ -791,16 +807,13 @@ impl broker::Host for FixtureHost {
             )
             .await
             .map_err(broker_storage)?;
-        if snap.step.as_ref().is_none_or(|step| {
-            step.binding.step_id != p.context().step_id
-                || step.accepted_input_cut != snap.progress.state.applied_input_cut
-        }) {
+        let step = snap.step.as_ref().ok_or(BrokerError::StaleAuthority)?;
+        if step.binding.step_id != p.context().step_id
+            || step.accepted_input_cut != snap.progress.state.applied_input_cut
+        {
             return Err(BrokerError::StaleAuthority);
         }
-        let budget = self
-            .store
-            .lock()
-            .await
+        let budget = store
             .local_execution_budget(
                 &self.seed.run_spec.workspace_id,
                 &self.actor,
@@ -808,14 +821,22 @@ impl broker::Host for FixtureHost {
             )
             .await
             .map_err(broker_storage)?;
+        // These permission flags are facts established by the owner/private-task
+        // authorization above. Project/worker/installation/environment owners do
+        // not exist in the admitted fixture profile and are explicitly refused.
+        // Only another unresolved invocation blocks this call: its own retained
+        // dispatch must remain readable by execute/result replay/reconciliation.
         Ok(PolicySnapshot {
             context: p.context().clone(),
             lease: self.seed.lease.clone(),
             now: sample.now,
             boot_id: sample.boot,
             monotonic_now_ns: sample.monotonic,
-            permission_generation: Counter::new("1").map_err(|_| BrokerError::StaleAuthority)?,
-            deletion_generation: Counter::new("0").map_err(|_| BrokerError::StaleAuthority)?,
+            permission_generation: Counter::new(
+                step.binding.permission_generation.value().to_string(),
+            )
+            .map_err(|_| BrokerError::StaleAuthority)?,
+            deletion_generation: step.binding.deletion_generation.clone(),
             principal_active: true,
             workspace_allowed: true,
             project_allowed: true,
@@ -825,9 +846,16 @@ impl broker::Host for FixtureHost {
             environment_allowed: true,
             target_allowed: self.source(p).is_some(),
             budget_reserved: budget.can_dispatch,
-            dispatch_supported: true,
-            cancellation_requested: false,
-            unresolved_effect: false,
+            dispatch_supported: step.bindings.iter().any(|b| {
+                b.binding_id == p.context().binding_id
+                    && b.name == "fixture.read"
+                    && b.effect == Effect::Read
+            }),
+            cancellation_requested: snap.cancellation_requested,
+            unresolved_effect: snap
+                .unresolved_invocations
+                .iter()
+                .any(|id| id != p.invocation_id()),
             parent_active_same_step: false,
             model_call_id: self.active.as_ref().map(|s| s.model_call_id.clone()),
             max_result_bytes: self.seed.limits.output_bytes.value() as u32,

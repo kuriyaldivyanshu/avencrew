@@ -197,6 +197,7 @@ pub struct FixtureFailure {
 #[serde(rename_all = "snake_case")]
 pub enum FixtureError {
     Cancelled,
+    Timeout,
     InvalidInput,
     IncompatibleVersion,
     LimitExceeded,

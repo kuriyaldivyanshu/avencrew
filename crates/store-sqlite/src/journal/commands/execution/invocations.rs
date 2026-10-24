@@ -15,6 +15,51 @@ pub enum LocalDispatch {
 }
 
 impl LocalStore {
+    /// Persist the observation lost when a broker future is dropped. Never
+    /// replace a terminal result or invent a physical dispatch for a proposal.
+    pub async fn record_local_unknown_invocation(
+        &mut self,
+        a: LocalExecutionAccess<'_>,
+        step: &DomainId,
+        invocation: &DomainId,
+        code: avencrew_contracts::wire::ErrorCode,
+        event: &DomainId,
+    ) -> Result<(), TurnError> {
+        use avencrew_contracts::wire::ErrorCode;
+        if !matches!(code, ErrorCode::Timeout | ErrorCode::UnknownOutcome) {
+            return Err(TurnError::InvalidSeed);
+        }
+        let seed = self.authorize_local_execution(&a, true).await?;
+        self.read_local_step(a.workspace, a.actor, a.turn, step)
+            .await?;
+        let p = self
+            .read_local_proposal(a.workspace, a.actor, invocation)
+            .await?;
+        if p.context.step_id != *step || p.context.run_id != seed.run_spec.run_id {
+            return Err(TurnError::Conflict);
+        }
+        let row = sqlx::query(
+            "SELECT state,result_blob_id FROM local_invocations WHERE workspace_id=? AND id=?",
+        )
+        .bind(a.workspace.as_str())
+        .bind(invocation.as_str())
+        .fetch_one(&mut self.connection)
+        .await?;
+        if row
+            .try_get::<Option<String>, _>("result_blob_id")?
+            .is_some()
+        {
+            self.read_local_tool_result(a.workspace, a.actor, invocation)
+                .await?;
+            return Ok(());
+        }
+        if row.try_get::<String, _>("state")? == "proposed" {
+            return Ok(());
+        }
+        let result:ToolResult=serde_json::from_value(serde_json::json!({"status":"unknown","invocation_id":invocation,"schema_version":"1.0","artifact_refs":[],"receipt_ref":null,"truncated":false,"next_cursor":null,"usage_refs":[],"error":{"code":code,"message":"tool completion was not acknowledged","evidence_refs":[]},"data":null})).map_err(|_|TurnError::InvalidSeed)?;
+        self.record_local_tool_result(a, &p, Some(&result), event)
+            .await
+    }
     pub async fn commit_local_proposals(
         &mut self,
         a: LocalExecutionAccess<'_>,

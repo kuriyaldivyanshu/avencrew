@@ -610,3 +610,424 @@ fn transaction_abort_never_acknowledges_inference_and_corrupt_seals_block_replay
         store.close().await.unwrap();
     });
 }
+
+async fn candidate(root: &Root) -> (LocalStore, LocalArtifactReceipt) {
+    use avencrew_contracts::runtime::{
+        content_digest, ArtifactFormat, ArtifactValidation, CandidateAllocation, CheckStatus,
+    };
+    let mut store = ready(root).await;
+    let mut sealed = step();
+    sealed.candidate = Some(CandidateAllocation {
+        artifact_id: id(900),
+        version_id: id(901),
+        content_blob_id: id(902),
+        checks_manifest_id: id(903),
+        checks_blob_id: id(904),
+        check_result_id: id(905),
+    });
+    let mut state = store
+        .local_execution_snapshot(&id(1), &id(2), &id(700))
+        .await
+        .unwrap()
+        .progress
+        .state;
+    state.steps_started = 1;
+    store
+        .seal_local_step(access(), &sealed, &state, &id(810))
+        .await
+        .unwrap();
+    store
+        .record_local_model(access(), &sealed, &result(), &state, &id(812), &id(813))
+        .await
+        .unwrap();
+    let body = b"Candidate; no completion accepted";
+    let validation = ArtifactValidation {
+        schema_version: "avencrew.artifact-validation/1".into(),
+        format: ArtifactFormat::Text,
+        sha256: content_digest(body),
+        byte_size: Counter::new(body.len().to_string()).unwrap(),
+        status: CheckStatus::Passed,
+        codes: vec!["nonempty_utf8".into()],
+        base_sha256: None,
+        result_sha256: None,
+    };
+    let receipt = store
+        .publish_local_artifact(LocalArtifactPublication {
+            access: access(),
+            target: LocalArtifactTarget::Candidate {
+                step: &id(800),
+                artifact: &id(900),
+            },
+            version: &id(901),
+            content_blob: &id(902),
+            checks_manifest: &id(903),
+            checks_blob: &id(904),
+            result: &id(905),
+            bytes: body,
+            validation: &validation,
+        })
+        .await
+        .unwrap();
+    (store, receipt)
+}
+#[test]
+fn human_edits_reject_stop_epoch_and_expired_or_wrong_boot_authority() {
+    native_run(|| async {
+        for case in 0..5 {
+            let root = Root::new();
+            let (mut s, receipt) = candidate(&root).await;
+            let old = s
+                .read_local_artifact(&id(1), &id(2), &id(900), &id(901))
+                .await
+                .unwrap();
+            let before: i64 = sqlx::query_scalar("SELECT count(*) FROM local_blobs")
+                .fetch_one(&mut s.connection)
+                .await
+                .unwrap();
+            let mut a = access();
+            let expired = seed().lease.expires_at;
+            let boot = id(999);
+            let deadline = seed().lease.monotonic_deadline_ns;
+            match case {
+                0 => {
+                    sqlx::query(
+                        "UPDATE local_runs SET cancellation_requested=1,status='cancelling'",
+                    )
+                    .execute(&mut s.connection)
+                    .await
+                    .unwrap();
+                }
+                1 => {
+                    sqlx::query("UPDATE local_runs SET fencing_epoch=fencing_epoch+1")
+                        .execute(&mut s.connection)
+                        .await
+                        .unwrap();
+                }
+                2 => a.now = &expired,
+                3 => a.boot = &boot,
+                _ => a.monotonic_now = &deadline,
+            }
+            let result = s
+                .publish_local_artifact(LocalArtifactPublication {
+                    access: a,
+                    target: LocalArtifactTarget::Edit {
+                        artifact: &receipt.artifact.artifact_id,
+                        expected_version: &receipt.artifact.version_id,
+                    },
+                    version: &id(910),
+                    content_blob: &id(911),
+                    checks_manifest: &id(912),
+                    checks_blob: &id(913),
+                    result: &id(914),
+                    bytes: b"Candidate; no completion accepted",
+                    validation: &old.validation,
+                })
+                .await;
+            assert!(
+                result.is_err(),
+                "edit accepted after authority change {case}"
+            );
+            assert_eq!(
+                sqlx::query_scalar::<_, i64>("SELECT count(*) FROM local_blobs")
+                    .fetch_one(&mut s.connection)
+                    .await
+                    .unwrap(),
+                before
+            );
+            assert_eq!(
+                sqlx::query_scalar::<_, String>("SELECT current_version_id FROM local_artifacts")
+                    .fetch_one(&mut s.connection)
+                    .await
+                    .unwrap(),
+                id(901).as_str()
+            );
+            s.close().await.unwrap();
+        }
+    });
+}
+
+#[test]
+fn committed_evidence_updates_progress_and_reopen_keeps_the_reset_counter() {
+    native_run(|| async {
+        let root = Root::new();
+        stage(&root, "result_before_commit").await;
+        let mut s = LocalStore::open(&root.0).await.unwrap();
+        s.record_local_tool_result(access(), &proposal(), Some(&tool_result()), &id(816))
+            .await
+            .unwrap();
+        let state = s
+            .local_execution_snapshot(&id(1), &id(2), &id(700))
+            .await
+            .unwrap()
+            .progress
+            .state;
+        let changed = s
+            .observe_local_step(access(), &id(800), &[id(820)], &state, &id(817))
+            .await
+            .unwrap();
+        assert_ne!(
+            changed, state.progress_digest,
+            "new verified evidence never updates progress"
+        );
+        s.close().await.unwrap();
+        let mut s = LocalStore::open(&root.0).await.unwrap();
+        let saved = s
+            .local_execution_snapshot(&id(1), &id(2), &id(700))
+            .await
+            .unwrap();
+        assert_eq!(saved.progress.state.progress_digest, changed);
+        assert_eq!(saved.progress.state.no_progress_steps, 0);
+        s.close().await.unwrap();
+    });
+}
+
+#[test]
+fn repeated_evidence_increments_no_progress_and_new_evidence_resets_it() {
+    native_run(|| async {
+        let root = Root::new();
+        let mut s = ready(&root).await;
+        let mut previous = None;
+        for (n, ratio) in [1.25, 1.25, 2.25, 2.25].into_iter().enumerate() {
+            let offset = n as u32 * 1000;
+            let i = |x| id(x + offset);
+            let mut step = tool_step();
+            step.binding.step_id = i(800);
+            step.context.step_id = i(800);
+            step.binding.context_manifest_id = i(801);
+            step.model_call_id = i(803);
+            let mut completion = tool_completion().unwrap();
+            completion.response.step_id = i(800);
+            completion.response.model_call_id = i(803);
+            completion.proposal_identities[0].invocation_id = i(820);
+            let mut p = proposal();
+            p.invocation_id = i(820);
+            p.context = step.context.clone();
+            p.origin = avencrew_contracts::runtime::Origin::Model {
+                model_call_id: i(803),
+                provider_call_id: "read-source".into(),
+            };
+            p.digest = p.calculated_digest().unwrap();
+            let mut state = s
+                .local_execution_snapshot(&id(1), &id(2), &id(700))
+                .await
+                .unwrap()
+                .progress
+                .state;
+            state.steps_started += 1;
+            s.seal_local_step(access(), &step, &state, &i(810))
+                .await
+                .unwrap();
+            s.record_local_model(access(), &step, &Ok(completion), &state, &i(812), &i(813))
+                .await
+                .unwrap();
+            s.commit_local_proposals(access(), &[p.clone()], &i(814))
+                .await
+                .unwrap();
+            assert!(matches!(
+                s.claim_local_dispatch(
+                    access(),
+                    &p,
+                    &avencrew_contracts::scalars::Digest::new("0".repeat(64)).unwrap(),
+                    &i(815)
+                )
+                .await
+                .unwrap(),
+                LocalDispatch::Fresh
+            ));
+            let result=serde_json::from_value(json!({"status":"succeeded","invocation_id":i(820),"schema_version":"1.0","artifact_refs":[],"receipt_ref":null,"truncated":false,"next_cursor":null,"usage_refs":[],"data":{"binding_id":id(802),"value":{"ratio":ratio}}})).unwrap();
+            s.record_local_tool_result(access(), &p, Some(&result), &i(816))
+                .await
+                .unwrap();
+            let digest = s
+                .observe_local_step(access(), &i(800), &[i(820)], &state, &i(817))
+                .await
+                .unwrap();
+            let state = s
+                .local_execution_snapshot(&id(1), &id(2), &id(700))
+                .await
+                .unwrap()
+                .progress
+                .state;
+            assert_eq!(state.no_progress_steps, (n % 2) as u32);
+            if n % 2 == 1 {
+                assert_eq!(previous.as_ref(), Some(&digest));
+            } else {
+                assert_ne!(previous.as_ref(), Some(&digest));
+            }
+            previous = Some(digest);
+        }
+        s.close().await.unwrap();
+    });
+}
+#[test]
+fn dropped_tool_future_retains_typed_unknown_and_never_overwrites_known_result() {
+    native_run(|| async {
+        use avencrew_contracts::wire::{ErrorCode, ToolResult};
+        for known in [false, true] {
+            let root = Root::new();
+            stage(&root, "result_before_commit").await;
+            let mut s = LocalStore::open(&root.0).await.unwrap();
+            if known {
+                s.record_local_tool_result(access(), &proposal(), Some(&tool_result()), &id(816))
+                    .await
+                    .unwrap();
+            }
+            s.record_local_unknown_invocation(
+                access(),
+                &id(800),
+                &id(820),
+                ErrorCode::Timeout,
+                &id(818),
+            )
+            .await
+            .unwrap();
+            let saved = s
+                .read_local_tool_result(&id(1), &id(2), &id(820))
+                .await
+                .unwrap();
+            if known {
+                assert_eq!(saved, tool_result());
+            } else {
+                assert!(
+                    matches!(saved,ToolResult::Unknown {error,..} if error.code==ErrorCode::Timeout)
+                );
+            }
+            let state = s
+                .local_execution_snapshot(&id(1), &id(2), &id(700))
+                .await
+                .unwrap()
+                .progress
+                .state;
+            s.observe_local_step(access(), &id(800), &[id(820)], &state, &id(817))
+                .await
+                .unwrap();
+            s.close().await.unwrap();
+            let mut s = LocalStore::open(&root.0).await.unwrap();
+            let snap = s
+                .local_execution_snapshot(&id(1), &id(2), &id(700))
+                .await
+                .unwrap();
+            assert_eq!(
+                snap.unresolved_invocations,
+                if known { vec![] } else { vec![id(820)] }
+            );
+            let saved = s
+                .read_local_tool_result(&id(1), &id(2), &id(820))
+                .await
+                .unwrap();
+            assert_eq!(matches!(saved, ToolResult::Unknown { .. }), !known);
+            s.close().await.unwrap();
+        }
+    });
+}
+#[test]
+fn ignored_run_cursor_updates_roll_back_progress_and_dispatch_events() {
+    native_run(|| async {
+        for dispatch in [false, true] {
+            let root = Root::new();
+            if dispatch {
+                stage(&root, "dispatch_before_commit").await;
+            } else {
+                ready(&root).await.close().await.unwrap();
+            }
+            let mut s = LocalStore::open(&root.0).await.unwrap();
+            let before: i64 = sqlx::query_scalar("SELECT count(*) FROM local_events")
+                .fetch_one(&mut s.connection)
+                .await
+                .unwrap();
+            sqlx::query("CREATE TEMP TRIGGER ignore_run_cursor BEFORE UPDATE OF last_event_seq ON local_runs BEGIN SELECT RAISE(IGNORE); END").execute(&mut s.connection).await.unwrap();
+            if dispatch {
+                assert!(matches!(
+                    s.claim_local_dispatch(
+                        access(),
+                        &proposal(),
+                        &avencrew_contracts::scalars::Digest::new("0".repeat(64)).unwrap(),
+                        &id(815)
+                    )
+                    .await,
+                    Err(TurnError::StaleAuthority)
+                ));
+            } else {
+                let mut state = s
+                    .local_execution_snapshot(&id(1), &id(2), &id(700))
+                    .await
+                    .unwrap()
+                    .progress
+                    .state;
+                state.steps_started = 1;
+                assert!(matches!(
+                    s.seal_local_step(access(), &tool_step(), &state, &id(810))
+                        .await,
+                    Err(TurnError::StaleAuthority)
+                ));
+            }
+            assert_eq!(
+                sqlx::query_scalar::<_, i64>("SELECT count(*) FROM local_events")
+                    .fetch_one(&mut s.connection)
+                    .await
+                    .unwrap(),
+                before
+            );
+            s.close().await.unwrap();
+        }
+    });
+}
+
+#[test]
+fn artifact_checks_pin_audience_and_reject_digest_valid_cross_audience_records() {
+    native_run(|| async {
+        let root = Root::new();
+        let (mut s, receipt) = candidate(&root).await;
+        let saved = s
+            .read_local_artifact(&id(1), &id(2), &id(900), &id(901))
+            .await
+            .unwrap();
+        assert_eq!(saved.audience_policy_id, seed().run_spec.audience_policy_id);
+        let bytes = s
+            .read_registered_blob(
+                &id(1),
+                &id(2),
+                &id(904),
+                "application/vnd.avencrew.artifact-checks+json",
+            )
+            .await
+            .unwrap();
+        let mut value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(
+            value["audience_policy_id"],
+            json!(seed().run_spec.audience_policy_id)
+        );
+        let mut forged = receipt;
+        forged.checks_manifest_id = id(950);
+        value["receipt"] = serde_json::to_value(&forged).unwrap();
+        value["audience_policy_id"] = json!(id(999));
+        let bytes = canonical(&value).unwrap();
+        s.put_canonical(&id(1), &id(951), &bytes).unwrap();
+        // Construct a separate, digest-consistent hostile manifest without
+        // weakening any immutable trigger or changing the real version pointer.
+        let mut tx = s.connection.begin().await.unwrap();
+        blob(
+            &mut tx,
+            &id(1),
+            &id(2),
+            &id(951),
+            &bytes,
+            "application/vnd.avencrew.artifact-checks+json",
+            now().unix_micros(),
+        )
+        .await
+        .unwrap();
+        sqlx::query("INSERT INTO local_manifests (id,workspace_id,created_at_us,owner_actor_id,kind,schema_version,canonical_blob_id,digest,sealed_at_us,deletion_generation) VALUES (?,?,?,?,'snapshot',1,?,?,?,0)")
+            .bind(id(950).as_str()).bind(id(1).as_str()).bind(now().unix_micros()).bind(id(2).as_str()).bind(id(951).as_str()).bind(digest(&bytes).as_slice()).bind(now().unix_micros()).execute(&mut *tx).await.unwrap();
+        tx.commit().await.unwrap();
+        assert!(s
+            .read_artifact_checks(&id(1), &id(2), &forged)
+            .await
+            .is_err());
+        assert!(s
+            .read_local_artifact(&id(1), &id(2), &id(900), &id(901))
+            .await
+            .is_ok());
+        s.close().await.unwrap();
+    });
+}

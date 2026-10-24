@@ -62,6 +62,8 @@ pub struct LocalExecutionSnapshot {
     pub step: Option<LocalStep>,
     pub model: Option<ModelCompletion>,
     pub current_checkpoint: Option<DomainId>,
+    pub cancellation_requested: bool,
+    pub unresolved_invocations: Vec<DomainId>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -73,6 +75,8 @@ struct ProgressRecord {
     progress: LocalTurnProgress,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     input_dispositions: Vec<serde_json::Value>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    observed_invocation_ids: Vec<DomainId>,
 }
 
 impl LocalStore {
@@ -111,10 +115,9 @@ impl LocalStore {
                     active_elapsed_ms: 0,
                     applied_input_cut: Counter::new(run.applied.to_string())
                         .map_err(|_| TurnError::Conflict)?,
-                    progress_digest: avencrew_contracts::scalars::Digest::new(hex(&digest(
-                        &canonical(&retained.seed)?,
-                    )))
-                    .map_err(|_| TurnError::InvalidSeed)?,
+                    progress_digest: self
+                        .execution_progress_digest(workspace, actor, &retained.seed)
+                        .await?,
                 },
                 pending_step_id: None,
                 checkpoint_id: None,
@@ -160,11 +163,22 @@ impl LocalStore {
         } else {
             None
         };
+        let unresolved:Vec<String>=sqlx::query_scalar("SELECT id FROM local_invocations WHERE workspace_id=? AND run_id=? AND state IN ('dispatched','unknown') ORDER BY id LIMIT 101")
+            .bind(workspace.as_str()).bind(retained.seed.run_spec.run_id.as_str()).fetch_all(&mut self.connection).await?;
+        if unresolved.len() > 100 {
+            return Err(TurnError::Conflict);
+        }
         Ok(LocalExecutionSnapshot {
             version: version as u64,
             progress,
             step,
             model,
+            cancellation_requested: run.cancelled,
+            unresolved_invocations: unresolved
+                .into_iter()
+                .map(DomainId::new)
+                .collect::<Result<_, _>>()
+                .map_err(|_| TurnError::Conflict)?,
             current_checkpoint: sqlx::query_scalar::<_, Option<String>>(
                 "SELECT current_checkpoint_id FROM local_runs WHERE workspace_id=? AND id=?",
             )
@@ -592,19 +606,27 @@ impl LocalStore {
     }
 }
 
-async fn check_dispatch_cut(
-    conn: &mut SqliteConnection,
+fn check_lease_cut(
     a: &LocalExecutionAccess<'_>,
     seed: &avencrew_contracts::wire::RpcRequestHarnessStartTurnBody,
 ) -> Result<(), TurnError> {
     let elapsed = a.sampled_at.elapsed();
-    if i128::from(a.now.unix_micros()) + elapsed.as_micros() as i128
-        >= i128::from(seed.lease.expires_at.unix_micros())
+    if *a.boot != seed.lease.boot_id
+        || i128::from(a.now.unix_micros()) + elapsed.as_micros() as i128
+            >= i128::from(seed.lease.expires_at.unix_micros())
         || u128::from(a.monotonic_now.value()) + elapsed.as_nanos()
             >= u128::from(seed.lease.monotonic_deadline_ns.value())
     {
         return Err(TurnError::StaleAuthority);
     }
+    Ok(())
+}
+async fn check_dispatch_cut(
+    conn: &mut SqliteConnection,
+    a: &LocalExecutionAccess<'_>,
+    seed: &avencrew_contracts::wire::RpcRequestHarnessStartTurnBody,
+) -> Result<(), TurnError> {
+    check_lease_cut(a, seed)?;
     let row = run_row(conn, a.workspace, &seed.run_spec.run_id, a.actor).await?;
     if row.cancelled {
         return Err(TurnError::Cancelled);
@@ -645,8 +667,11 @@ async fn save_progress(
     let row = run_row(conn, a.workspace, &seed.run_spec.run_id, a.actor).await?;
     sqlx::query("INSERT INTO local_events (id,workspace_id,created_at_us,run_id,seq,attempt_id,epoch,event_type,schema_version,occurred_at_us,payload_blob_id,command_id) VALUES (?,?,?,?,?,?,?,?,1,?,?,NULL)")
         .bind(event.as_str()).bind(a.workspace.as_str()).bind(a.now.unix_micros()).bind(seed.run_spec.run_id.as_str()).bind(next(row.event)?).bind(seed.lease.attempt_id.as_str()).bind(seed.lease.epoch.value() as i64).bind(kind).bind(a.now.unix_micros()).bind(event.as_str()).execute(&mut *conn).await?;
-    sqlx::query("UPDATE local_runs SET last_event_seq=last_event_seq+1,row_version=row_version+1 WHERE workspace_id=? AND id=? AND fencing_epoch=?")
+    let changed=sqlx::query("UPDATE local_runs SET last_event_seq=last_event_seq+1,row_version=row_version+1 WHERE workspace_id=? AND id=? AND fencing_epoch=?")
         .bind(a.workspace.as_str()).bind(seed.run_spec.run_id.as_str()).bind(seed.lease.epoch.value() as i64).execute(conn).await?;
+    if changed.rows_affected() != 1 {
+        return Err(TurnError::StaleAuthority);
+    }
     Ok(())
 }
 
@@ -664,7 +689,10 @@ async fn append_execution_event(
     }
     sqlx::query("INSERT INTO local_events (id,workspace_id,created_at_us,run_id,seq,attempt_id,epoch,event_type,schema_version,occurred_at_us,payload_blob_id,command_id) VALUES (?,?,?,?,?,?,?,?,1,?,?,NULL)")
         .bind(event.as_str()).bind(a.workspace.as_str()).bind(a.now.unix_micros()).bind(seed.run_spec.run_id.as_str()).bind(next(row.event)?).bind(seed.lease.attempt_id.as_str()).bind(seed.lease.epoch.value() as i64).bind(kind).bind(a.now.unix_micros()).bind(payload.as_str()).execute(&mut *conn).await?;
-    sqlx::query("UPDATE local_runs SET last_event_seq=last_event_seq+1,row_version=row_version+1 WHERE workspace_id=? AND id=?").bind(a.workspace.as_str()).bind(seed.run_spec.run_id.as_str()).execute(conn).await?;
+    let changed=sqlx::query("UPDATE local_runs SET last_event_seq=last_event_seq+1,row_version=row_version+1 WHERE workspace_id=? AND id=? AND fencing_epoch=?").bind(a.workspace.as_str()).bind(seed.run_spec.run_id.as_str()).bind(seed.lease.epoch.value() as i64).execute(conn).await?;
+    if changed.rows_affected() != 1 {
+        return Err(TurnError::StaleAuthority);
+    }
     Ok(())
 }
 fn progress_bytes(
@@ -678,6 +706,7 @@ fn progress_bytes(
         version,
         progress: progress.clone(),
         input_dispositions: vec![],
+        observed_invocation_ids: vec![],
     })?)
 }
 fn usage(result: &ModelCompletion) -> (Option<i64>, Option<i64>) {
