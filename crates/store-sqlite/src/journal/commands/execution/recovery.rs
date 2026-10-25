@@ -157,6 +157,7 @@ impl LocalStore {
         actor: &DomainId,
         turn: &DomainId,
     ) -> Result<(VerifiedHistory, serde_json::Value), TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let verified = self.verify_local_control_history(w, actor, turn).await?;
         let snap = &verified.snapshot;
         let context = self

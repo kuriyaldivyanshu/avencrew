@@ -265,6 +265,7 @@ fn internal_json(media: &str) -> bool {
             | "application/vnd.avencrew.local-turn+json"
             | "application/vnd.avencrew.lease+json"
             | "application/vnd.avencrew.sealed-step+json"
+            | "application/vnd.avencrew.fixture-context-proof+json"
             | "application/vnd.avencrew.model-completion+json"
             | "application/vnd.avencrew.turn-progress+json"
             | "application/vnd.avencrew.sealed-catalog+json"
@@ -349,6 +350,17 @@ fn verify_json(root: &Path, b: &Blob, uid: u32) -> Result<(), BackupError> {
         .take(MAX_JSON + 1)
         .read_to_end(&mut bytes)?;
     let normalized = match b.media_type.as_str() {
+        "application/vnd.avencrew.sealed-step+json" => {
+            serde_json::from_slice::<avencrew_contracts::runtime::LocalStep>(&bytes)
+                .map_err(|_| BackupError::InventoryMismatch)?
+                .retained_bytes()
+        }
+        "application/vnd.avencrew.fixture-context-proof+json" => {
+            avencrew_contracts::runtime::record_bytes(
+                &serde_json::from_slice::<serde_json::Value>(&bytes)
+                    .map_err(|_| BackupError::InventoryMismatch)?,
+            )
+        }
         "application/vnd.avencrew.model-completion+json" => {
             avencrew_contracts::runtime::record_bytes(
                 &serde_json::from_slice::<avencrew_contracts::runtime::ModelCompletion>(&bytes)

@@ -38,6 +38,7 @@ fn step() -> LocalStep {
     catalog.extend(b"[]");
     let catalog_digest = hex(&digest(&catalog));
     LocalStep {
+            source_proof: None,
         accepted_input_cut: Counter::new("0").unwrap(),
         candidate:None,
         binding: serde_json::from_value(json!({"step_id":id(800),"model_profile_id":id(750),"model_adapter_digest":"0".repeat(64),"prompt_schema_version":"1.0","catalog_digest":catalog_digest,"tool_binding_ids":[],"instruction_digests":[],"context_manifest_id":id(801),"environment_capability_digest":"0".repeat(64),"permission_generation":"1","deletion_generation":"0","sealed_at":now()})).unwrap(),
@@ -1077,3 +1078,362 @@ fn applied_control_projection_drift_is_rejected_before_reapplication() {
 }
 
 mod control_recovery;
+
+async fn proven_step(store: &mut LocalStore) -> LocalStep {
+    let mut step = step();
+    let proof = store
+        .local_context_proof(&id(1), &id(2), &id(700), 1_048_576)
+        .await
+        .unwrap();
+    let bytes = avencrew_contracts::runtime::record_bytes(&proof).unwrap();
+    let reference = super::context::proof_reference(id(850), &bytes).unwrap();
+    step.request = avencrew_contracts::runtime::context::fixture_context_view(
+        &proof,
+        &reference,
+        &step.compatibility_digest,
+    )
+    .unwrap();
+    step.source_proof = Some(reference);
+    step.request_digest =
+        avencrew_contracts::runtime::content_digest(&step.request_bytes().unwrap());
+    step
+}
+#[test]
+fn context_proof_rebuilds_unsealed_views_and_rejects_tampering_before_intent() {
+    native_run(|| async {
+        let root = Root::new();
+        let mut store = ready(&root).await;
+        let step = proven_step(&mut store).await;
+        assert_eq!(step.request, proven_step(&mut store).await.request);
+        let mut state = store
+            .local_execution_snapshot(&id(1), &id(2), &id(700))
+            .await
+            .unwrap()
+            .progress
+            .state;
+        state.steps_started = 1;
+        for case in 0..7 {
+            let mut altered = step.clone();
+            match case {
+                0 => {
+                    altered.request["anchors"]["accepted_inputs"] =
+                        json!([{"kind":"invented_authority"}])
+                }
+                1 => altered.request["scope"]["event_end"] = json!("999"),
+                2 => altered.request["scope"]["workspace_id"] = json!(id(999)),
+                3 => altered.request["generation_version"] = json!(2),
+                4 => altered.request["source_inventory"] = json!([]),
+                5 => altered.request["history"] = json!([{"call":"unpaired"}]),
+                _ => {
+                    altered.source_proof.as_mut().unwrap().sha256 =
+                        avencrew_contracts::runtime::content_digest(b"wrong")
+                }
+            }
+            altered.request_digest =
+                avencrew_contracts::runtime::content_digest(&altered.request_bytes().unwrap());
+            assert!(
+                store
+                    .seal_local_step(access(), &altered, &state, &id(810))
+                    .await
+                    .is_err(),
+                "case {case}"
+            );
+        }
+        let count: i64 = sqlx::query_scalar("SELECT count(*) FROM local_model_calls")
+            .fetch_one(&mut store.connection)
+            .await
+            .unwrap();
+        assert_eq!(count, 0);
+        // Rebuilding from verified source, rather than editing a summary, recovers
+        // the exact deterministic view before any inference intent exists.
+        let rebuilt = proven_step(&mut store).await;
+        assert_eq!(rebuilt.request, step.request);
+        store
+            .seal_local_step(access(), &rebuilt, &state, &id(810))
+            .await
+            .unwrap();
+        store.close().await.unwrap();
+        let mut store = LocalStore::open(&root.0).await.unwrap();
+        assert_eq!(
+            store
+                .read_local_step(&id(1), &id(2), &id(700), &id(800))
+                .await
+                .unwrap()
+                .request,
+            step.request
+        );
+        std::fs::write(
+            root.0.join(format!(
+                "blobs/{}/{}.json",
+                id(1).as_str(),
+                id(850).as_str()
+            )),
+            b"{}",
+        )
+        .unwrap();
+        assert!(store
+            .read_local_step(&id(1), &id(2), &id(700), &id(800))
+            .await
+            .is_err());
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM local_model_calls")
+                .fetch_one(&mut store.connection)
+                .await
+                .unwrap(),
+            1
+        );
+        store.close().await.unwrap();
+    });
+}
+#[test]
+fn context_proof_step_and_intent_register_atomically() {
+    native_run(|| async {
+        let root = Root::new();
+        let mut store = ready(&root).await;
+        let step = proven_step(&mut store).await;
+        let mut state = store
+            .local_execution_snapshot(&id(1), &id(2), &id(700))
+            .await
+            .unwrap()
+            .progress
+            .state;
+        state.steps_started = 1;
+        sqlx::query("CREATE TEMP TRIGGER reject_proven_model BEFORE INSERT ON local_model_calls BEGIN SELECT RAISE(ABORT,'cut'); END").execute(&mut store.connection).await.unwrap();
+        assert!(store
+            .seal_local_step(access(), &step, &state, &id(810))
+            .await
+            .is_err());
+        for query in [
+            "SELECT count(*) FROM local_steps",
+            "SELECT count(*) FROM local_model_calls",
+        ] {
+            assert_eq!(
+                sqlx::query_scalar::<_, i64>(query)
+                    .fetch_one(&mut store.connection)
+                    .await
+                    .unwrap(),
+                0
+            );
+        }
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM local_blobs WHERE id=?")
+                .bind(id(850).as_str())
+                .fetch_one(&mut store.connection)
+                .await
+                .unwrap(),
+            0
+        );
+        sqlx::query("DROP TRIGGER reject_proven_model")
+            .execute(&mut store.connection)
+            .await
+            .unwrap();
+        assert!(store
+            .seal_local_step(access(), &step, &state, &id(810))
+            .await
+            .unwrap());
+        assert_eq!(
+            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM local_blobs WHERE id=?")
+                .bind(id(850).as_str())
+                .fetch_one(&mut store.connection)
+                .await
+                .unwrap(),
+            1
+        );
+        assert!(!store
+            .seal_local_step(access(), &step, &state, &id(810))
+            .await
+            .unwrap());
+        store.close().await.unwrap();
+    });
+}
+
+#[test]
+fn context_proof_preserves_historical_artifact_pointer_after_later_edit() {
+    native_run(|| async {
+        let root = Root::new();
+        let (mut store, receipt) = candidate(&root).await;
+        let mut state = store
+            .local_execution_snapshot(&id(1), &id(2), &id(700))
+            .await
+            .unwrap()
+            .progress
+            .state;
+        store
+            .observe_local_step(access(), &id(800), &[], &state, &id(817))
+            .await
+            .unwrap();
+        let mut sealed = proven_step(&mut store).await;
+        sealed.binding.step_id = id(1800);
+        sealed.context.step_id = id(1800);
+        sealed.binding.context_manifest_id = id(1801);
+        sealed.model_call_id = id(1803);
+        state = store
+            .local_execution_snapshot(&id(1), &id(2), &id(700))
+            .await
+            .unwrap()
+            .progress
+            .state;
+        state.steps_started += 1;
+        store
+            .seal_local_step(access(), &sealed, &state, &id(1810))
+            .await
+            .unwrap();
+        assert_eq!(
+            sealed.request["artifact_versions"][0]["current_version_id"],
+            json!(id(901))
+        );
+        let old = store
+            .read_local_artifact(&id(1), &id(2), &id(900), &id(901))
+            .await
+            .unwrap();
+        store
+            .publish_local_artifact(LocalArtifactPublication {
+                access: access(),
+                target: LocalArtifactTarget::Edit {
+                    artifact: &receipt.artifact.artifact_id,
+                    expected_version: &receipt.artifact.version_id,
+                },
+                version: &id(910),
+                content_blob: &id(911),
+                checks_manifest: &id(912),
+                checks_blob: &id(913),
+                result: &id(914),
+                bytes: b"Candidate; no completion accepted",
+                validation: &old.validation,
+            })
+            .await
+            .unwrap();
+        store.close().await.unwrap();
+        let mut store = LocalStore::open(&root.0).await.unwrap();
+        let replay = store
+            .read_local_step(&id(1), &id(2), &id(700), &id(1800))
+            .await
+            .unwrap();
+        assert_eq!(replay.request, sealed.request);
+        let current: String =
+            sqlx::query_scalar("SELECT current_version_id FROM local_artifacts WHERE id=?")
+                .bind(id(900).as_str())
+                .fetch_one(&mut store.connection)
+                .await
+                .unwrap();
+        assert_eq!(current, id(910).as_str());
+        store.close().await.unwrap();
+    });
+}
+
+#[test]
+fn context_proof_budget_is_shared_and_never_reused_across_operations() {
+    native_run(|| async {
+        let root = Root::new();
+        let mut store = ready(&root).await;
+        let sealed = proven_step(&mut store).await;
+        let mut state = store
+            .local_execution_snapshot(&id(1), &id(2), &id(700))
+            .await
+            .unwrap()
+            .progress
+            .state;
+        state.steps_started = 1;
+        store
+            .seal_local_step(access(), &sealed, &state, &id(810))
+            .await
+            .unwrap();
+        let scope = store.proof_read_scope();
+        scope.lock().unwrap().remaining = 0;
+        assert!(matches!(
+            store
+                .read_local_step(&id(1), &id(2), &id(700), &id(800))
+                .await,
+            Err(TurnError::Unsupported)
+        ));
+        assert!(scope.lock().unwrap().exhausted);
+        drop(scope);
+        assert!(store.proof_reads.upgrade().is_none());
+        assert!(store
+            .read_local_step(&id(1), &id(2), &id(700), &id(800))
+            .await
+            .is_ok());
+        assert!(store.proof_reads.upgrade().is_none());
+        // Both runs have accepted, unapplied steering. The later simple queued
+        // run would ordinarily expose AwaitingControlConsumer.
+        let (_, receipt) = control_recovery::command(&mut store, "steer", 2200).await;
+        assert!(matches!(
+            receipt,
+            avencrew_contracts::wire::CommandReceipt::Accepted { .. }
+        ));
+        store
+            .register_local_run(LocalRunRegistration {
+                workspace: &id(1),
+                actor: &id(2),
+                task: &id(100),
+                task_revision: &id(103),
+                run: &id(4000),
+                event: &id(4001),
+                queue: &id(4002),
+                payload_blob: &id(4003),
+                at: &now(),
+            })
+            .await
+            .unwrap();
+        let bytes = serde_json::to_vec(&json!({"kind":"steer","command_id":id(4100),"run_id":id(4000),"idempotency_key":"later-queued-steer","payload":{"text":"Accepted later input","expected_revision":"1"}})).unwrap();
+        let receipt = store
+            .accept_command(CommandAcceptance {
+                workspace: &id(1),
+                actor: &id(2),
+                bytes: &bytes,
+                event: &id(4101),
+                queue: &id(4102),
+                command_blob: &id(4103),
+                event_blob: &id(4104),
+                at: &now(),
+            })
+            .await
+            .unwrap();
+        assert!(matches!(
+            receipt,
+            avencrew_contracts::wire::CommandReceipt::Accepted { .. }
+        ));
+        let complete = store
+            .recover_local_controls_page(&id(1), &id(2), None)
+            .await
+            .unwrap();
+        assert_eq!(complete.runs.len(), 2);
+        assert!(complete.runs.iter().all(|run| run.history_complete
+            && run.pending_controls.len() == 1
+            && run.accepted.value() == 1
+            && run.applied.value() == 0));
+        assert_eq!(
+            complete.runs[1].gate,
+            super::super::recovery::RecoveryGate::AwaitingControlConsumer
+        );
+        // Page-wide exhaustion must make both projections metadata-only.
+        let scope = store.proof_read_scope();
+        scope.lock().unwrap().remaining = 0;
+        let page = store
+            .recover_local_controls_page(&id(1), &id(2), None)
+            .await
+            .unwrap();
+        assert_eq!(page.runs.len(), 2);
+        let mut violations = Vec::new();
+        for run in &page.runs {
+            assert!(!run.history_complete);
+            if !run.pending_controls.is_empty()
+                || run.gate != super::super::recovery::RecoveryGate::HistoryLimit
+            {
+                violations.push(format!(
+                    "run {}: pending={}, gate={:?}",
+                    run.run.as_str(),
+                    run.pending_controls.len(),
+                    run.gate
+                ));
+            }
+        }
+        assert!(
+            violations.is_empty(),
+            "incomplete projections must be held metadata only: {violations:?}"
+        );
+        drop(scope);
+        assert!(store.proof_reads.upgrade().is_none());
+        store.close().await.unwrap();
+    });
+}

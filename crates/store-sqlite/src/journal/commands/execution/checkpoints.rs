@@ -38,7 +38,7 @@ pub struct LocalExecutionCheckpoint<'a> {
 }
 
 impl LocalStore {
-    async fn read_execution_bytes(
+    pub(super) async fn read_execution_bytes(
         &mut self,
         w: &DomainId,
         actor: &DomainId,
@@ -66,6 +66,7 @@ impl LocalStore {
         actor: &DomainId,
         turn: &DomainId,
     ) -> Result<Value, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let snap = self.local_execution_snapshot(w, actor, turn).await?;
         let inputs = self.read_local_execution_inputs(w, actor, turn).await?;
         self.verified_local_execution_context(w, actor, turn, &snap, &inputs)
@@ -98,6 +99,9 @@ impl LocalStore {
                 DomainId::new(row.try_get::<String, _>("id")?).map_err(|_| TurnError::Conflict)?;
             let step = self.read_local_step(w, actor, turn, &step_id).await?;
             let completion = self.read_local_model_completion(w, actor, &step).await?;
+            if let Some(proof) = &step.source_proof {
+                ids.insert(proof.id.clone());
+            }
             for column in [
                 "context_blob_id",
                 "tool_catalog_blob_id",

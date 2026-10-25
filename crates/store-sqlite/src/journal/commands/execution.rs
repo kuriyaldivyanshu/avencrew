@@ -25,6 +25,7 @@ pub use artifacts::{
 };
 pub use checkpoints::LocalExecutionCheckpoint;
 mod budget;
+mod context;
 pub use budget::LocalExecutionBudget;
 
 /// Protected coordinator observations, not client-supplied permission fields.
@@ -284,6 +285,7 @@ impl LocalStore {
         turn: &DomainId,
         step: &DomainId,
     ) -> Result<LocalStep, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         self.read_local_turn(workspace, actor, turn).await?;
         let row = sqlx::query("SELECT context_blob_id,tool_catalog_blob_id,model_profile_blob_id,run_id,attempt_id,sealed_at_us FROM local_steps WHERE workspace_id=? AND turn_id=? AND id=?")
             .bind(workspace.as_str()).bind(turn.as_str()).bind(step.as_str()).fetch_one(&mut self.connection).await?;
@@ -293,7 +295,12 @@ impl LocalStore {
             .read_registered_blob(workspace, actor, &id, STEP_MEDIA)
             .await?;
         let record: LocalStep = serde_json::from_slice(&bytes).map_err(|_| TurnError::Conflict)?;
-        if canonical(&record)? != bytes
+        if (record.request["schema_version"] == "avencrew.fixture-context/2")
+            != record.source_proof.is_some()
+        {
+            return Err(TurnError::Conflict);
+        }
+        if record.retained_bytes().map_err(|_| TurnError::Conflict)? != bytes
             || record.binding.step_id != *step
             || record.binding.context_manifest_id != id
             || record.context.workspace_id != *workspace
@@ -327,6 +334,14 @@ impl LocalStore {
                 return Err(TurnError::Conflict);
             }
         }
+        if hex(&digest(
+            &record.request_bytes().map_err(|_| TurnError::Conflict)?,
+        )) != record.request_digest.as_str()
+        {
+            return Err(TurnError::Conflict);
+        }
+        self.verify_context_proof(workspace, actor, turn, &record)
+            .await?;
         Ok(record)
     }
 
@@ -339,6 +354,11 @@ impl LocalStore {
         event: &DomainId,
     ) -> Result<bool, TurnError> {
         let seed = self.authorize_local_execution(&access, false).await?;
+        if (step.request["schema_version"] == "avencrew.fixture-context/2")
+            != step.source_proof.is_some()
+        {
+            return Err(TurnError::InvalidSeed);
+        }
         let snapshot = self
             .local_execution_snapshot(access.workspace, access.actor, access.turn)
             .await?;
@@ -384,7 +404,7 @@ impl LocalStore {
         {
             return Err(TurnError::InvalidSeed);
         }
-        let request = canonical(&step.request)?;
+        let request = step.request_bytes().map_err(|_| TurnError::InvalidSeed)?;
         if request.len() + seed.limits.output_bytes.value() as usize > 1_048_576
             || hex(&digest(&request)) != step.request_digest.as_str()
         {
@@ -405,15 +425,56 @@ impl LocalStore {
         {
             return Err(TurnError::InvalidSeed);
         }
-        let bytes = canonical(step)?;
+        let proof = if let Some(reference) = &step.source_proof {
+            let budget = step
+                .request
+                .get("source")
+                .and_then(|_| step.request.get("schema_version"));
+            if budget != Some(&serde_json::json!("avencrew.fixture-context/2")) {
+                return Err(TurnError::InvalidSeed);
+            }
+            // The configured budget is sealed into the proof and model view.
+            let context_bytes = step.request["context_bytes"]
+                .as_u64()
+                .ok_or(TurnError::InvalidSeed)?;
+            let proof = self
+                .local_context_proof(
+                    access.workspace,
+                    access.actor,
+                    access.turn,
+                    u32::try_from(context_bytes).map_err(|_| TurnError::InvalidSeed)?,
+                )
+                .await?;
+            let bytes = avencrew_contracts::runtime::record_bytes(&proof)
+                .map_err(|_| TurnError::InvalidSeed)?;
+            if context::proof_reference(reference.id.clone(), &bytes)? != *reference
+                || avencrew_contracts::runtime::context::fixture_context_view(
+                    &proof,
+                    reference,
+                    &step.compatibility_digest,
+                )
+                .map_err(|_| TurnError::InvalidSeed)?
+                    != step.request
+                || request.len() as u64 + seed.limits.output_bytes.value() > context_bytes
+            {
+                return Err(TurnError::InvalidSeed);
+            }
+            Some((reference.id.clone(), bytes, context::PROOF_MEDIA))
+        } else {
+            None
+        };
+        let bytes = step.retained_bytes().map_err(|_| TurnError::InvalidSeed)?;
         let profile = canonical(
             &serde_json::json!({"profile_id":step.provider_profile_id,"compatibility_digest":step.compatibility_digest,"adapter_digest":step.binding.model_adapter_digest,"provider":"fixture","rate_micro":"0"}),
         )?;
-        let blobs = [
+        let mut blobs = vec![
             (&step.binding.context_manifest_id, bytes, STEP_MEDIA),
             (&step.binding.step_id, catalog, CATALOG_MEDIA),
             (&step.model_call_id, profile, PROFILE_MEDIA),
         ];
+        if let Some((id, bytes, media)) = &proof {
+            blobs.push((id, bytes.clone(), *media));
+        }
         for (id, bytes, _) in &blobs {
             self.put_canonical(access.workspace, id, bytes)?;
         }

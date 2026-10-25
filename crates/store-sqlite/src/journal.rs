@@ -111,9 +111,32 @@ pub struct LocalStore {
     connection: SqliteConnection,
     _ownership: File,
     status: StoreStatus,
+    // Weak only: verification evidence cannot outlive a single owned operation,
+    // including cancellation of that operation's future.
+    proof_reads: std::sync::Weak<std::sync::Mutex<ProofReads>>,
 }
 
+#[derive(Default)]
+struct ProofReads {
+    remaining: usize,
+    remaining_reads: usize,
+    exhausted: bool,
+    verified:
+        std::collections::BTreeMap<avencrew_contracts::scalars::DomainId, (String, String, usize)>,
+}
 impl LocalStore {
+    fn proof_read_scope(&mut self) -> std::sync::Arc<std::sync::Mutex<ProofReads>> {
+        if let Some(scope) = self.proof_reads.upgrade() {
+            return scope;
+        }
+        let scope = std::sync::Arc::new(std::sync::Mutex::new(ProofReads {
+            remaining: 8 * 1024 * 1024,
+            remaining_reads: 8192,
+            ..ProofReads::default()
+        }));
+        self.proof_reads = std::sync::Arc::downgrade(&scope);
+        scope
+    }
     pub async fn open(root: &Path) -> Result<Self, StoreError> {
         Self::open_to(root, SCHEMA_VERSION).await
     }
@@ -258,6 +281,7 @@ impl LocalStore {
         Ok(Self {
             connection,
             _ownership: ownership,
+            proof_reads: std::sync::Weak::new(),
             status,
         })
     }

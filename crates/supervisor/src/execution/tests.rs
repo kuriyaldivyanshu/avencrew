@@ -251,6 +251,7 @@ fn retained_unresolved_intent_never_reissues_inference_and_profile_changes_are_d
             profile: profile.clone(),
             active: None,
             active_ordinal: 0,
+            context_budget: EngineConfig::default().context_bytes,
         };
         let mut state = host.restore(&seed).await.unwrap().state;
         let step = host.seal_step(&seed, &state).await.unwrap();
@@ -611,3 +612,5 @@ fn new_evidence_reaches_a_fourth_model_step_but_repeated_reads_hit_no_progress()
 }
 
 mod control_recovery;
+
+mod context_compaction;

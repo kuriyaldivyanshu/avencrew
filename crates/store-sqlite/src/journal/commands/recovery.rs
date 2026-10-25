@@ -78,6 +78,7 @@ impl LocalStore {
         after: Option<&DomainId>,
         replay_budget: usize,
     ) -> Result<RecoverySnapshot, ControlError> {
+        let _proof_scope = self.proof_read_scope();
         let identity = self.verified_identity(workspace, actor).await?;
         let mut ids:Vec<String>=sqlx::query_scalar("SELECT r.id FROM local_runs r JOIN local_tasks t ON t.workspace_id=r.workspace_id AND t.id=r.task_id WHERE r.workspace_id=? AND t.owner_actor_id=? AND (? IS NULL OR r.id>?) ORDER BY r.id LIMIT ?")
             .bind(workspace.as_str()).bind(actor.as_str()).bind(after.map(DomainId::as_str)).bind(after.map(DomainId::as_str)).bind(MAX_RUNS+1).fetch_all(&mut self.connection).await?;
@@ -322,6 +323,11 @@ impl LocalStore {
                     .await
                 {
                     Ok(_) | Err(TurnError::Unsupported | TurnError::StaleAuthority) => {} // stays held
+                    Err(_)
+                        if _proof_scope
+                            .lock()
+                            .map_err(|_| ControlError::Conflict)?
+                            .exhausted => {} // incomplete proof budget, never executable
                     Err(_) => return Err(ControlError::Conflict),
                 }
             }
@@ -339,7 +345,11 @@ impl LocalStore {
             .bind(run.as_str())
             .fetch_one(&mut self.connection)
             .await?;
-            if let Some(id) = checkpoint {
+            let proof_complete = !_proof_scope
+                .lock()
+                .map_err(|_| ControlError::Conflict)?
+                .exhausted;
+            if let Some(id) = checkpoint.filter(|_| proof_complete) {
                 let id = DomainId::new(id).map_err(|_| ControlError::Conflict)?;
                 self.read_checkpoint(workspace, actor, &run, &id).await?;
             }
@@ -355,6 +365,8 @@ impl LocalStore {
                 RecoveryGate::AuthorityHeld
             } else if row.cancelled || row.status == "cancelling" {
                 RecoveryGate::CancellationPending
+            } else if !proof_complete {
+                RecoveryGate::HistoryLimit
             } else if unsupported
                 || has_attempt
                 || extra
@@ -367,6 +379,9 @@ impl LocalStore {
             } else {
                 RecoveryGate::AwaitingControlConsumer
             };
+            if !proof_complete {
+                pending_controls.clear();
+            }
             runs.push(RecoveredRun {
                 run,
                 task: row.task,
@@ -379,7 +394,7 @@ impl LocalStore {
                 last_event: positive(row.event)?,
                 gate,
                 pending_controls,
-                history_complete: true,
+                history_complete: proof_complete,
             });
         }
         identity.check_live(&mut self.connection).await?;

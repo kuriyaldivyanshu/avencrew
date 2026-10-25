@@ -120,3 +120,41 @@ lifecycle consumer must own controls during post-outcome verification/rework.
 
 Regression evidence lives in `commands/execution/tests/control_recovery.rs`,
 `commands/execution/tests.rs` and the supervisor's `execution/tests/` modules.
+
+
+## Fixture context compaction
+
+A model request may use a deterministic compact view while the journal retains
+its exact source separately. An optional internal sealed-step reference pins an
+immutable source-proof blob; proof, step and model intent register in the same
+transaction. Checkpoints inventory the proof alongside the original source
+members. Existing exact requests remain readable, and fixture-profile digests
+retain their existing recipe. No new migration, dependency or public wire type
+is introduced for this local fixture consumer.
+
+The source proof captures scope, historical journal/control cuts, prior steps,
+accepted inputs, limits, pending/unresolved work, ordered semantic model/tool
+history, artifact/version/check snapshots and explicit coverage. At admission the
+store compares it with current verified source under the existing authority and
+control fences. Historical replay validates the immutable captured snapshot;
+later artifact versions cannot rewrite what an earlier step saw.
+
+Compaction can replace eligible older history with exact retrievable references
+and a derived summary. Mandatory structured anchors remain outside summary
+prose, and required tool call/result groups remain indivisible. The serialized
+model request must fit the configured context budget together with output
+headroom. A minimum valid view that cannot fit yields ContextLimit before model
+intent; it never earns room by discarding accepted input or unresolved work.
+Invalid unsealed views are rebuilt or rejected before admission. Corrupt sealed
+requests, proof bytes or source members block replay without inference or repair.
+
+Proof/source validation has a separate 8 MiB / 8192-read operation budget.
+Repeated source reads are deduplicated only within that owned operation; its
+state expires on completion, error or cancellation. The generic recovery page
+shares the scope across runs, and exhaustion keeps history incomplete and held
+instead of treating unverified checkpoint state as executable. Historical proof
+validation uses flat immutable source references, without recursive expansion.
+
+This is finite synthetic fixture behavior. It does not establish live provider
+summary faithfulness, two-provider portability, live process/filesystem capture,
+restored authority activation or aggregate P2/P3 acceptance.
