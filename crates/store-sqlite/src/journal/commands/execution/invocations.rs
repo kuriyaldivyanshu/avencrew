@@ -25,6 +25,7 @@ impl LocalStore {
         code: avencrew_contracts::wire::ErrorCode,
         event: &DomainId,
     ) -> Result<(), TurnError> {
+        let _proof_scope = self.proof_read_scope();
         use avencrew_contracts::wire::ErrorCode;
         if !matches!(code, ErrorCode::Timeout | ErrorCode::UnknownOutcome) {
             return Err(TurnError::InvalidSeed);
@@ -66,6 +67,7 @@ impl LocalStore {
         proposals: &[LocalProposal],
         event: &DomainId,
     ) -> Result<(), TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let seed = self.authorize_local_execution(&a, false).await?;
         let snap = self
             .local_execution_snapshot(a.workspace, a.actor, a.turn)
@@ -174,6 +176,7 @@ impl LocalStore {
         actor: &DomainId,
         id: &DomainId,
     ) -> Result<LocalProposal, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         self.verified_identity(w, actor).await?;
         let row = sqlx::query("SELECT * FROM local_invocations WHERE workspace_id=? AND id=?")
             .bind(w.as_str())
@@ -214,6 +217,7 @@ impl LocalStore {
         policy_digest: &avencrew_contracts::scalars::Digest,
         event: &DomainId,
     ) -> Result<LocalDispatch, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let seed = self.authorize_local_execution(&a, false).await?;
         if self
             .read_local_proposal(a.workspace, a.actor, &proposal.invocation_id)
@@ -314,6 +318,7 @@ impl LocalStore {
         actor: &DomainId,
         id: &DomainId,
     ) -> Result<ToolResult, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         self.read_local_proposal(w, actor, id).await?;
         let pointer:String=sqlx::query_scalar("SELECT result_blob_id FROM local_invocations WHERE workspace_id=? AND id=? AND state IN ('result','unknown') AND result_blob_id IS NOT NULL").bind(w.as_str()).bind(id.as_str()).fetch_one(&mut self.connection).await?;
         let pointer = DomainId::new(pointer).map_err(|_| TurnError::Conflict)?;
@@ -342,6 +347,7 @@ impl LocalStore {
         result: Option<&ToolResult>,
         event: &DomainId,
     ) -> Result<(), TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let seed = self.authorize_local_execution(&a, true).await?;
         if self
             .read_local_proposal(a.workspace, a.actor, &proposal.invocation_id)

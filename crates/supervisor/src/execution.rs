@@ -75,6 +75,12 @@ fn storage(error: TurnError) -> EngineError {
         _ => EngineError::Storage,
     }
 }
+fn context_preparation_error(error: TurnError) -> EngineError {
+    match error {
+        TurnError::ContextBudget => EngineError::ContextLimit,
+        error => storage(error),
+    }
+}
 fn broker_storage(error: TurnError) -> BrokerError {
     match error {
         TurnError::Cancelled => BrokerError::Cancelled,
@@ -109,6 +115,7 @@ struct FixtureHost {
     compatibility: Digest,
     active: Option<LocalStep>,
     active_ordinal: u32,
+    context_budget: u32,
 }
 impl FixtureHost {
     fn source(&self, p: &PreparedInvocation) -> Option<&FixtureSource> {
@@ -139,11 +146,10 @@ impl FixtureHost {
             request_digest: step.request_digest.clone(),
             provider_profile_id: step.provider_profile_id.clone(),
             compatibility_digest: step.compatibility_digest.clone(),
-            context_bytes: avencrew_contracts::canonical_bytes(
-                &serde_json::to_vec(&step.request).map_err(|_| EngineError::InvalidState)?,
-            )
-            .map_err(|_| EngineError::InvalidState)?
-            .len() as u32,
+            context_bytes: step
+                .request_bytes()
+                .map_err(|_| EngineError::InvalidState)?
+                .len() as u32,
         })
     }
     fn current_step(&self, step: &ModelStep) -> Result<&LocalStep, EngineError> {
@@ -201,6 +207,7 @@ pub async fn execute_fixture_turn(
         compatibility,
         active: None,
         active_ordinal: 0,
+        context_budget: config.context_bytes,
     };
     // Own the composed journal/harness future on the heap. Its nested static
     // ports must not consume a worker thread's stack merely by being composed.
@@ -340,26 +347,37 @@ impl engine::Host for FixtureHost {
     ) -> Result<ModelStep, EngineError> {
         let sample = clock::sample().map_err(|_| EngineError::StaleAuthority)?;
         let catalog = self.catalog()?;
-        let context = self
+        let proof = self
             .store
             .lock()
             .await
-            .local_execution_context(
+            .local_context_proof(
                 &self.seed.run_spec.workspace_id,
                 &self.actor,
                 &self.seed.turn_id,
+                self.context_budget,
             )
             .await
-            .map_err(storage)?;
-        let request = json!({"schema_version":"avencrew.fixture-context/1","objective_version_id":self.seed.run_spec.objective_version_id,"exact_ledger":context,"fixture_profile_digest":self.compatibility});
-        let bytes = avencrew_contracts::canonical_bytes(
-            &serde_json::to_vec(&request).map_err(|_| EngineError::InvalidState)?,
+            .map_err(context_preparation_error)?;
+        let proof_bytes = record_bytes(&proof).map_err(|_| EngineError::ContextLimit)?;
+        let reference = avencrew_contracts::runtime::context::ContextProofRef {
+            id: id(),
+            sha256: hash(&proof_bytes),
+            byte_size: Counter::new(proof_bytes.len().to_string())
+                .map_err(|_| EngineError::InvalidState)?,
+        };
+        let request = avencrew_contracts::runtime::context::fixture_context_view(
+            &proof,
+            &reference,
+            &self.compatibility,
         )
         .map_err(|_| EngineError::InvalidState)?;
+        let bytes = record_bytes(&request).map_err(|_| EngineError::ContextLimit)?;
         let step_id = id();
         let binding:StepBinding=serde_json::from_value(json!({"step_id":step_id,"model_profile_id":self.seed.run_spec.model_profile_id,"model_adapter_digest":hash(b"avencrew.fixture-model/1"),"prompt_schema_version":"1.0","catalog_digest":catalog.digest(),"tool_binding_ids":catalog.bindings().iter().map(|b|&b.binding_id).collect::<Vec<_>>(),"instruction_digests":self.seed.run_spec.instruction_digests,"context_manifest_id":id(),"environment_capability_digest":hash(b"fixture-read-only/no-process/1"),"permission_generation":"1","deletion_generation":"0","sealed_at":sample.now})).map_err(|_|EngineError::InvalidState)?;
         let trusted:TrustedContext=serde_json::from_value(json!({"workspace_id":self.seed.run_spec.workspace_id,"project_id":null,"run_id":self.seed.run_spec.run_id,"attempt_id":self.seed.lease.attempt_id,"step_id":step_id,"principal_id":self.seed.run_spec.acting_principal_id,"epoch":self.seed.lease.epoch,"environment_id":null,"generation":null,"binding_id":fixed(18),"catalog_digest":catalog.digest(),"budget_hold_refs":[],"approval_ref":null})).map_err(|_|EngineError::InvalidState)?;
         let step = LocalStep {
+            source_proof: Some(reference),
             accepted_input_cut: state.applied_input_cut.clone(),
             candidate: Some(avencrew_contracts::runtime::CandidateAllocation {
                 artifact_id: id(),

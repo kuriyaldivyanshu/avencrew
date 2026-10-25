@@ -90,6 +90,7 @@ impl LocalStore {
         actor: &DomainId,
         turn: &DomainId,
     ) -> Result<LocalExecutionBudget, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let seed = self.read_local_turn(w, actor, turn).await?.seed;
         let calls=sqlx::query("SELECT c.input_tokens,c.output_tokens,b.byte_size FROM local_model_calls c JOIN local_steps s ON s.workspace_id=c.workspace_id AND s.id=c.step_id JOIN local_blobs b ON b.workspace_id=s.workspace_id AND b.id=s.context_blob_id WHERE s.workspace_id=? AND s.run_id=? ORDER BY s.step_ordinal LIMIT 51")
             .bind(w.as_str()).bind(seed.run_spec.run_id.as_str()).fetch_all(&mut self.connection).await?;

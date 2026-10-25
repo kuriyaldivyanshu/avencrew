@@ -38,24 +38,42 @@ pub struct LocalExecutionCheckpoint<'a> {
 }
 
 impl LocalStore {
-    async fn read_execution_bytes(
+    pub(super) async fn read_execution_bytes(
         &mut self,
         w: &DomainId,
         actor: &DomainId,
         id: &DomainId,
         media: &str,
-    ) -> Result<Vec<u8>, StoreError> {
+    ) -> Result<Vec<u8>, TurnError> {
+        let _proof_scope = self.proof_read_scope();
+        if media == super::context::PROOF_MEDIA {
+            return self.bounded_proof_bytes(w, actor, id, media).await;
+        }
+        self.read_execution_source_bytes(w, actor, id, media).await
+    }
+    pub(super) async fn read_execution_source_bytes(
+        &mut self,
+        w: &DomainId,
+        actor: &DomainId,
+        id: &DomainId,
+        media: &str,
+    ) -> Result<Vec<u8>, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         if media == "application/vnd.avencrew.vault-bytes" {
             use std::io::Read;
             let file = self.open_vault_blob(w, actor, id).await?;
             let mut bytes = Vec::new();
-            file.take(262145).read_to_end(&mut bytes)?;
+            file.take(262145)
+                .read_to_end(&mut bytes)
+                .map_err(StoreError::from)?;
             if bytes.len() > 262144 {
-                return Err(invalid("execution artifact byte limit"));
+                return Err(invalid("execution artifact byte limit").into());
             }
             Ok(bytes)
         } else {
-            self.read_registered_blob(w, actor, id, media).await
+            self.read_registered_blob(w, actor, id, media)
+                .await
+                .map_err(Into::into)
         }
     }
 
@@ -66,6 +84,7 @@ impl LocalStore {
         actor: &DomainId,
         turn: &DomainId,
     ) -> Result<Value, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let snap = self.local_execution_snapshot(w, actor, turn).await?;
         let inputs = self.read_local_execution_inputs(w, actor, turn).await?;
         self.verified_local_execution_context(w, actor, turn, &snap, &inputs)
@@ -80,6 +99,7 @@ impl LocalStore {
         snap: &LocalExecutionSnapshot,
         inputs: &super::controls::VerifiedInputs,
     ) -> Result<Value, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let retained = self.read_local_turn(w, actor, turn).await?;
         let rows=sqlx::query("SELECT id,step_ordinal,context_blob_id,tool_catalog_blob_id,model_profile_blob_id FROM local_steps WHERE workspace_id=? AND turn_id=? ORDER BY step_ordinal LIMIT 51")
             .bind(w.as_str()).bind(turn.as_str()).fetch_all(&mut self.connection).await?;
@@ -98,6 +118,9 @@ impl LocalStore {
                 DomainId::new(row.try_get::<String, _>("id")?).map_err(|_| TurnError::Conflict)?;
             let step = self.read_local_step(w, actor, turn, &step_id).await?;
             let completion = self.read_local_model_completion(w, actor, &step).await?;
+            if let Some(proof) = &step.source_proof {
+                ids.insert(proof.id.clone());
+            }
             for column in [
                 "context_blob_id",
                 "tool_catalog_blob_id",
@@ -260,12 +283,13 @@ impl LocalStore {
         value: &Value,
         current: bool,
     ) -> Result<(), ControlError> {
+        let _proof_scope = self.proof_read_scope();
         let m: ExecutionManifest =
             serde_json::from_value(value.clone()).map_err(|_| ControlError::Conflict)?;
         let retained = self
             .read_local_turn(w, actor, &m.turn_id)
             .await
-            .map_err(|_| ControlError::Conflict)?;
+            .map_err(ControlError::from)?;
         if m.schema_version != "avencrew.execution-manifest/1"
             || m.workspace_id != *w
             || m.run_id != retained.seed.run_spec.run_id
@@ -299,14 +323,14 @@ impl LocalStore {
             let context = self
                 .local_execution_context(w, actor, &m.turn_id)
                 .await
-                .map_err(|_| ControlError::Conflict)?;
+                .map_err(ControlError::from)?;
             if canonical(&context["members"])? != canonical(&m.members)? {
                 return Err(ControlError::Conflict);
             }
             let snapshot = self
                 .local_execution_snapshot(w, actor, &m.turn_id)
                 .await
-                .map_err(|_| ControlError::Conflict)?;
+                .map_err(ControlError::from)?;
             if snapshot.progress.pending_step_id != m.pending_step_id
                 || snapshot.progress.state.steps_started != m.state.steps_started
                 || snapshot.progress.state.applied_input_cut != m.state.applied_input_cut
@@ -324,6 +348,7 @@ impl LocalStore {
         &mut self,
         publication: LocalExecutionCheckpoint<'_>,
     ) -> Result<DomainId, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let LocalExecutionCheckpoint {
             access: a,
             state,
@@ -433,6 +458,7 @@ impl LocalStore {
         outcome: &TurnOutcome,
         event: &DomainId,
     ) -> Result<(), TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let snap = self
             .local_execution_snapshot(a.workspace, a.actor, a.turn)
             .await?;

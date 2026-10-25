@@ -24,6 +24,7 @@ use std::{
 /// Payload-free failures. A commit failure never acknowledges saved progress.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EngineError {
+    ContextLimit,
     InvalidState,
     Unsupported,
     StaleAuthority,
@@ -549,7 +550,13 @@ pub async fn run_turn<H: Host>(
         }
         let step = match pending.take() {
             Some(step) => step,
-            None => host.seal_step(seed, &state).await?,
+            None => match host.seal_step(seed, &state).await {
+                Ok(step) => step,
+                Err(EngineError::ContextLimit) => {
+                    return finish(host, seed, &state, End::Yield(Yield::ContextLimit)).await
+                }
+                Err(error) => return Err(error),
+            },
         };
         validate_step(seed, &step)?;
         // Reserve declared output headroom as well as the supplied context.

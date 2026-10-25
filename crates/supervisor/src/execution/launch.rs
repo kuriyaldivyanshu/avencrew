@@ -24,6 +24,27 @@ pub async fn prepare_fixture_turn(
     store: &mut LocalStore,
     launch: &FixtureLaunch,
 ) -> Result<PreparedFixtureTurn, EngineError> {
+    prepare_fixture_turn_with_limits(store, launch, 10, 60_000).await
+}
+
+// Tests publish a real seed through the production store without changing any
+// launch defaults or adding a model/user configuration surface.
+#[cfg(test)]
+pub(super) async fn prepare_fixture_turn_for_test(
+    store: &mut LocalStore,
+    launch: &FixtureLaunch,
+    steps: u32,
+    wall_ms: u32,
+) -> Result<PreparedFixtureTurn, EngineError> {
+    prepare_fixture_turn_with_limits(store, launch, steps, wall_ms).await
+}
+
+async fn prepare_fixture_turn_with_limits(
+    store: &mut LocalStore,
+    launch: &FixtureLaunch,
+    steps: u32,
+    wall_ms: u32,
+) -> Result<PreparedFixtureTurn, EngineError> {
     if launch.schema_version != "avencrew.fixture-launch/1"
         || launch.profile.provider != "fixture"
         || launch.profile.rate_micro != "0"
@@ -124,7 +145,7 @@ pub async fn prepare_fixture_turn(
         .find(|r| r["table"] == "tasks")
         .map(|r| &r["record"])
         .ok_or(EngineError::InvalidState)?;
-    let seed:TurnSeed=serde_json::from_value(json!({"run_spec":{"task_id":task_record["id"],"task_revision_id":receipt.version_id,"run_id":run,"session_id":id(),"branch_id":id(),"workspace_id":workspace,"project_id":null,"worker_id":null,"responsibility_id":null,"requester_id":principal,"owner_id":principal,"acting_principal_id":principal,"audience_policy_id":revision["audience_policy_id"],"execution_policy_id":revision["execution_policy_id"],"objective_version_id":revision["objective_version_id"],"check_refs":checks,"instruction_digests":[],"model_profile_id":id(),"environment_recipe_version_id":null,"budget_period_refs":[],"deadline":null,"placement":"local","accepted_input_seq":"0"},"lease":{"run_id":run,"attempt_id":id(),"epoch":"1","placement":"local","authority":"local","environment_id":null,"generation":null,"expires_at":expires,"boot_id":sample.boot,"monotonic_deadline_ns":(sample.monotonic.value()+600_000_000_000).to_string(),"receipt_digest":hash(b"fixture-lease/1")},"turn_id":turn,"accepted_input_cut":"0","checkpoint_id":null,"limits":{"model_steps":10,"active_wall_ms":60_000,"output_bytes":32768}})).map_err(|_|EngineError::InvalidState)?;
+    let seed:TurnSeed=serde_json::from_value(json!({"run_spec":{"task_id":task_record["id"],"task_revision_id":receipt.version_id,"run_id":run,"session_id":id(),"branch_id":id(),"workspace_id":workspace,"project_id":null,"worker_id":null,"responsibility_id":null,"requester_id":principal,"owner_id":principal,"acting_principal_id":principal,"audience_policy_id":revision["audience_policy_id"],"execution_policy_id":revision["execution_policy_id"],"objective_version_id":revision["objective_version_id"],"check_refs":checks,"instruction_digests":[],"model_profile_id":id(),"environment_recipe_version_id":null,"budget_period_refs":[],"deadline":null,"placement":"local","accepted_input_seq":"0"},"lease":{"run_id":run,"attempt_id":id(),"epoch":"1","placement":"local","authority":"local","environment_id":null,"generation":null,"expires_at":expires,"boot_id":sample.boot,"monotonic_deadline_ns":(sample.monotonic.value()+600_000_000_000).to_string(),"receipt_digest":hash(b"fixture-lease/1")},"turn_id":turn,"accepted_input_cut":"0","checkpoint_id":null,"limits":{"model_steps":steps,"active_wall_ms":wall_ms,"output_bytes":32768}})).map_err(|_|EngineError::InvalidState)?;
     store
         .publish_local_turn(LocalTurnPublication {
             actor: &actor,

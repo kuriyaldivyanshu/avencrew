@@ -36,6 +36,7 @@ pub enum ControlError {
     Store(StoreError),
     InvalidCommand,
     Unsupported,
+    ContextBudget,
     NotFoundOrDenied,
     Conflict,
     IdempotencyMismatch,
@@ -47,6 +48,7 @@ impl fmt::Display for ControlError {
         match self {
             Self::Store(e) => e.fmt(f),
             Self::InvalidCommand => f.write_str("invalid command"),
+            Self::ContextBudget => f.write_str("context verification budget exhausted"),
             Self::Unsupported => f.write_str("command consumer is not enabled"),
             Self::NotFoundOrDenied => f.write_str("run unavailable to caller"),
             Self::Conflict => f.write_str("command version or identity conflict"),

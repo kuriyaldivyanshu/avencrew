@@ -11,7 +11,7 @@
 //! because Cargo will not let it: `store-sqlite` is not in this crate's
 //! dependency list. That is the enforcement mechanism, not a comment.
 //!
-//! Live model adapters and context compaction remain later work.
+//! Fixture context compaction preserves exact source proofs; live model adapters remain later work.
 
 pub mod artifacts;
 pub mod engine;

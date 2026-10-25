@@ -7,6 +7,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fmt;
+pub mod context;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
@@ -51,6 +52,8 @@ pub fn content_digest(bytes: &[u8]) -> Digest {
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LocalStep {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_proof: Option<context::ContextProofRef>,
     pub accepted_input_cut: Counter,
     pub candidate: Option<CandidateAllocation>,
     pub binding: crate::wire::StepBinding,
@@ -267,4 +270,28 @@ pub struct TurnState {
     pub active_elapsed_ms: u64,
     pub applied_input_cut: Counter,
     pub progress_digest: Digest,
+}
+
+/// Preserve legacy canonical bytes while v2 semantic evidence admits finite
+/// fractional JSON using the existing runtime-record normalization.
+impl LocalStep {
+    pub fn retained_bytes(&self) -> Result<Vec<u8>, crate::ContractError> {
+        if self.source_proof.is_some() {
+            record_bytes(self)
+        } else {
+            crate::canonical_bytes(
+                &serde_json::to_vec(self).map_err(|_| crate::ContractError::InvalidMessage)?,
+            )
+        }
+    }
+    pub fn request_bytes(&self) -> Result<Vec<u8>, crate::ContractError> {
+        if self.source_proof.is_some() {
+            record_bytes(&self.request)
+        } else {
+            crate::canonical_bytes(
+                &serde_json::to_vec(&self.request)
+                    .map_err(|_| crate::ContractError::InvalidMessage)?,
+            )
+        }
+    }
 }

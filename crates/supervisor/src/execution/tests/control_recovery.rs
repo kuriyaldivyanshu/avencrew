@@ -53,6 +53,7 @@ async fn host(
         compatibility: hash(&record_bytes(profile).unwrap()),
         active: None,
         active_ordinal: 0,
+        context_budget: EngineConfig::default().context_bytes,
     }
 }
 #[test]

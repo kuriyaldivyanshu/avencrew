@@ -20,6 +20,7 @@ impl LocalStore {
         actor: &DomainId,
         turn: &DomainId,
     ) -> Result<VerifiedHistory, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let retained = self.read_local_turn(w, actor, turn).await?;
         // The verifier deliberately supports exactly the admitted ordinal-one
         // fixture profile. Future multi-turn histories need a different replay.
@@ -144,6 +145,7 @@ impl LocalStore {
         actor: &DomainId,
         turn: &DomainId,
     ) -> Result<LocalExecutionSnapshot, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         Ok(self
             .reconcile_local_execution_details(w, actor, turn)
             .await?
@@ -157,6 +159,7 @@ impl LocalStore {
         actor: &DomainId,
         turn: &DomainId,
     ) -> Result<(VerifiedHistory, serde_json::Value), TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let verified = self.verify_local_control_history(w, actor, turn).await?;
         let snap = &verified.snapshot;
         let context = self
@@ -194,6 +197,7 @@ impl LocalStore {
         a: LocalExecutionAccess<'_>,
         event: &DomainId,
     ) -> Result<LocalExecutionRestore, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let (verified, mut context) = self
             .reconcile_local_execution_details(a.workspace, a.actor, a.turn)
             .await?;

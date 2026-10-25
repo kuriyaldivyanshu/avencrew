@@ -12,6 +12,7 @@ pub enum TurnError {
     Store(StoreError),
     InvalidSeed,
     Unsupported,
+    ContextBudget,
     NotFoundOrDenied,
     Conflict,
     IdempotencyMismatch,
@@ -23,6 +24,7 @@ impl fmt::Display for TurnError {
         f.write_str(match self {
             Self::Store(_) => "turn storage failure",
             Self::InvalidSeed => "invalid turn seed",
+            Self::ContextBudget => "context verification budget exhausted",
             Self::Unsupported => "turn profile unsupported",
             Self::NotFoundOrDenied => "turn unavailable",
             Self::Conflict => "turn version conflict",
@@ -57,8 +59,24 @@ impl From<ControlError> for TurnError {
             ControlError::StaleAuthority => Self::StaleAuthority,
             ControlError::Cancelled => Self::Cancelled,
             ControlError::Unsupported => Self::Unsupported,
+            ControlError::ContextBudget => Self::ContextBudget,
             ControlError::NotFoundOrDenied => Self::NotFoundOrDenied,
             _ => Self::InvalidSeed,
+        }
+    }
+}
+impl From<TurnError> for ControlError {
+    fn from(error: TurnError) -> Self {
+        match error {
+            TurnError::Store(e) => Self::Store(e),
+            TurnError::InvalidSeed => Self::InvalidCommand,
+            TurnError::Unsupported => Self::Unsupported,
+            TurnError::ContextBudget => Self::ContextBudget,
+            TurnError::NotFoundOrDenied => Self::NotFoundOrDenied,
+            TurnError::Conflict => Self::Conflict,
+            TurnError::IdempotencyMismatch => Self::IdempotencyMismatch,
+            TurnError::StaleAuthority => Self::StaleAuthority,
+            TurnError::Cancelled => Self::Cancelled,
         }
     }
 }

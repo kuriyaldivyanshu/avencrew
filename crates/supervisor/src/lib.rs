@@ -357,7 +357,7 @@ async fn client(
                         ControlError::StaleAuthority => "STALE_AUTHORITY",
                         ControlError::Cancelled => "CANCELLED",
                         ControlError::NotFoundOrDenied => "NOT_FOUND_OR_DENIED",
-                        ControlError::Store(_) => "UNAVAILABLE",
+                        ControlError::Store(_) | ControlError::ContextBudget => "UNAVAILABLE",
                     }),
                 }
             }
