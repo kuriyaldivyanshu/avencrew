@@ -7,6 +7,11 @@ pub struct LocalControlSnapshot {
     pub inputs: Vec<Command>,
 }
 
+pub(super) struct VerifiedInputs {
+    pub commands: Vec<Command>,
+    pub bytes: std::collections::BTreeMap<DomainId, Vec<u8>>,
+}
+
 impl LocalStore {
     /// Digest verified semantic evidence, excluding fresh invocation IDs so a
     /// repeated read of the same source/version/result cannot fake progress.
@@ -80,6 +85,15 @@ impl LocalStore {
         a: &DomainId,
         turn: &DomainId,
     ) -> Result<Vec<Command>, TurnError> {
+        Ok(self.read_local_execution_inputs(w, a, turn).await?.commands)
+    }
+
+    pub(super) async fn read_local_execution_inputs(
+        &mut self,
+        w: &DomainId,
+        a: &DomainId,
+        turn: &DomainId,
+    ) -> Result<VerifiedInputs, TurnError> {
         let seed = self.read_local_turn(w, a, turn).await?.seed;
         let run = run_row(&mut self.connection, w, &seed.run_spec.run_id, a).await?;
         let rows=sqlx::query("SELECT seq,payload_blob_id FROM local_commands WHERE workspace_id=? AND run_id=? ORDER BY seq LIMIT 1025")
@@ -88,6 +102,7 @@ impl LocalStore {
             return Err(TurnError::Conflict);
         }
         let mut inputs = Vec::new();
+        let mut verified_bytes = std::collections::BTreeMap::new();
         let mut total = 0;
         for (n, row) in rows.iter().enumerate() {
             if row.try_get::<i64, _>("seq")? != n as i64 + 1 {
@@ -109,9 +124,13 @@ impl LocalStore {
             {
                 return Err(TurnError::Conflict);
             }
+            verified_bytes.insert(id, bytes);
             inputs.push(command);
         }
-        Ok(inputs)
+        Ok(VerifiedInputs {
+            commands: inputs,
+            bytes: verified_bytes,
+        })
     }
 
     /// Safe fixture boundary only: records input dispositions, never asserts process cleanup.
@@ -120,7 +139,22 @@ impl LocalStore {
         a: LocalExecutionAccess<'_>,
         event: &DomainId,
     ) -> Result<LocalControlSnapshot, TurnError> {
+        let verified = self
+            .verify_local_control_history(a.workspace, a.actor, a.turn)
+            .await?;
+        self.apply_verified_local_controls(a, event, verified).await
+    }
+
+    // Verified data never escapes a single owned-store operation. Live identity,
+    // cursors and epoch are still rechecked in the publication transaction.
+    pub(super) async fn apply_verified_local_controls(
+        &mut self,
+        a: LocalExecutionAccess<'_>,
+        event: &DomainId,
+        verified: super::recovery::VerifiedHistory,
+    ) -> Result<LocalControlSnapshot, TurnError> {
         let seed = self.authorize_local_execution(&a, true).await?;
+        let snap = verified.snapshot;
         let row = run_row(
             &mut self.connection,
             a.workspace,
@@ -139,45 +173,41 @@ impl LocalStore {
                 inputs: vec![],
             });
         }
-        let inputs = self
-            .local_execution_inputs(a.workspace, a.actor, a.turn)
-            .await?;
-        let snap = self
-            .local_execution_snapshot(a.workspace, a.actor, a.turn)
-            .await?;
+        let inputs = verified.inputs.commands;
         let paused = inputs.iter().any(|c| matches!(c, Command::Pause { .. }));
         let stopped = row.cancelled;
-        if row.accepted == row.applied {
-            return Ok(LocalControlSnapshot {
-                applied_input_cut: Counter::new(row.applied.to_string())
-                    .map_err(|_| TurnError::Conflict)?,
-                paused,
-                stopped,
-                inputs,
-            });
-        }
         if snap.progress.outcome.is_some() {
             return Err(TurnError::Conflict);
         }
         let mut progress = snap.progress;
         progress.state.applied_input_cut =
             Counter::new(row.accepted.to_string()).map_err(|_| TurnError::Conflict)?;
-        let mut record = serde_json::to_value(ProgressRecord {
+        // Persist typed exact dispositions, with stop priority over every
+        // unapplied business command in this accepted prefix.
+        let dispositions = inputs
+            .iter()
+            .enumerate()
+            .skip(row.applied as usize)
+            .map(|(n, c)| {
+                Ok(InputDisposition {
+                    command_id: control(c)?.0.clone(),
+                    sequence: positive(n as i64 + 1)?,
+                    disposition: if stopped && !matches!(c, Command::Stop { .. }) {
+                        Disposition::Superseded
+                    } else {
+                        Disposition::Applied
+                    },
+                })
+            })
+            .collect::<Result<Vec<_>, ControlError>>()?;
+        let bytes = canonical(&ProgressRecord {
             schema_version: 1,
             turn_id: a.turn.clone(),
             version: snap.version + 1,
             progress,
-            input_dispositions: vec![],
+            input_dispositions: dispositions,
             observed_invocation_ids: vec![],
-        })
-        .map_err(|_| TurnError::Conflict)?;
-        // The event retains exact per-command applied/superseded dispositions.
-        let dispositions:Vec<_>=inputs.iter().enumerate().filter(|(n,_)|*n as i64>=row.applied).map(|(n,c)|{
-            let superseded=stopped&&!matches!(c,Command::Stop{..});
-            Ok(serde_json::json!({"command_id":control(c)?.0,"sequence":(n+1).to_string(),"disposition":if superseded{"superseded"}else{"applied"}}))
-        }).collect::<Result<_,ControlError>>()?;
-        record["input_dispositions"] = serde_json::json!(dispositions);
-        let bytes = canonical(&record)?;
+        })?;
         self.put_canonical(a.workspace, event, &bytes)?;
         let identity = self.verified_identity(a.workspace, a.actor).await?;
         let mut tx = self.connection.begin().await?;
@@ -190,14 +220,21 @@ impl LocalStore {
         {
             return Err(TurnError::Conflict);
         }
-        sqlx::query("UPDATE local_commands SET state=CASE WHEN ?=1 AND kind<>'cancel' THEN 'rejected' ELSE 'applied' END WHERE workspace_id=? AND run_id=? AND seq>? AND seq<=? AND state='accepted'")
+        let changed=sqlx::query("UPDATE local_commands SET state=CASE WHEN ?=1 AND kind<>'cancel' THEN 'rejected' ELSE 'applied' END WHERE workspace_id=? AND run_id=? AND seq>? AND seq<=? AND state='accepted'")
             .bind(stopped).bind(a.workspace.as_str()).bind(seed.run_spec.run_id.as_str()).bind(row.applied).bind(row.accepted).execute(&mut *tx).await?;
-        sqlx::query("UPDATE local_runs SET applied_command_seq=? WHERE workspace_id=? AND id=?")
+        if changed.rows_affected() != (row.accepted - row.applied) as u64 {
+            return Err(TurnError::Conflict);
+        }
+        let changed=sqlx::query("UPDATE local_runs SET applied_command_seq=? WHERE workspace_id=? AND id=? AND fencing_epoch=? AND applied_command_seq=?")
             .bind(row.accepted)
             .bind(a.workspace.as_str())
             .bind(seed.run_spec.run_id.as_str())
+            .bind(seed.lease.epoch.value() as i64).bind(row.applied)
             .execute(&mut *tx)
             .await?;
+        if changed.rows_affected() != 1 {
+            return Err(TurnError::StaleAuthority);
+        }
         save_progress(
             &mut tx,
             &a,
@@ -208,7 +245,11 @@ impl LocalStore {
             &bytes,
         )
         .await?;
+        #[cfg(test)]
+        tests::barrier(&self.status.database_path, "controls_before_commit")?;
         tx.commit().await?;
+        #[cfg(test)]
+        tests::barrier(&self.status.database_path, "controls_after_commit")?;
         Ok(LocalControlSnapshot {
             applied_input_cut: Counter::new(row.accepted.to_string())
                 .map_err(|_| TurnError::Conflict)?,

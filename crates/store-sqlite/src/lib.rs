@@ -7,11 +7,12 @@ pub use journal::{
     CheckpointPublication, CheckpointReceipt, CommandAcceptance, ControlError, DiagnosticCounts,
     FileCoverage, LocalArtifact, LocalArtifactPublication, LocalArtifactReceipt,
     LocalArtifactTarget, LocalControlSnapshot, LocalDiagnostics, LocalDispatch,
-    LocalExecutionAccess, LocalExecutionBudget, LocalExecutionCheckpoint, LocalExecutionSnapshot,
-    LocalRunReceipt, LocalRunRegistration, LocalStore, LocalTurnPublication, LocalTurnReceipt,
-    Payload, PublicationReceipt, PublishedBundle, RecordAllocation, RecoveredControl, RecoveredRun,
-    RecoveryGate, RecoverySnapshot, RegistrationReceipt, RestoreReceipt, RestoredCheckpoint,
-    RetainedLocalTurn, StagingCleanup, StoreError, StoreStatus, TurnError, VaultReceipt,
+    LocalExecutionAccess, LocalExecutionBudget, LocalExecutionCheckpoint, LocalExecutionRestore,
+    LocalExecutionSnapshot, LocalRunReceipt, LocalRunRegistration, LocalStore,
+    LocalTurnPublication, LocalTurnReceipt, Payload, PublicationReceipt, PublishedBundle,
+    RecordAllocation, RecoveredControl, RecoveredRun, RecoveryGate, RecoverySnapshot,
+    RegistrationReceipt, RestoreReceipt, RestoredCheckpoint, RetainedLocalTurn, StagingCleanup,
+    StoreError, StoreStatus, TurnError, VaultReceipt,
 };
 
 use avencrew_contracts::BuildInfo;

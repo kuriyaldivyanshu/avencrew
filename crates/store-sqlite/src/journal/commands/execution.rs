@@ -15,7 +15,9 @@ const PROFILE_MEDIA: &str = "application/vnd.avencrew.model-profile+json";
 mod invocations;
 pub use invocations::LocalDispatch;
 mod controls;
+mod recovery;
 pub use controls::LocalControlSnapshot;
+pub use recovery::LocalExecutionRestore;
 mod artifacts;
 mod checkpoints;
 pub use artifacts::{
@@ -64,6 +66,21 @@ pub struct LocalExecutionSnapshot {
     pub current_checkpoint: Option<DomainId>,
     pub cancellation_requested: bool,
     pub unresolved_invocations: Vec<DomainId>,
+    pub unresolved_model_calls: Vec<DomainId>,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+enum Disposition {
+    Applied,
+    Superseded,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct InputDisposition {
+    command_id: DomainId,
+    sequence: PositiveCounter,
+    disposition: Disposition,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -74,7 +91,7 @@ struct ProgressRecord {
     version: u64,
     progress: LocalTurnProgress,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    input_dispositions: Vec<serde_json::Value>,
+    input_dispositions: Vec<InputDisposition>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     observed_invocation_ids: Vec<DomainId>,
 }
@@ -168,12 +185,24 @@ impl LocalStore {
         if unresolved.len() > 100 {
             return Err(TurnError::Conflict);
         }
+        let models:Vec<String>=sqlx::query_scalar("SELECT c.id FROM local_model_calls c JOIN local_steps s ON s.workspace_id=c.workspace_id AND s.id=c.step_id WHERE s.workspace_id=? AND s.turn_id=? AND c.state='intent' ORDER BY c.id LIMIT 51")
+            .bind(workspace.as_str()).bind(turn.as_str()).fetch_all(&mut self.connection).await?;
+        // TurnOutcome::Cancelled and Control::Stop share a wire cap of 100.
+        // Do not admit a projection that cannot retain its exact unresolved set.
+        if models.len() > 50 || unresolved.len() + models.len() > 100 {
+            return Err(TurnError::Conflict);
+        }
         Ok(LocalExecutionSnapshot {
             version: version as u64,
             progress,
             step,
             model,
             cancellation_requested: run.cancelled,
+            unresolved_model_calls: models
+                .into_iter()
+                .map(DomainId::new)
+                .collect::<Result<_, _>>()
+                .map_err(|_| TurnError::Conflict)?,
             unresolved_invocations: unresolved
                 .into_iter()
                 .map(DomainId::new)
@@ -318,6 +347,9 @@ impl LocalStore {
                 return Err(TurnError::IdempotencyMismatch);
             }
             return Ok(false);
+        }
+        if snapshot.unresolved_invocations.len() + snapshot.unresolved_model_calls.len() >= 100 {
+            return Err(TurnError::Conflict);
         }
         step.binding
             .validate()

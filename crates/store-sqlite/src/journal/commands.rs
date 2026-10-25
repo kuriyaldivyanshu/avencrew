@@ -21,7 +21,7 @@ pub use checkpoints::{
 pub use execution::{
     LocalArtifact, LocalArtifactPublication, LocalArtifactReceipt, LocalArtifactTarget,
     LocalControlSnapshot, LocalDispatch, LocalExecutionAccess, LocalExecutionBudget,
-    LocalExecutionCheckpoint, LocalExecutionSnapshot,
+    LocalExecutionCheckpoint, LocalExecutionRestore, LocalExecutionSnapshot,
 };
 pub use recovery::{RecoveredControl, RecoveredRun, RecoveryGate, RecoverySnapshot};
 pub use turns::{LocalTurnPublication, LocalTurnReceipt, RetainedLocalTurn, TurnError};
@@ -454,6 +454,11 @@ impl LocalStore {
                 row_version: positive(row.version)?,
             });
         }
+        // An immutable fixture outcome has no control consumer. Preserve exact
+        // old receipt retries above, but never acknowledge new unappliable input.
+        if has_local_outcome(&mut self.connection, input.workspace, run).await? {
+            return Err(ControlError::Conflict);
+        }
         if kind != "cancel" && row.cancelled {
             return Err(ControlError::Cancelled);
         }
@@ -501,6 +506,9 @@ impl LocalStore {
             || current.epoch != row.epoch
             || current.cancelled != row.cancelled
         {
+            return Err(ControlError::Conflict);
+        }
+        if has_local_outcome(&mut tx, input.workspace, run).await? {
             return Err(ControlError::Conflict);
         }
         if sqlx::query("SELECT 1 FROM local_commands WHERE workspace_id=? AND (id=? OR (run_id=? AND idempotency_key=?))").bind(input.workspace.as_str()).bind(id.as_str()).bind(run.as_str()).bind(key).fetch_optional(&mut *tx).await?.is_some() { return Err(ControlError::Conflict); }
@@ -776,4 +784,13 @@ fn commit_barrier(database: &std::path::Path, stage: &str) -> Result<(), StoreEr
         std::thread::sleep(std::time::Duration::from_millis(10));
     }
     Err(invalid("control crash test timed out"))
+}
+
+async fn has_local_outcome(
+    connection: &mut SqliteConnection,
+    workspace: &DomainId,
+    run: &DomainId,
+) -> Result<bool, sqlx::Error> {
+    sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM local_events WHERE workspace_id=? AND run_id=? AND event_type='execution.outcome')")
+        .bind(workspace.as_str()).bind(run.as_str()).fetch_one(connection).await
 }

@@ -6,6 +6,9 @@ const MAX_RUNS: i64 = 256;
 const MAX_COMMANDS: i64 = 1024;
 const MAX_EVENTS: i64 = 2048;
 const MAX_BYTES: usize = 8 * 1024 * 1024;
+// Separate from original command recovery: covers the additional execution
+// verifier's command and progress ledger bytes across the whole page.
+const MAX_EXECUTION_REPLAY_BYTES: usize = 8 * 1024 * 1024;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RecoveryGate {
@@ -59,6 +62,22 @@ impl LocalStore {
         actor: &DomainId,
         after: Option<&DomainId>,
     ) -> Result<RecoverySnapshot, ControlError> {
+        self.recover_local_controls_page_with_replay_budget(
+            workspace,
+            actor,
+            after,
+            MAX_EXECUTION_REPLAY_BYTES,
+        )
+        .await
+    }
+
+    pub(super) async fn recover_local_controls_page_with_replay_budget(
+        &mut self,
+        workspace: &DomainId,
+        actor: &DomainId,
+        after: Option<&DomainId>,
+        replay_budget: usize,
+    ) -> Result<RecoverySnapshot, ControlError> {
         let identity = self.verified_identity(workspace, actor).await?;
         let mut ids:Vec<String>=sqlx::query_scalar("SELECT r.id FROM local_runs r JOIN local_tasks t ON t.workspace_id=r.workspace_id AND t.id=r.task_id WHERE r.workspace_id=? AND t.owner_actor_id=? AND (? IS NULL OR r.id>?) ORDER BY r.id LIMIT ?")
             .bind(workspace.as_str()).bind(actor.as_str()).bind(after.map(DomainId::as_str)).bind(after.map(DomainId::as_str)).bind(MAX_RUNS+1).fetch_all(&mut self.connection).await?;
@@ -73,6 +92,7 @@ impl LocalStore {
         ids.truncate(MAX_RUNS as usize);
         let mut runs = Vec::with_capacity(ids.len());
         let mut byte_count = 0usize;
+        let mut execution_replay_bytes = 0usize;
         for id in ids {
             let run = DomainId::new(id).map_err(|_| invalid("invalid retained run ID"))?;
             let row = run_row(&mut self.connection, workspace, &run, actor).await?;
@@ -100,7 +120,27 @@ impl LocalStore {
             {
                 return Err(ControlError::Conflict);
             }
-            if event_count > MAX_EVENTS
+            let (turn_count, last_ordinal): (i64, i64) = sqlx::query_as(
+                "SELECT count(*),coalesce(max(ordinal),0) FROM local_turns WHERE workspace_id=? AND run_id=?"
+            ).bind(workspace.as_str()).bind(run.as_str()).fetch_one(&mut self.connection).await?;
+            let progress_bytes: i64 = sqlx::query_scalar(
+                "SELECT coalesce(sum(b.byte_size),0) FROM local_events e JOIN local_blobs b ON b.workspace_id=e.workspace_id AND b.id=e.payload_blob_id WHERE e.workspace_id=? AND e.run_id=? AND b.media_type='application/vnd.avencrew.turn-progress+json'"
+            ).bind(workspace.as_str()).bind(run.as_str()).fetch_one(&mut self.connection).await?;
+            let execution_charge = if turn_count == 0 {
+                Some(0)
+            } else {
+                usize::try_from(command_bytes).ok().and_then(|commands| {
+                    usize::try_from(progress_bytes)
+                        .ok()
+                        .and_then(|progress| commands.checked_add(progress))
+                })
+            };
+            let next_execution_bytes =
+                execution_charge.and_then(|charge| execution_replay_bytes.checked_add(charge));
+            if turn_count > 1
+                || (turn_count == 1 && last_ordinal != 1)
+                || next_execution_bytes.is_none_or(|n| n > replay_budget)
+                || event_count > MAX_EVENTS
                 || command_count > MAX_COMMANDS
                 || usize::try_from(command_bytes)
                     .ok()
@@ -134,6 +174,7 @@ impl LocalStore {
                 });
                 continue;
             }
+            execution_replay_bytes = next_execution_bytes.ok_or(ControlError::Conflict)?;
             let events = sqlx::query(
                 "SELECT * FROM local_events WHERE workspace_id=? AND run_id=? ORDER BY seq LIMIT ?",
             )
@@ -264,6 +305,24 @@ impl LocalStore {
                         canonical_bytes: bytes,
                         original_receipt,
                     });
+                }
+            }
+            // The executable fixture consumer owns typed applied dispositions
+            // and retained execution records. Verify them on startup too, while
+            // keeping this projection held and entirely read-only.
+            let turns:Vec<String>=sqlx::query_scalar("SELECT id FROM local_turns WHERE workspace_id=? AND run_id=? ORDER BY ordinal LIMIT 51")
+                .bind(workspace.as_str()).bind(run.as_str()).fetch_all(&mut self.connection).await?;
+            if turns.len() > 50 {
+                return Err(ControlError::Conflict);
+            }
+            for turn in turns {
+                let turn = DomainId::new(turn).map_err(|_| ControlError::Conflict)?;
+                match self
+                    .reconcile_local_execution(workspace, actor, &turn)
+                    .await
+                {
+                    Ok(_) | Err(TurnError::Unsupported | TurnError::StaleAuthority) => {} // stays held
+                    Err(_) => return Err(ControlError::Conflict),
                 }
             }
             let has_attempt: bool = sqlx::query_scalar(

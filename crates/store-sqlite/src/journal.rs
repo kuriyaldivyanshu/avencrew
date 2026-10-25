@@ -25,9 +25,10 @@ pub use commands::{
     CheckpointFile, CheckpointPublication, CheckpointReceipt, CommandAcceptance, ControlError,
     FileCoverage, LocalArtifact, LocalArtifactPublication, LocalArtifactReceipt,
     LocalArtifactTarget, LocalControlSnapshot, LocalDispatch, LocalExecutionAccess,
-    LocalExecutionBudget, LocalExecutionCheckpoint, LocalExecutionSnapshot, LocalRunReceipt,
-    LocalRunRegistration, LocalTurnPublication, LocalTurnReceipt, RecoveredControl, RecoveredRun,
-    RecoveryGate, RecoverySnapshot, RestoredCheckpoint, RetainedLocalTurn, TurnError,
+    LocalExecutionBudget, LocalExecutionCheckpoint, LocalExecutionRestore, LocalExecutionSnapshot,
+    LocalRunReceipt, LocalRunRegistration, LocalTurnPublication, LocalTurnReceipt,
+    RecoveredControl, RecoveredRun, RecoveryGate, RecoverySnapshot, RestoredCheckpoint,
+    RetainedLocalTurn, TurnError,
 };
 pub use identity::RegistrationReceipt;
 pub use publication::{

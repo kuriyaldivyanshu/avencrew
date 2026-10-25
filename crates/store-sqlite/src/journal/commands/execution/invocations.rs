@@ -258,6 +258,9 @@ impl LocalStore {
             "proposed" => {}
             _ => return Err(TurnError::Conflict),
         }
+        if snap.unresolved_invocations.len() + snap.unresolved_model_calls.len() >= 100 {
+            return Err(TurnError::Conflict);
+        }
         let bytes = canonical(policy_digest)?;
         self.put_canonical(a.workspace, event, &bytes)?;
         // A separate event locator carries progress so policy bytes cannot be confused with state.
