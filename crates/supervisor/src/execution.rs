@@ -75,6 +75,12 @@ fn storage(error: TurnError) -> EngineError {
         _ => EngineError::Storage,
     }
 }
+fn context_preparation_error(error: TurnError) -> EngineError {
+    match error {
+        TurnError::ContextBudget => EngineError::ContextLimit,
+        error => storage(error),
+    }
+}
 fn broker_storage(error: TurnError) -> BrokerError {
     match error {
         TurnError::Cancelled => BrokerError::Cancelled,
@@ -352,7 +358,7 @@ impl engine::Host for FixtureHost {
                 self.context_budget,
             )
             .await
-            .map_err(storage)?;
+            .map_err(context_preparation_error)?;
         let proof_bytes = record_bytes(&proof).map_err(|_| EngineError::ContextLimit)?;
         let reference = avencrew_contracts::runtime::context::ContextProofRef {
             id: id(),

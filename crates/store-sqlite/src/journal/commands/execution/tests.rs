@@ -1080,13 +1080,16 @@ fn applied_control_projection_drift_is_rejected_before_reapplication() {
 mod control_recovery;
 
 async fn proven_step(store: &mut LocalStore) -> LocalStep {
+    proven_step_with_proof_id(store, id(850)).await
+}
+async fn proven_step_with_proof_id(store: &mut LocalStore, proof_id: DomainId) -> LocalStep {
     let mut step = step();
     let proof = store
         .local_context_proof(&id(1), &id(2), &id(700), 1_048_576)
         .await
         .unwrap();
     let bytes = avencrew_contracts::runtime::record_bytes(&proof).unwrap();
-    let reference = super::context::proof_reference(id(850), &bytes).unwrap();
+    let reference = super::context::proof_reference(proof_id, &bytes).unwrap();
     step.request = avencrew_contracts::runtime::context::fixture_context_view(
         &proof,
         &reference,
@@ -1344,7 +1347,7 @@ fn context_proof_budget_is_shared_and_never_reused_across_operations() {
             store
                 .read_local_step(&id(1), &id(2), &id(700), &id(800))
                 .await,
-            Err(TurnError::Unsupported)
+            Err(TurnError::ContextBudget)
         ));
         assert!(scope.lock().unwrap().exhausted);
         drop(scope);
@@ -1432,8 +1435,403 @@ fn context_proof_budget_is_shared_and_never_reused_across_operations() {
             violations.is_empty(),
             "incomplete projections must be held metadata only: {violations:?}"
         );
+        // An unrelated later turn is still inspected after the first run uses
+        // the page budget. Its corrupt seed must not hide behind exhaustion.
+        let mut later = seed();
+        later.run_spec.run_id = id(4000);
+        later.run_spec.session_id = id(4701);
+        later.run_spec.branch_id = id(4702);
+        later.lease.run_id = id(4000);
+        later.lease.attempt_id = id(4703);
+        later.turn_id = id(4700);
+        later.run_spec.accepted_input_seq = Counter::new("1").unwrap();
+        later.accepted_input_cut = Counter::new("1").unwrap();
+        store
+            .publish_local_turn(LocalTurnPublication {
+                actor: &id(2),
+                seed: &later,
+                ordinal: &PositiveCounter::new("1").unwrap(),
+                expected_run_version: &PositiveCounter::new("2").unwrap(),
+                spec_blob: &id(4705),
+                lease_blob: &id(4706),
+                event: &id(4707),
+                harness_build_digest: &avencrew_contracts::runtime::content_digest(b"test"),
+                at: &now(),
+                now: &now(),
+                current_boot: &id(704),
+                monotonic_now: &Counter::new("10").unwrap(),
+            })
+            .await
+            .unwrap();
+        std::fs::write(
+            root.0.join(format!(
+                "blobs/{}/{}.json",
+                id(1).as_str(),
+                id(4705).as_str()
+            )),
+            b"{}",
+        )
+        .unwrap();
+        assert!(
+            store
+                .recover_local_controls_page(&id(1), &id(2), None)
+                .await
+                .is_err(),
+            "later corrupt turn was hidden by earlier budget exhaustion"
+        );
         drop(scope);
         assert!(store.proof_reads.upgrade().is_none());
+        store.close().await.unwrap();
+    });
+}
+
+#[test]
+fn external_review_completed_proof_reads_are_not_recharged() {
+    native_run(|| async {
+        let root = Root::new();
+        let mut store = ready(&root).await;
+        let sealed = proven_step(&mut store).await;
+        let mut state = store
+            .local_execution_snapshot(&id(1), &id(2), &id(700))
+            .await
+            .unwrap()
+            .progress
+            .state;
+        state.steps_started = 1;
+        store
+            .seal_local_step(access(), &sealed, &state, &id(810))
+            .await
+            .unwrap();
+        let scope = store.proof_read_scope();
+        store
+            .read_local_step(&id(1), &id(2), &id(700), &id(800))
+            .await
+            .unwrap();
+        let remaining = scope.lock().unwrap().remaining;
+        store
+            .read_local_step(&id(1), &id(2), &id(700), &id(800))
+            .await
+            .unwrap();
+        assert_eq!(
+            scope.lock().unwrap().remaining,
+            remaining,
+            "completed proof was charged again"
+        );
+        // Cache keys bind the full sealed step, not merely its IDs. None of
+        // these altered records can reuse a completed verification.
+        for case in 0..7 {
+            let mut altered = sealed.clone();
+            match case {
+                0 => altered.request["anchors"]["accepted_inputs"] = json!(["invented"]),
+                1 => {
+                    altered.source_proof.as_mut().unwrap().sha256 =
+                        avencrew_contracts::runtime::content_digest(b"altered")
+                }
+                2 => altered.source_proof.as_mut().unwrap().byte_size = Counter::new("1").unwrap(),
+                3 => altered.context.workspace_id = id(999),
+                4 => {
+                    altered.compatibility_digest =
+                        avencrew_contracts::runtime::content_digest(b"other profile")
+                }
+                5 => {
+                    altered.request_digest =
+                        avencrew_contracts::runtime::content_digest(b"altered request")
+                }
+                _ => altered.lease.attempt_id = id(999),
+            }
+            if case == 0 {
+                altered.request_digest =
+                    avencrew_contracts::runtime::content_digest(&altered.request_bytes().unwrap());
+            }
+            assert!(
+                store
+                    .verify_context_proof(&id(1), &id(2), &id(700), &altered)
+                    .await
+                    .is_err(),
+                "alteration {case} hit cache"
+            );
+        }
+        assert!(store
+            .verify_context_proof(&id(999), &id(2), &id(700), &sealed)
+            .await
+            .is_err());
+        assert!(store
+            .verify_context_proof(&id(1), &id(999), &id(700), &sealed)
+            .await
+            .is_err());
+        assert!(store
+            .verify_context_proof(&id(1), &id(2), &id(999), &sealed)
+            .await
+            .is_err());
+        assert_eq!(scope.lock().unwrap().completed.len(), 1);
+        {
+            let budget = scope.lock().unwrap();
+            let unique_bytes: usize = budget.verified.values().map(|(_, _, size)| size).sum();
+            assert_eq!(
+                8 * 1024 * 1024 - budget.remaining,
+                unique_bytes,
+                "proof/direct/member accounting must charge unique bytes once"
+            );
+            assert_eq!(budget.proof_bytes.len(), 1);
+        }
+        // Even a populated completed cache cannot skip current identity checks.
+        sqlx::query("UPDATE local_actors SET status='disabled'")
+            .execute(&mut store.connection)
+            .await
+            .unwrap();
+        assert!(store
+            .read_local_step(&id(1), &id(2), &id(700), &id(800))
+            .await
+            .is_err());
+        sqlx::query("UPDATE local_actors SET status='active'")
+            .execute(&mut store.connection)
+            .await
+            .unwrap();
+        drop(scope);
+        assert!(store.proof_reads.upgrade().is_none());
+        std::fs::write(
+            root.0.join(format!(
+                "blobs/{}/{}.json",
+                id(1).as_str(),
+                id(850).as_str()
+            )),
+            b"{}",
+        )
+        .unwrap();
+        assert!(store
+            .read_local_step(&id(1), &id(2), &id(700), &id(800))
+            .await
+            .is_err());
+        assert!(store.proof_reads.upgrade().is_none());
+        store.close().await.unwrap();
+    });
+}
+
+#[test]
+fn external_review_failed_completion_keeps_diagnostic_history_ineligible() {
+    native_run(|| async {
+        let root = Root::new();
+        let mut store = ready(&root).await;
+        let sealed = proven_step(&mut store).await;
+        let mut state = store
+            .local_execution_snapshot(&id(1), &id(2), &id(700))
+            .await
+            .unwrap()
+            .progress
+            .state;
+        state.steps_started = 1;
+        store
+            .seal_local_step(access(), &sealed, &state, &id(810))
+            .await
+            .unwrap();
+        let failure = Err(avencrew_contracts::runtime::FixtureFailure {
+            code: avencrew_contracts::runtime::FixtureError::Timeout,
+            usage: FixtureUsage::Unknown,
+        });
+        store
+            .record_local_model(access(), &sealed, &failure, &state, &id(812), &id(813))
+            .await
+            .unwrap();
+        let proof = store
+            .local_context_proof(&id(1), &id(2), &id(700), 1_048_576)
+            .await
+            .unwrap();
+        assert_eq!(proof["groups"][0]["completion"], json!(Some(failure)));
+        assert_eq!(
+            proof["groups"][0]["complete"], false,
+            "failed diagnostic history must stay exact"
+        );
+        store.close().await.unwrap();
+    });
+}
+
+#[test]
+fn external_review_proof_member_and_direct_reads_share_one_charge() {
+    native_run(|| async {
+        let root = Root::new();
+        let mut store = ready(&root).await;
+        let first = proven_step(&mut store).await;
+        let mut state = store
+            .local_execution_snapshot(&id(1), &id(2), &id(700))
+            .await
+            .unwrap()
+            .progress
+            .state;
+        state.steps_started = 1;
+        store
+            .seal_local_step(access(), &first, &state, &id(810))
+            .await
+            .unwrap();
+        store
+            .record_local_model(access(), &first, &result(), &state, &id(812), &id(813))
+            .await
+            .unwrap();
+        store
+            .observe_local_step(access(), &id(800), &[], &state, &id(817))
+            .await
+            .unwrap();
+        let mut second = proven_step_with_proof_id(&mut store, id(1850)).await;
+        second.binding.step_id = id(1800);
+        second.context.step_id = id(1800);
+        second.binding.context_manifest_id = id(1801);
+        second.model_call_id = id(1803);
+        state = store
+            .local_execution_snapshot(&id(1), &id(2), &id(700))
+            .await
+            .unwrap()
+            .progress
+            .state;
+        state.steps_started = 2;
+        store
+            .seal_local_step(access(), &second, &state, &id(1810))
+            .await
+            .unwrap();
+        let scope = store.proof_read_scope();
+        store
+            .local_execution_context(&id(1), &id(2), &id(700))
+            .await
+            .unwrap();
+        {
+            let budget = scope.lock().unwrap();
+            assert_eq!(budget.proof_bytes.len(), 2);
+            assert_eq!(budget.completed.len(), 2);
+            assert_eq!(
+                8 * 1024 * 1024 - budget.remaining,
+                budget
+                    .verified
+                    .values()
+                    .map(|(_, _, size)| size)
+                    .sum::<usize>()
+            );
+            println!(
+                "two-proof closure: {} unique bytes, {} reads",
+                8 * 1024 * 1024 - budget.remaining,
+                8192 - budget.remaining_reads
+            );
+        }
+        drop(scope);
+        assert!(store.proof_reads.upgrade().is_none());
+        store.close().await.unwrap();
+    });
+}
+
+#[test]
+fn external_review_budget_error_survives_checkpoint_and_reconcile_conversions() {
+    native_run(|| async {
+        let root = Root::new();
+        let mut store = ready(&root).await;
+        let sealed = proven_step(&mut store).await;
+        let mut state = store
+            .local_execution_snapshot(&id(1), &id(2), &id(700))
+            .await
+            .unwrap()
+            .progress
+            .state;
+        state.steps_started = 1;
+        store
+            .seal_local_step(access(), &sealed, &state, &id(810))
+            .await
+            .unwrap();
+        control_recovery::checkpoint_stop(&mut store).await;
+        let scope = store.proof_read_scope();
+        scope.lock().unwrap().remaining = 0;
+        assert!(matches!(
+            store
+                .local_context_proof(&id(1), &id(2), &id(700), 1_048_576)
+                .await,
+            Err(TurnError::ContextBudget)
+        ));
+        assert!(matches!(
+            store
+                .read_checkpoint(&id(1), &id(2), &id(300), &id(1500))
+                .await,
+            Err(ControlError::ContextBudget)
+        ));
+        assert!(matches!(
+            store
+                .reconcile_local_execution(&id(1), &id(2), &id(700))
+                .await,
+            Err(TurnError::ContextBudget)
+        ));
+        assert!(matches!(
+            TurnError::from(ControlError::from(TurnError::ContextBudget)),
+            TurnError::ContextBudget
+        ));
+        assert!(matches!(
+            TurnError::from(ControlError::Unsupported),
+            TurnError::Unsupported
+        ));
+        drop(scope);
+        store.close().await.unwrap();
+    });
+}
+
+#[test]
+fn external_review_mutations_own_one_scope_and_release_it_between_calls() {
+    native_run(|| async {
+        let root = Root::new();
+        let mut store = ready(&root).await;
+        let sealed = proven_step(&mut store).await;
+        let mut state = store
+            .local_execution_snapshot(&id(1), &id(2), &id(700))
+            .await
+            .unwrap()
+            .progress
+            .state;
+        state.steps_started = 1;
+        let scopes = store.proof_scopes_started;
+        store
+            .seal_local_step(access(), &sealed, &state, &id(810))
+            .await
+            .unwrap();
+        assert_eq!(
+            store.proof_scopes_started - scopes,
+            1,
+            "seal nested reads lost their operation scope"
+        );
+        assert!(store.proof_reads.upgrade().is_none());
+        let scopes = store.proof_scopes_started;
+        store
+            .record_local_model(access(), &sealed, &result(), &state, &id(812), &id(813))
+            .await
+            .unwrap();
+        assert_eq!(
+            store.proof_scopes_started - scopes,
+            1,
+            "response nested reads lost their operation scope"
+        );
+        assert!(store.proof_reads.upgrade().is_none());
+        let scopes = store.proof_scopes_started;
+        store
+            .observe_local_step(access(), &id(800), &[], &state, &id(817))
+            .await
+            .unwrap();
+        assert_eq!(
+            store.proof_scopes_started - scopes,
+            1,
+            "observe nested reads lost their operation scope"
+        );
+        assert!(store.proof_reads.upgrade().is_none());
+        let scopes = store.proof_scopes_started;
+        assert!(store
+            .record_local_model(
+                access(),
+                &sealed,
+                &Err(avencrew_contracts::runtime::FixtureFailure {
+                    code: avencrew_contracts::runtime::FixtureError::Timeout,
+                    usage: FixtureUsage::Unknown
+                }),
+                &state,
+                &id(1812),
+                &id(1813)
+            )
+            .await
+            .is_err());
+        assert_eq!(store.proof_scopes_started - scopes, 1);
+        assert!(
+            store.proof_reads.upgrade().is_none(),
+            "failed operation retained trust"
+        );
         store.close().await.unwrap();
     });
 }

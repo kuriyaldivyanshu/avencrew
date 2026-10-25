@@ -5,7 +5,7 @@ use serde_json::{json, Value};
 pub(super) const PROOF_MEDIA: &str = "application/vnd.avencrew.fixture-context-proof+json";
 
 impl LocalStore {
-    async fn bounded_proof_bytes(
+    pub(super) async fn bounded_proof_bytes(
         &mut self,
         w: &DomainId,
         actor: &DomainId,
@@ -13,6 +13,17 @@ impl LocalStore {
         media: &str,
     ) -> Result<Vec<u8>, TurnError> {
         let scope = self.proof_read_scope();
+        let key = (w.clone(), actor.clone(), id.clone());
+        if media == PROOF_MEDIA {
+            if let Some(bytes) = scope
+                .lock()
+                .map_err(|_| TurnError::Conflict)?
+                .proof_bytes
+                .get(&key)
+            {
+                return Ok(bytes.clone());
+            }
+        }
         let size: i64 =
             sqlx::query_scalar("SELECT byte_size FROM local_blobs WHERE workspace_id=? AND id=?")
                 .bind(w.as_str())
@@ -24,14 +35,26 @@ impl LocalStore {
             let size = usize::try_from(size).map_err(|_| TurnError::Conflict)?;
             if size > budget.remaining || budget.remaining_reads == 0 {
                 budget.exhausted = true;
-                return Err(TurnError::Unsupported);
+                return Err(TurnError::ContextBudget);
             }
             budget.remaining -= size;
             budget.remaining_reads -= 1;
         }
-        self.read_execution_bytes(w, actor, id, media)
-            .await
-            .map_err(Into::into)
+        let bytes = if media == PROOF_MEDIA {
+            self.read_registered_blob(w, actor, id, media).await?
+        } else {
+            self.read_execution_source_bytes(w, actor, id, media)
+                .await?
+        };
+        let mut budget = scope.lock().map_err(|_| TurnError::Conflict)?;
+        budget.verified.insert(
+            key.clone(),
+            (media.to_owned(), hex(&digest(&bytes)), bytes.len()),
+        );
+        if media == PROOF_MEDIA {
+            budget.proof_bytes.insert(key, bytes.clone());
+        }
+        Ok(bytes)
     }
     /// Rebuild an unsealed view only from verified source. Never accepts a
     /// caller's summary or repairs an already registered object.
@@ -83,12 +106,10 @@ impl LocalStore {
                     }
                 }
             }
-            let complete = completion.is_some()
-                && invocations.iter().all(|v| v["state"] == "result")
-                && match &completion {
-                    Some(Ok(r)) => r.proposal_identities.len() == invocations.len(),
-                    _ => true,
-                };
+            // Failed completions contain diagnostics, not completed eligible
+            // work. Keep them exact even when their invocation list is empty.
+            let complete = matches!(&completion, Some(Ok(r)) if r.proposal_identities.len() == invocations.len())
+                && invocations.iter().all(|v| v["state"] == "result");
             groups.push(json!({"step_id":step_id,"model_call_id":step.model_call_id,"model_state":h["model_state"],"completion":completion,"invocations":invocations,"complete":complete}));
         }
         // Exact event records retain typed dispositions and original receipts;
@@ -145,6 +166,39 @@ impl LocalStore {
         let Some(reference) = &step.source_proof else {
             return Ok(());
         };
+        // Always recheck identity/retained turn before using scoped evidence.
+        let seed = self.read_local_turn(w, actor, turn).await?.seed;
+        if step.context.workspace_id != *w
+            || step.context.run_id != seed.run_spec.run_id
+            || step.context.attempt_id != seed.lease.attempt_id
+            || step.context.principal_id != seed.run_spec.acting_principal_id
+            || step.context.epoch != seed.lease.epoch
+            || step.context.step_id != step.binding.step_id
+            || step.lease != seed.lease
+            || step.provider_profile_id != seed.run_spec.model_profile_id
+            || avencrew_contracts::runtime::content_digest(
+                &step.request_bytes().map_err(|_| TurnError::Conflict)?,
+            ) != step.request_digest
+        {
+            return Err(TurnError::Conflict);
+        }
+        let operation = self.proof_read_scope();
+        let key = (
+            w.clone(),
+            actor.clone(),
+            turn.clone(),
+            hex(&digest(
+                &step.retained_bytes().map_err(|_| TurnError::Conflict)?,
+            )),
+        );
+        if operation
+            .lock()
+            .map_err(|_| TurnError::Conflict)?
+            .completed
+            .contains(&key)
+        {
+            return Ok(());
+        }
         let bytes = self
             .bounded_proof_bytes(w, actor, &reference.id, PROOF_MEDIA)
             .await?;
@@ -154,7 +208,6 @@ impl LocalStore {
             return Err(TurnError::Conflict);
         }
         let proof: Value = serde_json::from_slice(&bytes).map_err(|_| TurnError::Conflict)?;
-        let seed = self.read_local_turn(w, actor, turn).await?.seed;
         let scope = &proof["scope"];
         let ordinal: i64 = sqlx::query_scalar(
             "SELECT step_ordinal FROM local_steps WHERE workspace_id=? AND turn_id=? AND id=?",
@@ -226,7 +279,7 @@ impl LocalStore {
                 .lock()
                 .map_err(|_| TurnError::Conflict)?
                 .verified
-                .get(&id)
+                .get(&(w.clone(), actor.clone(), id.clone()))
                 .cloned();
             let (actual_media, sha256, size) = if let Some(cached) = cached {
                 cached
@@ -237,7 +290,7 @@ impl LocalStore {
                     .lock()
                     .map_err(|_| TurnError::Conflict)?
                     .verified
-                    .insert(id.clone(), verified.clone());
+                    .insert((w.clone(), actor.clone(), id.clone()), verified.clone());
                 verified
             };
             if actual_media != media
@@ -250,6 +303,11 @@ impl LocalStore {
                 return Err(TurnError::Conflict);
             }
         }
+        operation
+            .lock()
+            .map_err(|_| TurnError::Conflict)?
+            .completed
+            .insert(key);
         Ok(())
     }
 }

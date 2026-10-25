@@ -105,6 +105,7 @@ impl LocalStore {
         actor: &DomainId,
         turn: &DomainId,
     ) -> Result<LocalExecutionSnapshot, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let retained = self.read_local_turn(workspace, actor, turn).await?;
         let run = run_row(
             &mut self.connection,
@@ -353,6 +354,7 @@ impl LocalStore {
         state: &TurnState,
         event: &DomainId,
     ) -> Result<bool, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let seed = self.authorize_local_execution(&access, false).await?;
         if (step.request["schema_version"] == "avencrew.fixture-context/2")
             != step.source_proof.is_some()
@@ -551,6 +553,7 @@ impl LocalStore {
         response_id: &DomainId,
         event: &DomainId,
     ) -> Result<(), TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let seed = self.authorize_local_execution(&access, true).await?;
         let snapshot = self
             .local_execution_snapshot(access.workspace, access.actor, access.turn)
@@ -659,6 +662,7 @@ impl LocalStore {
         a: &LocalExecutionAccess<'_>,
         retain_only: bool,
     ) -> Result<avencrew_contracts::wire::RpcRequestHarnessStartTurnBody, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let retained = self.read_local_turn(a.workspace, a.actor, a.turn).await?;
         let identity = self.verified_identity(a.workspace, a.actor).await?;
         let run = run_row(

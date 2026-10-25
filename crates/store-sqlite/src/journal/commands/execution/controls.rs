@@ -21,6 +21,7 @@ impl LocalStore {
         actor: &DomainId,
         seed: &avencrew_contracts::wire::RpcRequestHarnessStartTurnBody,
     ) -> Result<avencrew_contracts::scalars::Digest, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         use avencrew_contracts::{
             runtime::{content_digest, record_bytes},
             wire::ToolResult,
@@ -74,6 +75,7 @@ impl LocalStore {
         actor: &DomainId,
         turn: &DomainId,
     ) -> Result<bool, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let seed = self.read_local_turn(w, actor, turn).await?.seed;
         let row = run_row(&mut self.connection, w, &seed.run_spec.run_id, actor).await?;
         Ok(row.cancelled)
@@ -85,6 +87,7 @@ impl LocalStore {
         a: &DomainId,
         turn: &DomainId,
     ) -> Result<Vec<Command>, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         Ok(self.read_local_execution_inputs(w, a, turn).await?.commands)
     }
 
@@ -94,6 +97,7 @@ impl LocalStore {
         a: &DomainId,
         turn: &DomainId,
     ) -> Result<VerifiedInputs, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let seed = self.read_local_turn(w, a, turn).await?.seed;
         let run = run_row(&mut self.connection, w, &seed.run_spec.run_id, a).await?;
         let rows=sqlx::query("SELECT seq,payload_blob_id FROM local_commands WHERE workspace_id=? AND run_id=? ORDER BY seq LIMIT 1025")
@@ -139,6 +143,7 @@ impl LocalStore {
         a: LocalExecutionAccess<'_>,
         event: &DomainId,
     ) -> Result<LocalControlSnapshot, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let verified = self
             .verify_local_control_history(a.workspace, a.actor, a.turn)
             .await?;
@@ -153,6 +158,7 @@ impl LocalStore {
         event: &DomainId,
         verified: super::recovery::VerifiedHistory,
     ) -> Result<LocalControlSnapshot, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let seed = self.authorize_local_execution(&a, true).await?;
         let snap = verified.snapshot;
         let row = run_row(
@@ -268,6 +274,7 @@ impl LocalStore {
         state: &TurnState,
         event: &DomainId,
     ) -> Result<avencrew_contracts::scalars::Digest, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let seed = self.authorize_local_execution(&a, true).await?;
         let snap = self
             .local_execution_snapshot(a.workspace, a.actor, a.turn)

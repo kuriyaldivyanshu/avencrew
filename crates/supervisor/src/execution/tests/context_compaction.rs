@@ -180,3 +180,199 @@ fn context_compaction_insufficient_output_headroom_yields_before_intent() {
         close(store).await;
     });
 }
+
+#[test]
+#[cfg_attr(
+    debug_assertions,
+    ignore = "required optimized proof-history gate: tools/verification/check.sh rust"
+)]
+fn external_review_thirty_read_turn_seals_reopens_and_replays() {
+    run(|| async {
+        let root = Root::new();
+        let mut store = LocalStore::open(&root.0).await.unwrap();
+        let mut input = launch();
+        input.profile.sources[0].content = json!({"evidence":"x".repeat(8000),"ratio":1.25});
+        let read = input.profile.episodes[0].clone();
+        let final_episode = input.profile.episodes[1].clone();
+        input.profile.episodes = vec![read; 30];
+        input.profile.episodes.push(final_episode);
+        let p = launch::prepare_fixture_turn_for_test(&mut store, &input, 31, 600_000)
+            .await
+            .unwrap();
+        let store = Arc::new(Mutex::new(store));
+        let config = EngineConfig {
+            context_bytes: 54_000,
+            no_progress_steps: 50,
+        };
+        let outcome = execute_fixture_turn(
+            store.clone(),
+            p.workspace.clone(),
+            p.actor.clone(),
+            p.turn.clone(),
+            input.profile.clone(),
+            config,
+        )
+        .await
+        .unwrap();
+        println!(
+            "long-turn outcome reason: {}",
+            serde_json::to_value(&outcome).unwrap()["reason"]
+        );
+        assert!(
+            matches!(outcome, TurnOutcome::CandidateResult { .. }),
+            "long turn stopped early: {}",
+            serde_json::to_value(&outcome).unwrap()["reason"]
+        );
+        let before = store
+            .lock()
+            .await
+            .local_execution_snapshot(&p.workspace, &p.actor, &p.turn)
+            .await
+            .unwrap();
+        assert_eq!(before.progress.state.steps_started, 31);
+        close(store).await;
+        let store = Arc::new(Mutex::new(LocalStore::open(&root.0).await.unwrap()));
+        let replay = execute_fixture_turn(
+            store.clone(),
+            p.workspace.clone(),
+            p.actor.clone(),
+            p.turn.clone(),
+            input.profile,
+            config,
+        )
+        .await
+        .unwrap();
+        assert_eq!(replay, outcome);
+        let after = store
+            .lock()
+            .await
+            .local_execution_snapshot(&p.workspace, &p.actor, &p.turn)
+            .await
+            .unwrap();
+        assert_eq!(before.version, after.version);
+        assert_eq!(after.progress.state.steps_started, 31);
+        close(store).await;
+    });
+}
+
+#[test]
+fn external_review_only_preparation_budget_maps_to_context_limit() {
+    assert_eq!(
+        context_preparation_error(TurnError::ContextBudget),
+        EngineError::ContextLimit
+    );
+    assert_eq!(storage(TurnError::ContextBudget), EngineError::Storage);
+    assert_eq!(
+        context_preparation_error(TurnError::Unsupported),
+        EngineError::Unsupported
+    );
+    assert_eq!(
+        context_preparation_error(TurnError::Conflict),
+        EngineError::Storage
+    );
+    assert_eq!(
+        context_preparation_error(TurnError::StaleAuthority),
+        EngineError::StaleAuthority
+    );
+}
+
+#[test]
+fn external_review_default_ten_step_turn_preserves_progress_and_replays() {
+    run(|| async {
+        use avencrew_harness::model::fixture::FixtureEventBody;
+        let root = Root::new();
+        let (store, p, mut profile) = setup(&root).await;
+        let seed = store
+            .lock()
+            .await
+            .read_local_turn(&p.workspace, &p.actor, &p.turn)
+            .await
+            .unwrap()
+            .seed;
+        assert_eq!(seed.limits.model_steps.value(), 10);
+        assert_eq!(seed.limits.active_wall_ms.value(), 60_000);
+        let template = profile.episodes[0].clone();
+        let final_episode = profile.episodes[1].clone();
+        let source_template = profile.sources[0].clone();
+        profile.sources.clear();
+        profile.episodes.clear();
+        for n in 0..9 {
+            let mut source = source_template.clone();
+            source.name = format!("progress-{n}");
+            source.version_id = id();
+            source.content = json!({"progress":n,"ratio":1.25,"evidence":"x".repeat(1000)});
+            let mut episode = template.clone();
+            let mut arguments = 0;
+            for event in &mut episode.input.events {
+                match &mut event.body {
+                    FixtureEventBody::ArgumentsDelta { bytes, .. } => {
+                        *bytes = serde_json::to_vec(&json!({"source_name":source.name})).unwrap();
+                        arguments += 1;
+                    }
+                    FixtureEventBody::ToolStart {
+                        provider_call_id, ..
+                    } => *provider_call_id = format!("progress-call-{n}"),
+                    _ => {}
+                }
+            }
+            assert_eq!(arguments, 1);
+            profile.sources.push(source);
+            profile.episodes.push(episode);
+        }
+        profile.episodes.push(final_episode);
+        let config = EngineConfig {
+            context_bytes: 54_000,
+            ..EngineConfig::default()
+        };
+        assert_eq!(config.no_progress_steps, 3);
+        let outcome = execute_fixture_turn(
+            store.clone(),
+            p.workspace.clone(),
+            p.actor.clone(),
+            p.turn.clone(),
+            profile.clone(),
+            config,
+        )
+        .await
+        .unwrap();
+        assert!(
+            matches!(outcome, TurnOutcome::CandidateResult { .. }),
+            "default turn stopped: {}",
+            serde_json::to_value(&outcome).unwrap()["reason"]
+        );
+        let before = store
+            .lock()
+            .await
+            .local_execution_snapshot(&p.workspace, &p.actor, &p.turn)
+            .await
+            .unwrap();
+        assert_eq!(before.progress.state.steps_started, 10);
+        assert_eq!(before.progress.state.no_progress_steps, 0);
+        close(store).await;
+        let store = Arc::new(Mutex::new(LocalStore::open(&root.0).await.unwrap()));
+        assert_eq!(
+            execute_fixture_turn(
+                store.clone(),
+                p.workspace.clone(),
+                p.actor.clone(),
+                p.turn.clone(),
+                profile,
+                config
+            )
+            .await
+            .unwrap(),
+            outcome
+        );
+        assert_eq!(
+            store
+                .lock()
+                .await
+                .local_execution_snapshot(&p.workspace, &p.actor, &p.turn)
+                .await
+                .unwrap()
+                .version,
+            before.version
+        );
+        close(store).await;
+    });
+}

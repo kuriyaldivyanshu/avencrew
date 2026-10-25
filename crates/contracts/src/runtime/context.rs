@@ -68,6 +68,9 @@ pub fn fixture_context_view(
     if fits(&view)? {
         return Ok(view);
     }
+    // Keep complete proposals and completions during payload replacement: this
+    // deliberately favors semantic fidelity over maximal byte savings. Only
+    // later summary pressure replaces entire eligible groups.
     // Retain the most recent group and every unresolved group exactly. Older
     // complete groups become whole retrievable pairs, never disconnected calls.
     for n in 0..groups.len().saturating_sub(1) {

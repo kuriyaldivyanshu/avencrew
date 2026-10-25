@@ -12,12 +12,22 @@ After the [managed setup](../bootstrap/README.md), native SQLite build and
 bash tools/verification/check.sh all
 ```
 
-Individual lanes: `rust`, `desktop`, `contracts`, `fixtures`, `licenses`. Rust includes the
+Individual lanes: `rust`, `proof-history`, `desktop`, `contracts`, `fixtures`, `licenses`. Rust includes the
 real native SQLite engine diagnostic. Contract checking includes regeneration
 comparison and the existing Rust/TS conformance runner. Fixture checking creates
 a fresh temporary seed root, prints its safely quoted cleanup command and does
 not start a database, model or desktop session. Its offline Rust check requires
 the dependencies cached by the preceding Rust lane.
+
+The Rust lane also requires the optimized 31-step proof-history regression.
+Its debug build is explicitly marked ignored because debug serialization/hashing
+can consume the real turn deadline; a separate default 10-step/60-second fixture
+regression remains in the debug suite. The optimized case uses the same real
+clock, proof-byte/read and context limits; its synthetic 31-step/600-second seed
+does not change production defaults. It must seal all steps and verify reopening
+and replay. `check.sh proof-history` runs that gate alone, reusing the isolated
+`target/p3-06-release-stress` build. Missing or ignored stress tests fail the gate;
+one passing, non-ignored case is required. Both `rust` and `all` include this gate.
 
 ## CI contract
 

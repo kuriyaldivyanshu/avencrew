@@ -97,6 +97,7 @@ impl LocalStore {
         &mut self,
         p: LocalArtifactPublication<'_>,
     ) -> Result<LocalArtifactReceipt, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let a = &p.access;
         let retained = self.read_local_turn(a.workspace, a.actor, a.turn).await?;
         let identity = self.verified_identity(a.workspace, a.actor).await?;
@@ -304,6 +305,7 @@ impl LocalStore {
         actor: &DomainId,
         receipt: &LocalArtifactReceipt,
     ) -> Result<Checks, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         let row=sqlx::query("SELECT canonical_blob_id,digest,kind FROM local_manifests WHERE workspace_id=? AND id=? AND owner_actor_id=?").bind(w.as_str()).bind(receipt.checks_manifest_id.as_str()).bind(actor.as_str()).fetch_one(&mut self.connection).await?;
         let id = DomainId::new(row.try_get::<String, _>("canonical_blob_id")?)
             .map_err(|_| TurnError::Conflict)?;
@@ -354,6 +356,7 @@ impl LocalStore {
         artifact: &DomainId,
         version: &DomainId,
     ) -> Result<LocalArtifact, TurnError> {
+        let _proof_scope = self.proof_read_scope();
         self.verified_identity(w, actor).await?;
         let row=sqlx::query("SELECT v.content_blob_id,v.checks_manifest_id,a.kind,m.canonical_blob_id FROM local_artifact_versions v JOIN local_artifacts a ON a.workspace_id=v.workspace_id AND a.id=v.artifact_id JOIN local_manifests m ON m.workspace_id=v.workspace_id AND m.id=v.checks_manifest_id WHERE v.workspace_id=? AND v.id=? AND v.artifact_id=? AND a.owner_actor_id=?")
             .bind(w.as_str()).bind(version.as_str()).bind(artifact.as_str()).bind(actor.as_str()).fetch_one(&mut self.connection).await?;

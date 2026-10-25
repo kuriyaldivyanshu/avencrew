@@ -323,11 +323,7 @@ impl LocalStore {
                     .await
                 {
                     Ok(_) | Err(TurnError::Unsupported | TurnError::StaleAuthority) => {} // stays held
-                    Err(_)
-                        if _proof_scope
-                            .lock()
-                            .map_err(|_| ControlError::Conflict)?
-                            .exhausted => {} // incomplete proof budget, never executable
+                    Err(TurnError::ContextBudget) => {} // held without suppressing unrelated errors
                     Err(_) => return Err(ControlError::Conflict),
                 }
             }
@@ -345,14 +341,17 @@ impl LocalStore {
             .bind(run.as_str())
             .fetch_one(&mut self.connection)
             .await?;
+            if let Some(id) = checkpoint {
+                let id = DomainId::new(id).map_err(|_| ControlError::Conflict)?;
+                match self.read_checkpoint(workspace, actor, &run, &id).await {
+                    Ok(_) | Err(ControlError::ContextBudget) => {}
+                    Err(error) => return Err(error),
+                }
+            }
             let proof_complete = !_proof_scope
                 .lock()
                 .map_err(|_| ControlError::Conflict)?
                 .exhausted;
-            if let Some(id) = checkpoint.filter(|_| proof_complete) {
-                let id = DomainId::new(id).map_err(|_| ControlError::Conflict)?;
-                self.read_checkpoint(workspace, actor, &run, &id).await?;
-            }
             let extra:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM local_runs WHERE workspace_id=? AND id=? AND (session_id IS NOT NULL OR branch_id IS NOT NULL OR current_checkpoint_id IS NOT NULL))")
                 .bind(workspace.as_str()).bind(run.as_str()).fetch_one(&mut self.connection).await?;
             let execution_intent:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM local_work_queue WHERE workspace_id=? AND run_id=? AND kind IN ('dispatch','wake'))")

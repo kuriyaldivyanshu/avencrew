@@ -114,20 +114,40 @@ pub struct LocalStore {
     // Weak only: verification evidence cannot outlive a single owned operation,
     // including cancellation of that operation's future.
     proof_reads: std::sync::Weak<std::sync::Mutex<ProofReads>>,
+    #[cfg(test)]
+    proof_scopes_started: usize,
 }
 
+type ProofBlobKey = (
+    avencrew_contracts::scalars::DomainId,
+    avencrew_contracts::scalars::DomainId,
+    avencrew_contracts::scalars::DomainId,
+);
+type ProofStepKey = (
+    avencrew_contracts::scalars::DomainId,
+    avencrew_contracts::scalars::DomainId,
+    avencrew_contracts::scalars::DomainId,
+    String,
+);
 #[derive(Default)]
 struct ProofReads {
     remaining: usize,
     remaining_reads: usize,
     exhausted: bool,
-    verified:
-        std::collections::BTreeMap<avencrew_contracts::scalars::DomainId, (String, String, usize)>,
+    verified: std::collections::BTreeMap<ProofBlobKey, (String, String, usize)>,
+    // Proof bytes are a subset of the same charged 8 MiB, shared between direct
+    // verification and membership reads. Never owned outside this operation.
+    proof_bytes: std::collections::BTreeMap<ProofBlobKey, Vec<u8>>,
+    completed: std::collections::BTreeSet<ProofStepKey>,
 }
 impl LocalStore {
     fn proof_read_scope(&mut self) -> std::sync::Arc<std::sync::Mutex<ProofReads>> {
         if let Some(scope) = self.proof_reads.upgrade() {
             return scope;
+        }
+        #[cfg(test)]
+        {
+            self.proof_scopes_started += 1;
         }
         let scope = std::sync::Arc::new(std::sync::Mutex::new(ProofReads {
             remaining: 8 * 1024 * 1024,
@@ -282,6 +302,8 @@ impl LocalStore {
             connection,
             _ownership: ownership,
             proof_reads: std::sync::Weak::new(),
+            #[cfg(test)]
+            proof_scopes_started: 0,
             status,
         })
     }

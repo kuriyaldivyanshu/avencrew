@@ -441,6 +441,7 @@ impl LocalStore {
         &mut self,
         i: CheckpointPublication<'_>,
     ) -> Result<CheckpointReceipt, ControlError> {
+        let _proof_scope = self.proof_read_scope();
         let identity = self.verified_identity(i.workspace, i.actor).await?;
         let c = decode_checkpoint(i.bytes, i.workspace)?;
         let bytes = c.candidate.canonical_bytes();
@@ -555,6 +556,7 @@ impl LocalStore {
         run: &DomainId,
         id: &DomainId,
     ) -> Result<RestoredCheckpoint, ControlError> {
+        let _proof_scope = self.proof_read_scope();
         let identity = self.verified_identity(w, a).await?;
         let current = run_row(&mut self.connection, w, run, a).await?;
         let cp=sqlx::query("SELECT c.*,m.canonical_blob_id,m.owner_actor_id,m.digest AS manifest_digest,m.created_at_us AS manifest_created,m.sealed_at_us AS manifest_sealed,m.kind AS manifest_kind,m.schema_version AS manifest_schema,m.deletion_generation FROM local_checkpoints c JOIN local_manifests m ON m.workspace_id=c.workspace_id AND m.id=c.manifest_id WHERE c.workspace_id=? AND c.id=? AND c.run_id=?").bind(w.as_str()).bind(id.as_str()).bind(run.as_str()).fetch_optional(&mut self.connection).await?.ok_or(ControlError::NotFoundOrDenied)?;
