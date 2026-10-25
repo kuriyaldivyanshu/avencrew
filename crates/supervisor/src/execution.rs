@@ -71,6 +71,7 @@ fn storage(error: TurnError) -> EngineError {
         TurnError::StaleAuthority | TurnError::Cancelled | TurnError::NotFoundOrDenied => {
             EngineError::StaleAuthority
         }
+        TurnError::Unsupported => EngineError::Unsupported,
         _ => EngineError::Storage,
     }
 }
@@ -211,36 +212,7 @@ impl engine::Host for FixtureHost {
     async fn restore(&mut self, _: &TurnSeed) -> Result<Restoration, EngineError> {
         let sample = clock::sample().map_err(|_| EngineError::StaleAuthority)?;
         let mut store = self.store.lock().await;
-        let future = store.reconcile_local_execution(
-            &self.seed.run_spec.workspace_id,
-            &self.actor,
-            &self.seed.turn_id,
-        );
-        let snap = Box::pin(future).await.map_err(storage)?;
-        if let Some(outcome) = snap.progress.outcome {
-            if snap.cancellation_requested && !matches!(outcome, TurnOutcome::Cancelled { .. }) {
-                return Err(EngineError::StaleAuthority);
-            }
-            // This immutable outcome predates any newly accepted controls. It
-            // cannot acknowledge their application or stand in for current state.
-            let inputs = store
-                .local_execution_inputs(
-                    &self.seed.run_spec.workspace_id,
-                    &self.actor,
-                    &self.seed.turn_id,
-                )
-                .await
-                .map_err(storage)?;
-            if inputs.len() as u64 != snap.progress.state.applied_input_cut.value() {
-                return Err(EngineError::StaleAuthority);
-            }
-            return Ok(Restoration {
-                state: snap.progress.state,
-                pending_step: None,
-                outcome: Some(outcome),
-            });
-        }
-        let control = Box::pin(store.apply_local_controls(
+        let restored = Box::pin(store.restore_local_execution(
             access(
                 &sample,
                 &self.seed.run_spec.workspace_id,
@@ -251,36 +223,29 @@ impl engine::Host for FixtureHost {
         ))
         .await
         .map_err(storage)?;
-        if !control.stopped
-            && (!control.paused
-                && (self.seed.lease.boot_id != sample.boot
-                    || self.seed.lease.expires_at <= sample.now
-                    || self.seed.lease.monotonic_deadline_ns.value() <= sample.monotonic.value()))
+        let snap = restored.snapshot;
+        if let Some(outcome) = snap.progress.outcome {
+            return Ok(Restoration {
+                state: snap.progress.state,
+                pending_step: None,
+                outcome: Some(outcome),
+            });
+        }
+        if !snap.cancellation_requested
+            && !restored.paused
+            && (self.seed.lease.boot_id != sample.boot
+                || self.seed.lease.expires_at <= sample.now
+                || self.seed.lease.monotonic_deadline_ns.value() <= sample.monotonic.value())
         {
             return Err(EngineError::StaleAuthority);
         }
-        let snap = store
-            .local_execution_snapshot(
-                &self.seed.run_spec.workspace_id,
-                &self.actor,
-                &self.seed.turn_id,
-            )
-            .await
-            .map_err(storage)?;
         if let Some(step) = &snap.step {
             if step.compatibility_digest != self.compatibility {
                 return Err(EngineError::StaleAuthority);
             }
         }
         // Every prior seal must use this same immutable profile, even after an observed step.
-        let context = store
-            .local_execution_context(
-                &self.seed.run_spec.workspace_id,
-                &self.actor,
-                &self.seed.turn_id,
-            )
-            .await
-            .map_err(storage)?;
+        let context = restored.context;
         for entry in context["history"]
             .as_array()
             .ok_or(EngineError::InvalidState)?

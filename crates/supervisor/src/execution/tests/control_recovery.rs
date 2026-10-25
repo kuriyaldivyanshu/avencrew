@@ -273,7 +273,7 @@ fn accepted_stop_between_broker_policy_and_dispatch_claim_executes_nothing() {
     });
 }
 #[test]
-fn late_stop_does_not_replay_a_candidate_as_current_or_start_more_work() {
+fn late_stop_is_rejected_and_candidate_replay_does_not_start_more_work() {
     run(|| async {
         let root = Root::new();
         let (store, p, profile) = setup(&root).await;
@@ -287,11 +287,53 @@ fn late_stop_does_not_replay_a_candidate_as_current_or_start_more_work() {
         )
         .await
         .unwrap();
-        stop(&store, &p, "stop-after-candidate").await;
+        let before = store.lock().await.diagnostic_bytes().await.unwrap();
+        let seed = store
+            .lock()
+            .await
+            .read_local_turn(&p.workspace, &p.actor, &p.turn)
+            .await
+            .unwrap()
+            .seed;
+        for kind in ["stop", "pause", "steer"] {
+            let version = store
+                .lock()
+                .await
+                .recover_local_controls(&p.workspace, &p.actor)
+                .await
+                .unwrap()
+                .runs[0]
+                .version
+                .clone();
+            let payload = match kind {
+                "stop" => json!({"reason":"late stop"}),
+                "pause" => json!({"reason":"late pause", "expected_revision":version}),
+                _ => json!({"text":"late input", "expected_revision":version}),
+            };
+            let bytes = serde_json::to_vec(&json!({"kind":kind,"command_id":id(),"run_id":seed.run_spec.run_id,"idempotency_key":format!("after-candidate-{kind}"),"payload":payload})).unwrap();
+            assert!(matches!(
+                store
+                    .lock()
+                    .await
+                    .accept_command(CommandAcceptance {
+                        workspace: &p.workspace,
+                        actor: &p.actor,
+                        bytes: &bytes,
+                        event: &id(),
+                        queue: &id(),
+                        command_blob: &id(),
+                        event_blob: &id(),
+                        at: &clock::sample().unwrap().now,
+                    })
+                    .await,
+                Err(avencrew_store_sqlite::ControlError::Conflict)
+            ));
+        }
+        assert_eq!(store.lock().await.diagnostic_bytes().await.unwrap(), before);
         close(store).await;
         let store = Arc::new(Mutex::new(LocalStore::open(&root.0).await.unwrap()));
         let before = store.lock().await.diagnostic_bytes().await.unwrap();
-        assert!(matches!(
+        assert_eq!(
             execute_fixture_turn(
                 store.clone(),
                 p.workspace.clone(),
@@ -300,9 +342,10 @@ fn late_stop_does_not_replay_a_candidate_as_current_or_start_more_work() {
                 profile,
                 EngineConfig::default()
             )
-            .await,
-            Err(EngineError::StaleAuthority)
-        ));
+            .await
+            .unwrap(),
+            saved
+        );
         let snap = store
             .lock()
             .await
@@ -310,8 +353,14 @@ fn late_stop_does_not_replay_a_candidate_as_current_or_start_more_work() {
             .await
             .unwrap();
         assert_eq!(snap.progress.outcome, Some(saved));
-        assert!(snap.cancellation_requested);
+        assert!(!snap.cancellation_requested);
         assert_eq!(store.lock().await.diagnostic_bytes().await.unwrap(), before);
         close(store).await;
     });
+}
+
+#[test]
+fn unsupported_recovery_is_a_held_engine_error() {
+    assert_eq!(storage(TurnError::Unsupported), EngineError::Unsupported);
+    assert_eq!(storage(TurnError::Conflict), EngineError::Storage);
 }

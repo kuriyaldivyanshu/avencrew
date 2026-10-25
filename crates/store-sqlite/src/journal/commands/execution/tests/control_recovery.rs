@@ -4,9 +4,17 @@ use avencrew_contracts::{
     wire::{CommandReceipt, TurnOutcome},
 };
 
-async fn command(s: &mut LocalStore, kind: &str, n: u32) -> (Vec<u8>, CommandReceipt) {
+pub(super) async fn command(s: &mut LocalStore, kind: &str, n: u32) -> (Vec<u8>, CommandReceipt) {
+    command_for_run(s, kind, n, &id(300)).await
+}
+async fn command_for_run(
+    s: &mut LocalStore,
+    kind: &str,
+    n: u32,
+    run: &DomainId,
+) -> (Vec<u8>, CommandReceipt) {
     let n = n + 10_000; // Separate from the canonical task's allocated blob IDs.
-    let row = run_row(&mut s.connection, &id(1), &id(300), &id(2))
+    let row = run_row(&mut s.connection, &id(1), run, &id(2))
         .await
         .unwrap();
     let payload = match kind {
@@ -14,7 +22,7 @@ async fn command(s: &mut LocalStore, kind: &str, n: u32) -> (Vec<u8>, CommandRec
         "pause" => json!({"reason":"Pause","expected_revision":row.version.to_string()}),
         _ => json!({"text":"New input","expected_revision":row.version.to_string()}),
     };
-    let bytes=serde_json::to_vec(&json!({"kind":kind,"command_id":id(n),"run_id":id(300),"idempotency_key":format!("control-{n}"),"payload":payload})).unwrap();
+    let bytes=serde_json::to_vec(&json!({"kind":kind,"command_id":id(n),"run_id":run,"idempotency_key":format!("control-{n}"),"payload":payload})).unwrap();
     let receipt = s
         .accept_command(CommandAcceptance {
             workspace: &id(1),
@@ -360,7 +368,24 @@ fn cancellation_outcome_retains_unresolved_work_reservation_and_never_revives() 
             assert_eq!(ended.is_some(), pending == "none");
             assert!(s.authorize_local_execution(&access(), false).await.is_err());
             assert_eq!(counts(&mut s).await, before);
-            if pending == "none" {
+            if pending != "none" {
+                let late = serde_json::to_vec(&json!({"kind":"stop","command_id":id(1700),"run_id":id(300),"idempotency_key":"late-stop","payload":{"reason":"late stop"}})).unwrap();
+                assert!(matches!(
+                    s.accept_command(CommandAcceptance {
+                        workspace: &id(1),
+                        actor: &id(2),
+                        bytes: &late,
+                        event: &id(1701),
+                        queue: &id(1702),
+                        command_blob: &id(1703),
+                        event_blob: &id(1704),
+                        at: &now(),
+                    })
+                    .await,
+                    Err(ControlError::Conflict)
+                ));
+                assert_eq!(counts(&mut s).await, before);
+            } else {
                 let (_, receipt) = command(&mut s, "stop", 1700).await;
                 assert!(matches!(receipt, CommandReceipt::Terminal { .. }));
                 assert_eq!(counts(&mut s).await, before);
@@ -553,5 +578,235 @@ fn ignored_application_updates_roll_back_dispositions_cursor_and_progress() {
             );
             s.close().await.unwrap();
         }
+    });
+}
+
+#[test]
+fn execution_replay_budget_is_shared_by_the_page_and_holds_unread_history() {
+    native_run(|| async {
+        let root = Root::new();
+        let mut s = ready(&root).await;
+        command(&mut s, "steer", 1000).await;
+        s.apply_local_controls(access(), &id(1300)).await.unwrap();
+        // A second real prepared run, with its own immutable seed and controls.
+        s.register_local_run(LocalRunRegistration {
+            workspace: &id(1),
+            actor: &id(2),
+            task: &id(100),
+            task_revision: &id(103),
+            run: &id(2000),
+            event: &id(2001),
+            queue: &id(2002),
+            payload_blob: &id(2003),
+            at: &now(),
+        })
+        .await
+        .unwrap();
+        let mut second = seed();
+        second.run_spec.run_id = id(2000);
+        second.run_spec.session_id = id(2101);
+        second.run_spec.branch_id = id(2102);
+        second.lease.run_id = id(2000);
+        second.lease.attempt_id = id(2103);
+        second.turn_id = id(2100);
+        s.publish_local_turn(LocalTurnPublication {
+            actor: &id(2),
+            seed: &second,
+            ordinal: &positive(1).unwrap(),
+            expected_run_version: &positive(1).unwrap(),
+            spec_blob: &id(2105),
+            lease_blob: &id(2106),
+            event: &id(2107),
+            harness_build_digest: &avencrew_contracts::scalars::Digest::new("1".repeat(64))
+                .unwrap(),
+            at: &now(),
+            now: &now(),
+            current_boot: &id(704),
+            monotonic_now: &Counter::new("10").unwrap(),
+        })
+        .await
+        .unwrap();
+        command_for_run(&mut s, "steer", 2000, &id(2000)).await;
+        s.apply_local_controls(
+            LocalExecutionAccess::new(
+                &id(1),
+                &id(2),
+                &id(2100),
+                &now(),
+                &id(704),
+                &Counter::new("10").unwrap(),
+            ),
+            &id(2300),
+        )
+        .await
+        .unwrap();
+        let charge: i64 = sqlx::query_scalar("SELECT sum(byte_size) FROM local_blobs WHERE id IN (SELECT payload_blob_id FROM local_commands WHERE run_id=? UNION ALL SELECT payload_blob_id FROM local_events WHERE run_id=? AND event_type='execution.controls_applied')")
+            .bind(id(300).as_str()).bind(id(300).as_str()).fetch_one(&mut s.connection).await.unwrap();
+        let before = counts(&mut s).await;
+        // Corrupt only the second progress file: a budget-held page must never
+        // open it. A later explicit, sufficiently budgeted replay detects it.
+        let path = root.0.join(relative(&id(1), &id(2300)));
+        let bytes = std::fs::read(&path).unwrap();
+        std::fs::write(&path, b"unread corrupt progress").unwrap();
+        let page = s
+            .recover_local_controls_page_with_replay_budget(&id(1), &id(2), None, charge as usize)
+            .await
+            .unwrap();
+        assert!(page.runs[0].history_complete);
+        assert!(!page.runs[1].history_complete);
+        assert_eq!(
+            page.runs[1].gate,
+            super::super::super::recovery::RecoveryGate::HistoryLimit
+        );
+        assert!(s.recover_local_controls(&id(1), &id(2)).await.is_err());
+        std::fs::write(&path, bytes).unwrap();
+        let page = s.recover_local_controls(&id(1), &id(2)).await.unwrap();
+        assert!(page.runs.iter().all(|r| r.history_complete));
+        assert_eq!(counts(&mut s).await, before);
+        s.close().await.unwrap();
+    });
+}
+
+#[test]
+fn observed_invocation_ids_are_verified_against_the_retained_step_and_rows() {
+    native_run(|| async {
+        for invalid in [vec![id(999)], vec![id(820), id(820)]] {
+            let root = Root::new();
+            stage(&root, "result_after_commit").await;
+            let mut s = LocalStore::open(&root.0).await.unwrap();
+            s.record_local_tool_result(access(), &proposal(), Some(&tool_result()), &id(816))
+                .await
+                .unwrap();
+            let state = s
+                .local_execution_snapshot(&id(1), &id(2), &id(700))
+                .await
+                .unwrap()
+                .progress
+                .state;
+            s.observe_local_step(access(), &id(800), &[id(820)], &state, &id(1800))
+                .await
+                .unwrap();
+            s.reconcile_local_execution(&id(1), &id(2), &id(700))
+                .await
+                .unwrap();
+            let path = root.0.join(relative(&id(1), &id(1800)));
+            let mut record: ProgressRecord =
+                serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+            record.observed_invocation_ids = invalid;
+            let bytes = canonical(&record).unwrap();
+            std::fs::write(path, &bytes).unwrap();
+            sqlx::query("UPDATE local_blobs SET sha256=?,byte_size=? WHERE id=?")
+                .bind(digest(&bytes).as_slice())
+                .bind(bytes.len() as i64)
+                .bind(id(1800).as_str())
+                .execute(&mut s.connection)
+                .await
+                .unwrap();
+            assert!(matches!(
+                s.reconcile_local_execution(&id(1), &id(2), &id(700)).await,
+                Err(TurnError::Conflict)
+            ));
+            assert!(s.recover_local_controls(&id(1), &id(2)).await.is_err());
+            s.close().await.unwrap();
+        }
+    });
+}
+
+#[test]
+fn composed_restore_returns_updated_controls_and_the_same_exact_context() {
+    native_run(|| async {
+        let root = Root::new();
+        let mut s = ready(&root).await;
+        command(&mut s, "steer", 1000).await;
+        let restored = s
+            .restore_local_execution(access(), &id(1300))
+            .await
+            .unwrap();
+        assert_eq!(
+            restored.snapshot.progress.state.applied_input_cut.value(),
+            1
+        );
+        assert_eq!(
+            restored.context,
+            s.local_execution_context(&id(1), &id(2), &id(700))
+                .await
+                .unwrap()
+        );
+        let before = counts(&mut s).await;
+        let replay = s
+            .restore_local_execution(access(), &id(1301))
+            .await
+            .unwrap();
+        assert_eq!(restored.context, replay.context);
+        assert_eq!(counts(&mut s).await, before);
+        s.close().await.unwrap();
+    });
+}
+
+#[test]
+fn unresolved_projection_uses_the_same_combined_cap_as_the_cancellation_wire_type() {
+    native_run(|| async {
+        let root = Root::new();
+        let mut s = ready(&root).await;
+        let mut state = s
+            .local_execution_snapshot(&id(1), &id(2), &id(700))
+            .await
+            .unwrap()
+            .progress
+            .state;
+        state.steps_started = 1;
+        s.seal_local_step(access(), &tool_step(), &state, &id(810))
+            .await
+            .unwrap();
+        // Adversarial retained rows exercise the projection boundary directly;
+        // they are not represented as verified proposals or physical dispatches.
+        for n in 0..100 {
+            if n == 99 {
+                let snap = s
+                    .local_execution_snapshot(&id(1), &id(2), &id(700))
+                    .await
+                    .unwrap();
+                assert_eq!(snap.unresolved_invocations.len(), 99);
+                assert_eq!(snap.unresolved_model_calls.len(), 1);
+                assert!(
+                    matches!(cancellation(&snap, id(1500)), TurnOutcome::Cancelled { unresolved_receipt_refs, .. } if unresolved_receipt_refs.as_slice().len() == 100)
+                );
+            }
+            sqlx::query("INSERT INTO local_invocations (id,workspace_id,created_at_us,run_id,step_id,request_origin,tool_binding_key,idempotency_key,arguments_blob_id,arguments_digest,state) VALUES (?,?,?, ?,?,'model',?,?,?,?,'unknown')")
+                .bind(id(3000+n).as_str()).bind(id(1).as_str()).bind(now().unix_micros())
+                .bind(id(300).as_str()).bind(id(800).as_str()).bind(id(802).as_str())
+                .bind(id(3000+n).as_str()).bind(id(801).as_str()).bind([0u8;32].as_slice())
+                .execute(&mut s.connection).await.unwrap();
+        }
+        assert!(matches!(
+            s.local_execution_snapshot(&id(1), &id(2), &id(700)).await,
+            Err(TurnError::Conflict)
+        ));
+        s.close().await.unwrap();
+    });
+}
+
+#[test]
+fn future_multi_turn_histories_are_held_without_replaying_under_the_wrong_attempt() {
+    native_run(|| async {
+        let root = Root::new();
+        let mut s = ready(&root).await;
+        // A future-schema-shaped projection is intentionally not admitted by
+        // publish_local_turn today. Recovery must refuse its execution profile.
+        sqlx::query("INSERT INTO local_turns (id,workspace_id,created_at_us,run_id,attempt_id,ordinal,state,input_command_seq,started_at_us,spec_blob_id) SELECT ?,workspace_id,created_at_us,run_id,attempt_id,2,state,input_command_seq,started_at_us,spec_blob_id FROM local_turns")
+            .bind(id(2500).as_str()).execute(&mut s.connection).await.unwrap();
+        let before = counts(&mut s).await;
+        assert!(matches!(
+            s.reconcile_local_execution(&id(1), &id(2), &id(700)).await,
+            Err(TurnError::Unsupported)
+        ));
+        let page = s.recover_local_controls(&id(1), &id(2)).await.unwrap();
+        assert_eq!(
+            page.runs[0].gate,
+            super::super::super::recovery::RecoveryGate::HistoryLimit
+        );
+        assert!(!page.runs[0].history_complete);
+        assert_eq!(counts(&mut s).await, before);
+        s.close().await.unwrap();
     });
 }

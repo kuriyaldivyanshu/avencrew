@@ -17,6 +17,7 @@ pub use invocations::LocalDispatch;
 mod controls;
 mod recovery;
 pub use controls::LocalControlSnapshot;
+pub use recovery::LocalExecutionRestore;
 mod artifacts;
 mod checkpoints;
 pub use artifacts::{
@@ -186,7 +187,9 @@ impl LocalStore {
         }
         let models:Vec<String>=sqlx::query_scalar("SELECT c.id FROM local_model_calls c JOIN local_steps s ON s.workspace_id=c.workspace_id AND s.id=c.step_id WHERE s.workspace_id=? AND s.turn_id=? AND c.state='intent' ORDER BY c.id LIMIT 51")
             .bind(workspace.as_str()).bind(turn.as_str()).fetch_all(&mut self.connection).await?;
-        if models.len() > 50 {
+        // TurnOutcome::Cancelled and Control::Stop share a wire cap of 100.
+        // Do not admit a projection that cannot retain its exact unresolved set.
+        if models.len() > 50 || unresolved.len() + models.len() > 100 {
             return Err(TurnError::Conflict);
         }
         Ok(LocalExecutionSnapshot {
@@ -344,6 +347,9 @@ impl LocalStore {
                 return Err(TurnError::IdempotencyMismatch);
             }
             return Ok(false);
+        }
+        if snapshot.unresolved_invocations.len() + snapshot.unresolved_model_calls.len() >= 100 {
+            return Err(TurnError::Conflict);
         }
         step.binding
             .validate()

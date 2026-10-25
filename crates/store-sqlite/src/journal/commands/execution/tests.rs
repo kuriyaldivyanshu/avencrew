@@ -691,22 +691,17 @@ fn human_edits_reject_stop_epoch_and_expired_or_wrong_boot_authority() {
                 .read_local_artifact(&id(1), &id(2), &id(900), &id(901))
                 .await
                 .unwrap();
-            let before: i64 = sqlx::query_scalar("SELECT count(*) FROM local_blobs")
-                .fetch_one(&mut s.connection)
-                .await
-                .unwrap();
             let mut a = access();
             let expired = seed().lease.expires_at;
             let boot = id(999);
             let deadline = seed().lease.monotonic_deadline_ns;
             match case {
                 0 => {
-                    sqlx::query(
-                        "UPDATE local_runs SET cancellation_requested=1,status='cancelling'",
-                    )
-                    .execute(&mut s.connection)
-                    .await
-                    .unwrap();
+                    let (_, receipt) = control_recovery::command(&mut s, "stop", 1000).await;
+                    assert!(matches!(
+                        receipt,
+                        avencrew_contracts::wire::CommandReceipt::Accepted { .. }
+                    ));
                 }
                 1 => {
                     sqlx::query("UPDATE local_runs SET fencing_epoch=fencing_epoch+1")
@@ -718,6 +713,10 @@ fn human_edits_reject_stop_epoch_and_expired_or_wrong_boot_authority() {
                 3 => a.boot = &boot,
                 _ => a.monotonic_now = &deadline,
             }
+            let before: i64 = sqlx::query_scalar("SELECT count(*) FROM local_blobs")
+                .fetch_one(&mut s.connection)
+                .await
+                .unwrap();
             let result = s
                 .publish_local_artifact(LocalArtifactPublication {
                     access: a,

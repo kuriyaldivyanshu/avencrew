@@ -7,6 +7,11 @@ pub struct LocalControlSnapshot {
     pub inputs: Vec<Command>,
 }
 
+pub(super) struct VerifiedInputs {
+    pub commands: Vec<Command>,
+    pub bytes: std::collections::BTreeMap<DomainId, Vec<u8>>,
+}
+
 impl LocalStore {
     /// Digest verified semantic evidence, excluding fresh invocation IDs so a
     /// repeated read of the same source/version/result cannot fake progress.
@@ -80,6 +85,15 @@ impl LocalStore {
         a: &DomainId,
         turn: &DomainId,
     ) -> Result<Vec<Command>, TurnError> {
+        Ok(self.read_local_execution_inputs(w, a, turn).await?.commands)
+    }
+
+    pub(super) async fn read_local_execution_inputs(
+        &mut self,
+        w: &DomainId,
+        a: &DomainId,
+        turn: &DomainId,
+    ) -> Result<VerifiedInputs, TurnError> {
         let seed = self.read_local_turn(w, a, turn).await?.seed;
         let run = run_row(&mut self.connection, w, &seed.run_spec.run_id, a).await?;
         let rows=sqlx::query("SELECT seq,payload_blob_id FROM local_commands WHERE workspace_id=? AND run_id=? ORDER BY seq LIMIT 1025")
@@ -88,6 +102,7 @@ impl LocalStore {
             return Err(TurnError::Conflict);
         }
         let mut inputs = Vec::new();
+        let mut verified_bytes = std::collections::BTreeMap::new();
         let mut total = 0;
         for (n, row) in rows.iter().enumerate() {
             if row.try_get::<i64, _>("seq")? != n as i64 + 1 {
@@ -109,9 +124,13 @@ impl LocalStore {
             {
                 return Err(TurnError::Conflict);
             }
+            verified_bytes.insert(id, bytes);
             inputs.push(command);
         }
-        Ok(inputs)
+        Ok(VerifiedInputs {
+            commands: inputs,
+            bytes: verified_bytes,
+        })
     }
 
     /// Safe fixture boundary only: records input dispositions, never asserts process cleanup.
@@ -120,10 +139,22 @@ impl LocalStore {
         a: LocalExecutionAccess<'_>,
         event: &DomainId,
     ) -> Result<LocalControlSnapshot, TurnError> {
-        let seed = self.authorize_local_execution(&a, true).await?;
-        let snap = self
+        let verified = self
             .verify_local_control_history(a.workspace, a.actor, a.turn)
             .await?;
+        self.apply_verified_local_controls(a, event, verified).await
+    }
+
+    // Verified data never escapes a single owned-store operation. Live identity,
+    // cursors and epoch are still rechecked in the publication transaction.
+    pub(super) async fn apply_verified_local_controls(
+        &mut self,
+        a: LocalExecutionAccess<'_>,
+        event: &DomainId,
+        verified: super::recovery::VerifiedHistory,
+    ) -> Result<LocalControlSnapshot, TurnError> {
+        let seed = self.authorize_local_execution(&a, true).await?;
+        let snap = verified.snapshot;
         let row = run_row(
             &mut self.connection,
             a.workspace,
@@ -142,9 +173,7 @@ impl LocalStore {
                 inputs: vec![],
             });
         }
-        let inputs = self
-            .local_execution_inputs(a.workspace, a.actor, a.turn)
-            .await?;
+        let inputs = verified.inputs.commands;
         let paused = inputs.iter().any(|c| matches!(c, Command::Pause { .. }));
         let stopped = row.cancelled;
         if snap.progress.outcome.is_some() {

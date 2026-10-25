@@ -83,3 +83,40 @@ be cleared by restart or duplicate requests. Unresolved model intents and tool
 dispatches remain in cancellation outcomes; their attempt stays `draining`
 without an end time until a future reconciliation owner can prove safe release.
 No additional migration or automatic execution/cleanup grant is involved.
+
+
+## Fixture restart contract
+
+The enabled execution consumer supports one ordinal-one local fixture turn per
+run. Startup recovery and explicit restore verify canonical accepted-command
+bytes and original receipts, acceptance order, typed applied/superseded
+dispositions, progress versions, attempt/epoch, observation references, applied
+cursor and at most one immutable outcome. Unknown or future multi-turn histories
+remain held; they never grant dispatch. Malformed supported history is refused.
+
+A recovery page admits at most 256 runs, with at most 1024 commands and 2048
+events per run. Original command payload recovery has an 8 MiB page budget. The
+additional execution verifier has a separate 8 MiB page budget for command and
+progress ledger bytes, reserved from registered sizes before opening that run's
+history. A budget-held run has `history_complete = false` and no recovered
+controls; other eligible runs can still be inspected. These are ledger replay
+budgets, not an aggregate bound on identity, checkpoint or artifact validation IO.
+
+Explicit restore reuses verified command bytes, snapshot and context within one
+owned-store operation. No verification cache or authority survives the call;
+control publication still rechecks live identity, epoch and cursors inside its
+transaction. Cancellation retains the exact combined unresolved tool/model set,
+with the same maximum of 100 references as the cancellation wire contract.
+Unknown work retains its draining reservation until reconciliation proves release.
+
+New stop, pause or steering commands after a committed fixture outcome are
+rejected with a conflict rather than receiving an unappliable accepted receipt.
+Exact retries of previously accepted commands return their original receipt;
+terminal runs retain their terminal no-op receipt. Legacy already-accepted late
+controls remain held and cannot replay an old outcome as current. Human artifact
+edits retain independent stop, current-version, identity and lease fences; a
+rejected late command never claims to have cancelled those edits. A later run
+lifecycle consumer must own controls during post-outcome verification/rework.
+
+Regression evidence lives in `commands/execution/tests/control_recovery.rs`,
+`commands/execution/tests.rs` and the supervisor's `execution/tests/` modules.

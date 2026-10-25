@@ -66,8 +66,21 @@ impl LocalStore {
         actor: &DomainId,
         turn: &DomainId,
     ) -> Result<Value, TurnError> {
-        let retained = self.read_local_turn(w, actor, turn).await?;
         let snap = self.local_execution_snapshot(w, actor, turn).await?;
+        let inputs = self.read_local_execution_inputs(w, actor, turn).await?;
+        self.verified_local_execution_context(w, actor, turn, &snap, &inputs)
+            .await
+    }
+
+    pub(super) async fn verified_local_execution_context(
+        &mut self,
+        w: &DomainId,
+        actor: &DomainId,
+        turn: &DomainId,
+        snap: &LocalExecutionSnapshot,
+        inputs: &super::controls::VerifiedInputs,
+    ) -> Result<Value, TurnError> {
+        let retained = self.read_local_turn(w, actor, turn).await?;
         let rows=sqlx::query("SELECT id,step_ordinal,context_blob_id,tool_catalog_blob_id,model_profile_blob_id FROM local_steps WHERE workspace_id=? AND turn_id=? ORDER BY step_ordinal LIMIT 51")
             .bind(w.as_str()).bind(turn.as_str()).fetch_all(&mut self.connection).await?;
         if rows.len() != snap.progress.state.steps_started as usize {
@@ -198,7 +211,6 @@ impl LocalStore {
                 );
             }
         }
-        let inputs = self.local_execution_inputs(w, actor, turn).await?;
         let command_blobs:Vec<String>=sqlx::query_scalar("SELECT payload_blob_id FROM local_commands WHERE workspace_id=? AND run_id=? ORDER BY seq LIMIT 1025")
             .bind(w.as_str()).bind(retained.seed.run_spec.run_id.as_str()).fetch_all(&mut self.connection).await?;
         for id in command_blobs {
@@ -217,7 +229,11 @@ impl LocalStore {
             .fetch_one(&mut self.connection)
             .await?;
             let media: String = row.try_get("media_type")?;
-            let bytes = self.read_execution_bytes(w, actor, &id, &media).await?;
+            let bytes = if let Some(bytes) = inputs.bytes.get(&id) {
+                bytes.clone()
+            } else {
+                self.read_execution_bytes(w, actor, &id, &media).await?
+            };
             let hash = Digest::new(hex(&digest(&bytes))).map_err(|_| TurnError::Conflict)?;
             if row.try_get::<Vec<u8>, _>("sha256")? != digest(&bytes)
                 || row.try_get::<i64, _>("byte_size")? != bytes.len() as i64
@@ -233,7 +249,7 @@ impl LocalStore {
             });
         }
         Ok(
-            json!({"seed":retained.seed,"state":snap.progress.state,"accepted_inputs":inputs,"history":history,"members":members}),
+            json!({"seed":retained.seed,"state":snap.progress.state,"accepted_inputs":inputs.commands,"history":history,"members":members}),
         )
     }
 

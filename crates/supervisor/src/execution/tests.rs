@@ -457,8 +457,9 @@ fn editing_a_candidate_creates_new_checks_and_rejects_stale_versions() {
             original_saved.receipt.check_result_id,
             edited.check_result_id
         );
-        // A real accepted stop after the verifying-state human edit must fence
-        // further versions, while retaining the already committed revision.
+        // Human edits after a saved candidate still require an unexpired lease.
+        // New controls after that outcome are rejected explicitly (covered in
+        // control_recovery), so a rejected stop is never treated as accepted.
         let seed = store
             .lock()
             .await
@@ -466,23 +467,8 @@ fn editing_a_candidate_creates_new_checks_and_rejects_stale_versions() {
             .await
             .unwrap()
             .seed;
-        let stop=serde_json::to_vec(&json!({"kind":"stop","command_id":id(),"run_id":seed.run_spec.run_id,"idempotency_key":"stop-before-human-edit","payload":{"reason":"Stop editing"}})).unwrap();
-        let sample = clock::sample().unwrap();
-        store
-            .lock()
-            .await
-            .accept_command(CommandAcceptance {
-                workspace: &p.workspace,
-                actor: &p.actor,
-                bytes: &stop,
-                event: &id(),
-                queue: &id(),
-                command_blob: &id(),
-                event_blob: &id(),
-                at: &sample.now,
-            })
-            .await
-            .unwrap();
+        let mut sample = clock::sample().unwrap();
+        sample.now = seed.lease.expires_at;
         let before = store
             .lock()
             .await
