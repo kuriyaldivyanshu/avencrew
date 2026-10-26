@@ -5,11 +5,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LANE="${1:-all}"
 if [ "$#" -gt 1 ]; then
-  echo 'usage: bash tools/verification/check.sh [rust|proof-history|desktop|contracts|fixtures|licenses|all]' >&2
+  echo 'usage: bash tools/verification/check.sh [rust|proof-history|desktop|desktop-unit|desktop-native|contracts|fixtures|licenses|all]' >&2
   exit 2
 fi
 case "$LANE" in
-  rust|proof-history|desktop|contracts|fixtures|licenses|all) ;;
+  rust|proof-history|desktop|desktop-unit|desktop-native|contracts|fixtures|licenses|all) ;;
   *) echo "check: unknown lane '$LANE'" >&2; exit 2 ;;
 esac
 python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 12) else "Python 3.12+ is required; select it as python3 on PATH")' || { return 2 2>/dev/null || exit 2; }
@@ -88,6 +88,8 @@ case "$LANE" in
   rust) rust_checks ;;
   proof-history) proof_history_checks ;;
   desktop) desktop_checks ;;
+  desktop-unit) pnpm --filter @avencrew/desktop test ;;
+  desktop-native) pnpm --filter @avencrew/desktop test:native ;;
   contracts) contract_checks ;;
   fixtures) fixture_checks ;;
   licenses) license_checks ;;

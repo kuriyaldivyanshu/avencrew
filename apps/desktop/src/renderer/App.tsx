@@ -50,7 +50,7 @@ export function App() {
           connected.
         </EmptyArea>
         <EmptyArea title="Tasks">
-          None. Task admission, the coordinator and the harness are not implemented yet.
+          This desktop window does not expose task creation or execution yet.
         </EmptyArea>
         <EmptyArea title="Activity">
           Nothing is scheduled or executing. There is no idle worker or agent watching anything.

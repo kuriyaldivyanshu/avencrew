@@ -9,7 +9,10 @@
     "typecheck": "tsc --build --force tsconfig.main.json tsconfig.renderer.json",
     "build": "node build.mjs",
     "start": "electron .",
-    "dev": "pnpm run build && electron ."
+    "dev": "pnpm run build && electron .",
+    "test:build": "node --require ../../tools/verification/node-runtime.cjs node_modules/typescript/bin/tsc --noEmit --project tests/tsconfig.json && node tests/build.mjs",
+    "test": "pnpm test:build && node --test tests/transport.test.mjs",
+    "test:native": "bash tests/native.sh"
   },
   "devDependencies": {
     "@types/node": "24.19.1",
@@ -20,6 +23,7 @@
     "typescript": "7.0.2"
   },
   "dependencies": {
+    "@avencrew/contracts-ts": "workspace:*",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   }

@@ -16,7 +16,12 @@ const here = new URL('./', import.meta.url);
 const pkg = JSON.parse(await readFile(new URL('./package.json', here), 'utf8'));
 const dist = (path) => fileURLToPath(new URL(path, here));
 
+console.log(
+  JSON.stringify({ check: 'desktop-build', node: process.version, executable: process.execPath }),
+);
+
 const define = {
+  __TRUSTED_DOCUMENT_URL__: JSON.stringify(new URL('dist/renderer/index.html', here).href),
   __APP_VERSION__: JSON.stringify(pkg.version),
 };
 

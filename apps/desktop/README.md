@@ -1,104 +1,59 @@
-# @avencrew/desktop
+# Avencrew desktop
 
-Avencrew Electron desktop client — **development scaffold**. It builds, type-checks
-and launches, and it does nothing else.
+The desktop exposes a narrow supervisor control boundary. The production entry
+composes a disconnected bridge; task creation, execution screens, workspace
+admission, reconnect and quit/background policy remain later work (P4-08/P4-09).
 
-## What this is not
-
-There is no workspace, task, worker, model, source connection, database, broker or
-supervisor control here, and the UI says so rather than showing placeholder
-activity. Task admission, the coordinator and the harness are separate phases.
-
-## Requirements
-
-macOS ARM64 is the development launch profile. GNU/Linux ARM64 CI builds
-bundles but does not fetch or launch a Linux Electron distribution.
-Use the project-managed toolchain. From the repository root:
+Use the existing project-managed toolchain and installed pinned dependencies:
 
 ```sh
-bash tools/bootstrap/bootstrap.sh          # once
-bash                                     # enter Bash before sourcing
-source tools/bootstrap/dev-env.sh          # or use bash tools/bootstrap/dev-env.sh <command>
+bash tools/bootstrap/dev-env.sh pnpm --filter @avencrew/desktop typecheck
+bash tools/bootstrap/dev-env.sh pnpm --filter @avencrew/desktop build
+bash tools/bootstrap/dev-env.sh pnpm --filter @avencrew/desktop test
+bash tools/bootstrap/dev-env.sh pnpm --filter @avencrew/desktop test:native
 ```
 
-That gives the pinned Rust, Node, pnpm, TypeScript and esbuild under
-`build/dev-toolchain/`. Your global toolchain is not modified.
+`test:native` executes only on macOS ARM64 with the pinned Electron distribution.
+It launches hidden sandboxed windows, a real supervisor and a throwaway registered
+queued run, then checks accepted durable receipts after reopening the store.
+It explicitly kills its owned fixture supervisor after checking that window/client
+close leaves it alive. Linux native Electron remains unverified. The ordinary
+transport tests include real deadlines and synthetic Unix-socket malformed peers;
+they require permission to bind local sockets. No test installs dependencies.
+The shared verification lanes are `desktop`, `desktop-unit` and `desktop-native`.
 
-To leave a sourced activation, restore your own `PATH` and unset the variables
-listed in `$AVENCREW_ENV_VARS`. There is no `deactivate` command.
+`window.avencrew` has exactly four named methods: `describeCapabilities()`,
+`steer(input)`, `pause(input)` and `stop(input)`. Inputs use generated command
+variants with `kind` omitted; main supplies and validates that discriminator.
+Results contain the original validated capability/receipt, or a fixed safe failure
+code. An accepted receipt does not imply application. Explicit retries preserve
+command identity; no mutation is retried automatically. Static build metadata is
+separately exposed as `window.avencrewBuild`.
 
-## Install
+Every main IPC handler checks its owning WebContents, current main frame and exact
+fixed document URL before validating input. The sandboxed preload exposes the
+bridge only on that main document. Node in pages/workers/subframes is disabled;
+context isolation and the renderer sandbox remain enabled. Navigation, external
+opening, popups, webviews, downloads and permissions are denied. There is no raw
+IPC, general RPC, shell, filesystem, SQL or credential API in the page.
 
-```sh
-pnpm install --frozen-lockfile # from the repository root
-bash tools/bootstrap/fetch-electron.sh   # once: verified Electron binary
-```
+`composition.ts` accepts optional trusted main-only launch configuration. Production
+reads no configuration or credentials from renderer input, environment or argv.
+The native test is a separate entry that invokes this same composition and client.
+The client launches `serve` with anonymous pipes and `shell:false`, checks a bounded
+strict launch grant and authenticates the fresh connection challenge using the
+existing canonical HMAC transcript. Credentials remain main memory/pipe data.
+Frames are capped at 1 MiB, pending requests at 16; launch/auth/partial-read/write
+deadlines are five seconds and request deadlines ten seconds. Failure closes the
+connection and rejects pending calls without fabricating acceptance.
 
-Run that command directly. It refuses to touch `pnpm-lock.yaml` and fails with
-`ERR_PNPM_OUTDATED_LOCKFILE` if `package.json` has drifted, so a build cannot
-silently diverge from the committed pins.
+`windows.ts` also owns the production artifact preview policy: scripts disabled,
+no preload, separate in-memory session, and network/download/navigation denial.
+The native test consumes this exact policy with hostile HTML. Real artifact
+fetching, audience checks and artifact-version review are deferred; V-U06 remains
+partial. The preview factory alone is not a complete artifact workflow.
 
-Do **not** wrap it in a `package.json` script. Two traps combine: pnpm parses a
-script named `install:anything` as the `install` command plus an argument, and
-`pnpm run` auto-installs unfrozen before the script body. Together, a "frozen"
-install would rewrite the lockfile and then pass against what it had just
-written. `pnpm-workspace.yaml` sets `verifyDepsBeforeRun: false` to close the second trap.
-
-Two things worth knowing:
-
-- **Install scripts are denied** (`pnpm-workspace.yaml` → `allowBuilds`). esbuild
-  and TypeScript resolve their platform packages from the dependency tree.
-- **Electron's binary is fetched by `tools/bootstrap/fetch-electron.sh`**, which
-  checks the archive's SHA-256 against
-  tracked `tools/bootstrap/pins.json` *before* unpacking, then
-  places it in the layout `electron/index.js` expects. Re-run it after any
-  `rm -rf node_modules`.
-
-## Commands
-
-Run from the repository root:
-
-```sh
-pnpm typecheck     # strict tsc, two configs (main+preload, renderer)
-pnpm build         # esbuild -> dist/main, dist/preload, dist/renderer
-pnpm dev           # build, then launch
-```
-
-Or scope to this package:
-
-```sh
-pnpm --filter @avencrew/desktop typecheck
-pnpm --filter @avencrew/desktop build
-pnpm --filter @avencrew/desktop dev
-```
-
-No API keys, accounts or paid services are needed.
-
-## Privilege boundaries
-
-These are enforced in code and worth preserving:
-
-| Control | Where |
-|---|---|
-| `nodeIntegration: false`, `contextIsolation: true`, `sandbox: true` | `src/main/main.ts` |
-| Fixed local `loadFile` only | `src/main/main.ts` |
-| In-page navigation and popups refused | `src/main/main.ts` |
-| CSP `default-src 'none'`, `script-src 'self'`, `connect-src 'none'` | `src/renderer/index.html` |
-| Preload exposes one frozen value and no IPC channel | `src/preload/preload.ts` |
-| Renderer type environment has no Node globals (`types: []`) | `tsconfig.renderer.json` |
-
-Adding an `ipcRenderer` call to the preload, or an inline script to the HTML, would
-break these deliberately. A sandboxed renderer is **not** a command sandbox;
-command and tool isolation is the harness's job under the guest profile.
-
-## Layout
-
-```
-src/main/main.ts          window, lifecycle, navigation refusal
-src/preload/preload.ts    the single contextBridge value
-src/shared/               frozen build metadata (the only shared type)
-src/renderer/             React view, stylesheet, HTML, ambient types
-build.mjs                 three esbuild outputs
-tsconfig.main.json        main + preload (Node libs, node types)
-tsconfig.renderer.json    renderer (DOM only, no node types)
-```
+The bridge follows Electron's [security guidance](https://www.electronjs.org/docs/latest/tutorial/security),
+[named context-isolated APIs](https://www.electronjs.org/docs/latest/tutorial/context-isolation)
+and [process model](https://www.electronjs.org/docs/latest/tutorial/process-model).
+Installed Electron 44.5.1 declarations are the API authority for this build.
