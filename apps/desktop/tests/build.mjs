@@ -16,7 +16,16 @@ await build({
   outfile: 'dist/main/native-test.js',
 });
 await build({
+  entryPoints: ['tests/relocated.ts'],
+  bundle: true,
+  platform: 'node',
+  format: 'esm',
+  external: ['electron'],
+  outfile: 'dist/main/relocation-test.js',
+});
+await build({
   entryPoints: ['src/main/client.ts', 'src/main/transport.ts'],
+  splitting: true,
   bundle: true,
   platform: 'node',
   format: 'esm',

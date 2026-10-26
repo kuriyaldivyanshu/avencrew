@@ -72,6 +72,7 @@ desktop_checks() {
   pnpm lint
   pnpm typecheck
   pnpm build
+  pnpm --filter @avencrew/desktop test
 }
 contract_checks() {
   pnpm --filter @avencrew/contracts-ts check

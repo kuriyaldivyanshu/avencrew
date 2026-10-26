@@ -19,20 +19,26 @@ queued run, then checks accepted durable receipts after reopening the store.
 It explicitly kills its owned fixture supervisor after checking that window/client
 close leaves it alive. Linux native Electron remains unverified. The ordinary
 transport tests include real deadlines and synthetic Unix-socket malformed peers;
-they require permission to bind local sockets. No test installs dependencies.
+they require permission to bind local sockets. The `desktop` and `all` checks
+include these unit tests. CI separately gates native Electron on macOS; the
+relocated-bundle smoke is a scratch copy test, not release packaging evidence. No test installs dependencies.
 The shared verification lanes are `desktop`, `desktop-unit` and `desktop-native`.
 
 `window.avencrew` has exactly four named methods: `describeCapabilities()`,
 `steer(input)`, `pause(input)` and `stop(input)`. Inputs use generated command
 variants with `kind` omitted; main supplies and validates that discriminator.
 Results contain the original validated capability/receipt, or a fixed safe failure
-code. An accepted receipt does not imply application. Explicit retries preserve
+code. Valid server rejection returns `REJECTED`; connection failure returns
+`UNAVAILABLE`. Every receipt must match the submitted command and, when present,
+run identity. An accepted receipt does not imply application. Explicit retries preserve
 command identity; no mutation is retried automatically. Static build metadata is
 separately exposed as `window.avencrewBuild`.
 
 Every main IPC handler checks its owning WebContents, current main frame and exact
-fixed document URL before validating input. The sandboxed preload exposes the
-bridge only on that main document. Node in pages/workers/subframes is disabled;
+fixed document URL before validating input. The sandboxed preload synchronously asks a narrow internal authorization
+channel for a boolean under that same guard, then exposes the bridge only on the
+main document. No build-machine document path is embedded; copied bundles
+resolve their local document at runtime. Node in pages/workers/subframes is disabled;
 context isolation and the renderer sandbox remain enabled. Navigation, external
 opening, popups, webviews, downloads and permissions are denied. There is no raw
 IPC, general RPC, shell, filesystem, SQL or credential API in the page.
@@ -43,6 +49,9 @@ The native test is a separate entry that invokes this same composition and clien
 The client launches `serve` with anonymous pipes and `shell:false`, checks a bounded
 strict launch grant and authenticates the fresh connection challenge using the
 existing canonical HMAC transcript. Credentials remain main memory/pipe data.
+Trusted roots are canonicalized before launch. Failed bootstrap terminates and
+awaits only its newly spawned child; successful authentication transfers to an
+independent lifetime, so ordinary disconnect never sends a signal.
 Frames are capped at 1 MiB, pending requests at 16; launch/auth/partial-read/write
 deadlines are five seconds and request deadlines ten seconds. Failure closes the
 connection and rejects pending calls without fabricating acceptance.

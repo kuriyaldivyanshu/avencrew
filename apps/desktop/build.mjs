@@ -21,7 +21,6 @@ console.log(
 );
 
 const define = {
-  __TRUSTED_DOCUMENT_URL__: JSON.stringify(new URL('dist/renderer/index.html', here).href),
   __APP_VERSION__: JSON.stringify(pkg.version),
 };
 

@@ -1,5 +1,6 @@
 import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
 import { createHmac, randomBytes } from 'node:crypto';
+import { realpath } from 'node:fs/promises';
 import { connect, type Socket } from 'node:net';
 import { isAbsolute, join } from 'node:path';
 import {
@@ -13,7 +14,14 @@ import type {
   CommandReceipt,
   RpcRequestSubmitCommandBody,
 } from '@avencrew/contracts-ts/wire';
-import { BoundaryError, FrameReader, IO_DEADLINE, writeFrame } from './transport.js';
+import {
+  BoundaryError,
+  endStream,
+  FrameReader,
+  IO_DEADLINE,
+  RejectedError,
+  writeFrame,
+} from './transport.js';
 
 export interface TrustedLaunch {
   readonly executable: string;
@@ -97,17 +105,25 @@ export class SupervisorClient {
   private ready = false;
   private failed = false;
   private startupReject: (() => void) | undefined;
-  static async launch(config: TrustedLaunch): Promise<SupervisorClient> {
+  static async launch(config: TrustedLaunch, signal?: AbortSignal): Promise<SupervisorClient> {
     const client = new SupervisorClient();
+    const abort = (): void => client.disconnect();
+    if (signal?.aborted) throw new BoundaryError();
+    signal?.addEventListener('abort', abort, { once: true });
     try {
       await client.start(config);
       return client;
     } catch {
       client.disconnect();
+      await client.reapFailedBootstrap();
       throw new BoundaryError();
+    } finally {
+      signal?.removeEventListener('abort', abort);
     }
   }
-  private async start(config: TrustedLaunch): Promise<void> {
+  private async start(input: TrustedLaunch): Promise<void> {
+    if (!isAbsolute(input.dataRoot)) throw new BoundaryError();
+    const config = { ...input, dataRoot: await realpath(input.dataRoot) };
     if (
       !isAbsolute(config.executable) ||
       !isAbsolute(config.dataRoot) ||
@@ -116,6 +132,7 @@ export class SupervisorClient {
       !HEX.test(config.buildDigest)
     )
       throw new BoundaryError();
+    if (this.failed) throw new BoundaryError();
     const child = spawn(config.executable, ['serve', '--data-root', config.dataRoot], {
       shell: false,
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -123,6 +140,9 @@ export class SupervisorClient {
     this.child = child;
     // Drain without retaining or forwarding raw diagnostics/credentials.
     child.stderr.on('data', () => {});
+    child.stdin.on('error', () => this.disconnect());
+    child.stdout.on('error', () => this.disconnect());
+    child.stderr.on('error', () => this.disconnect());
     child.on('error', () => this.disconnect());
     child.on('exit', () => this.disconnect());
     const grant = await new Promise<Grant>((resolve, reject) => {
@@ -157,10 +177,9 @@ export class SupervisorClient {
         actor_id: config.actorId,
         main_pid: process.pid,
         client_build_digest: config.buildDigest,
-      }).then(
-        () => child.stdin.end(),
-        () => this.disconnect(),
-      );
+      })
+        .then(() => endStream(child.stdin))
+        .catch(() => this.disconnect());
     });
     if (this.failed) throw new BoundaryError();
     const socket = connect(grant.socket_path);
@@ -171,21 +190,21 @@ export class SupervisorClient {
         clearTimeout(timeout);
         reject(new BoundaryError());
       };
+      let receivedChallenge = false;
       this.reader = new FrameReader(
         socket,
         (value) => {
+          if (receivedChallenge) {
+            this.reply(value);
+            return;
+          }
           if (typeof value !== 'string' || !HEX.test(value)) {
             this.disconnect();
             return;
           }
           clearTimeout(timeout);
           this.startupReject = undefined;
-          this.reader?.close();
-          this.reader = new FrameReader(
-            socket,
-            (value) => this.reply(value),
-            () => this.disconnect(),
-          );
+          receivedChallenge = true;
           resolve(value);
         },
         () => this.disconnect(),
@@ -245,7 +264,7 @@ export class SupervisorClient {
     }
     clearTimeout(pending.timer);
     this.pending.delete(reply.request_id);
-    if (!reply.ok) pending.reject(new BoundaryError());
+    if (!reply.ok) pending.reject(new RejectedError());
     else pending.resolve(reply.result);
   }
   private async send(message: ReturnType<typeof request>, deadline = 10000): Promise<unknown> {
@@ -282,11 +301,38 @@ export class SupervisorClient {
   async command(body: RpcRequestSubmitCommandBody): Promise<CommandReceipt> {
     if (!this.ready) throw new BoundaryError();
     const receipt = await this.send(request('submit_command', body));
-    if (!validateCommandReceiptPayload(receipt).ok) {
+    if (
+      !validateCommandReceiptPayload(receipt).ok ||
+      (receipt as CommandReceipt).command_id !== body.command_id ||
+      ('run_id' in (receipt as CommandReceipt) &&
+        (receipt as { run_id: string }).run_id !== body.run_id)
+    ) {
       this.disconnect();
       throw new BoundaryError();
     }
     return receipt as CommandReceipt;
+  }
+  /** Failed launch retains ownership; authenticated normal disconnect never enters here. */
+  private async reapFailedBootstrap(): Promise<void> {
+    const child = this.child;
+    if (!child?.pid || child.exitCode !== null || child.signalCode !== null) return;
+    await new Promise<void>((resolve) => {
+      let killTimer: ReturnType<typeof setTimeout>;
+      let deadline: ReturnType<typeof setTimeout>;
+      const finish = (): void => {
+        clearTimeout(killTimer);
+        clearTimeout(deadline);
+        child.off('exit', finish);
+        child.off('error', finish);
+        resolve();
+      };
+      child.once('exit', finish);
+      child.once('error', finish);
+      killTimer = setTimeout(() => child.kill('SIGKILL'), 500);
+      deadline = setTimeout(finish, 2000);
+      child.kill('SIGTERM');
+      if (child.exitCode !== null || child.signalCode !== null) finish();
+    });
   }
   disconnect(): void {
     if (this.failed) return;

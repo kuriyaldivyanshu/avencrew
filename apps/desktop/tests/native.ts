@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
-import { writeFile } from 'node:fs/promises';
+import { symlink, writeFile } from 'node:fs/promises';
 import { once } from 'node:events';
 import type { ChildProcess } from 'node:child_process';
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import { composeDesktop, ownsInvocation } from '../src/main/composition.js';
+import { SupervisorClient } from '../src/main/client.js';
 import { createArtifactPreview, DOCUMENT_URL } from '../src/main/windows.js';
-import { CHANNELS } from '../src/shared/bridge.js';
+import { CHANNELS, PRELOAD_AUTHORIZE } from '../src/shared/bridge.js';
 
 // This is a separate synthetic main entry, never an app mode or renderer API.
 const root = process.argv[2];
@@ -31,6 +32,95 @@ async function runNative() {
     }),
   );
   try {
+    const config = {
+      executable,
+      dataRoot: root,
+      workspaceId: id(1),
+      actorId: id(2),
+      buildDigest: 'a'.repeat(64),
+    };
+    const assertHandlersFree = (): void => {
+      for (const channel of Object.values(CHANNELS)) {
+        ipcMain.handle(channel, () => null);
+        ipcMain.removeHandler(channel);
+      }
+      assert.equal(ipcMain.listenerCount(PRELOAD_AUTHORIZE), 0);
+      assert.equal(BrowserWindow.getAllWindows().length, 0);
+    };
+    // A partial installation must not remove a pre-existing owner's handler.
+    ipcMain.handle(CHANNELS.pause, () => 'existing-owner');
+    await assert.rejects(composeDesktop(undefined, false), /Desktop unavailable/);
+    assert.throws(() => ipcMain.handle(CHANNELS.pause, () => null));
+    ipcMain.removeHandler(CHANNELS.pause);
+    assertHandlersFree();
+    const originalLoad = BrowserWindow.prototype.loadURL;
+    BrowserWindow.prototype.loadURL = async () => {
+      throw new Error('synthetic local document failure');
+    };
+    try {
+      await assert.rejects(composeDesktop(undefined, false), /Desktop unavailable/);
+    } finally {
+      BrowserWindow.prototype.loadURL = originalLoad;
+    }
+    assertHandlersFree();
+    // Real bootstrap failure after grant/challenge acquisition must release its
+    // owned child and store lock before a subsequent launch is attempted.
+    type Internals = {
+      child: ChildProcess;
+      send(this: Internals, ...args: unknown[]): Promise<unknown>;
+    };
+    const internals = SupervisorClient.prototype as unknown as Internals;
+    const originalSend = internals.send;
+    for (const closeWindow of [false, true]) {
+      internals.send = async function (...args: unknown[]) {
+        owned = this.child;
+        if (closeWindow) {
+          for (const candidate of BrowserWindow.getAllWindows()) candidate.destroy();
+          return originalSend.apply(this, args);
+        }
+        throw new Error('synthetic preauthentication failure');
+      };
+      try {
+        if (closeWindow) await assert.rejects(composeDesktop(config, false), /Desktop unavailable/);
+        else await assert.rejects(SupervisorClient.launch(config), /Supervisor unavailable/);
+      } finally {
+        internals.send = originalSend;
+      }
+      assert(owned);
+      assert(owned.exitCode !== null || owned.signalCode !== null);
+      console.log(
+        `native failed bootstrap child reaped before relaunch; close-during-launch=${closeWindow}`,
+      );
+      owned = undefined;
+      assertHandlersFree();
+    }
+    // Authenticated lifetime remains independent even if the final load fails.
+    const originalLaunch = SupervisorClient.launch;
+    SupervisorClient.launch = async (...args: Parameters<typeof originalLaunch>) => {
+      const result = await originalLaunch(...args);
+      owned = (result as unknown as { child: ChildProcess }).child;
+      return result;
+    };
+    BrowserWindow.prototype.loadURL = async () => {
+      throw new Error('synthetic late load failure');
+    };
+    try {
+      await assert.rejects(composeDesktop(config, false), /Desktop unavailable/);
+    } finally {
+      SupervisorClient.launch = originalLaunch;
+      BrowserWindow.prototype.loadURL = originalLoad;
+    }
+    assert(owned?.pid);
+    process.kill(owned.pid, 0);
+    assertHandlersFree();
+    const lateExited = once(owned, 'exit');
+    owned.kill('SIGKILL');
+    await lateExited;
+    owned = undefined;
+    console.log(
+      'native composition failure cleanup preserves existing handlers and authenticated lifetime',
+    );
+    await symlink(root, `${root}/root-alias`);
     const disconnected = await composeDesktop(undefined, false);
     assert.deepEqual(
       await disconnected.window.webContents.executeJavaScript(
@@ -42,7 +132,7 @@ async function runNative() {
     const { window, client } = await composeDesktop(
       {
         executable,
-        dataRoot: root,
+        dataRoot: `${root}/root-alias`,
         workspaceId: id(1),
         actorId: id(2),
         buildDigest: 'a'.repeat(64),
@@ -82,7 +172,7 @@ async function runNative() {
     assert.deepEqual(await invoke('steer', steer), original);
     assert.deepEqual(
       await invoke('steer', { ...steer, payload: { ...steer.payload, text: 'changed' } }),
-      { ok: false, code: 'UNAVAILABLE' },
+      { ok: false, code: 'REJECTED' },
     );
     for (const input of [
       { ...steer, kind: 'stop' },
@@ -224,6 +314,12 @@ async function runNative() {
     );
     wrongDocument.destroy();
     console.log('native wrong-document preload absent');
+    assert.equal(
+      await contents.executeJavaScript(
+        `(()=>{const view=document.createElement('webview');view.src='https://example.invalid/';document.body.append(view);return typeof view.getWebContentsId;})()`,
+      ),
+      'undefined',
+    );
     const artifact = createArtifactPreview();
     await artifact.loadURL(
       'data:text/html,' +
@@ -253,6 +349,19 @@ async function runNative() {
     artifact.webContents.debugger.detach();
     assert.equal(artifact.webContents.session.isPersistent(), false);
     assert.notEqual(artifact.webContents.session, contents.session);
+    const downloadDenied = new Promise<boolean>((resolve, reject) => {
+      const deadline = setTimeout(
+        () => reject(new Error('download policy probe did not complete')),
+        5000,
+      );
+      artifact.webContents.session.once('will-download', (event) => {
+        clearTimeout(deadline);
+        resolve(event.defaultPrevented);
+      });
+    });
+    artifact.webContents.downloadURL('data:text/html,%3Ch1%3Eowned-download-probe%3C/h1%3E');
+    assert.equal(await downloadDenied, true);
+    console.log('native production webview API absent and actual download canceled');
     artifact.destroy();
     const originalUrl = contents.getURL();
     await contents.executeJavaScript(

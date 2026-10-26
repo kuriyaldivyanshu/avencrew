@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { PassThrough } from 'node:stream';
-import { FrameReader, frame, writeFrame } from '../dist/tests/transport.js';
+import {
+  FrameReader,
+  frame,
+  writeFrame,
+  endStream,
+  RejectedError,
+} from '../dist/tests/transport.js';
 import { SupervisorClient, request } from '../dist/tests/client.js';
 console.log(
   JSON.stringify({ check: 'desktop-unit', node: process.version, executable: process.execPath }),
@@ -171,17 +177,31 @@ test('real five-second blocked write deadline destroys stream', async () => {
   assert.equal(stream.destroyed, true);
 });
 
-test('server EOF rejects outstanding calls and releases frame state', async () => {
-  const { client, stream } = clientPair();
+test('server inbound EOF rejects a genuinely outstanding request', async () => {
+  const { client, stream: outbound } = clientPair();
+  const inbound = new PassThrough();
+  let failures = 0;
   client.reader = new FrameReader(
-    stream,
+    inbound,
     (value) => client.reply(value),
-    () => client.disconnect(),
+    () => {
+      failures++;
+      client.disconnect();
+    },
   );
-  const pending = assert.rejects(client.send(request('describe_capabilities', {}, id(1))));
-  stream.end();
-  await pending;
+  const result = client.send(request('describe_capabilities', {}, id(1)));
+  assert.equal(client.pending.size, 1);
+  assert.equal(failures, 0);
+  const rejected = assert.rejects(result, /Supervisor unavailable/);
+  inbound.end();
+  await new Promise(setImmediate);
   assert.equal(client.pending.size, 0);
+  assert.equal(failures, 1);
+  await rejected;
+  assert.equal(failures, 1);
+  assert.equal(client.pending.size, 0);
+  assert.equal(outbound.destroyed, true);
+  inbound.destroy();
 });
 
 test('launch grant/authentication fail closed: exact fields/path, extra grant, scope/generation, real deadlines', async () => {
@@ -222,6 +242,8 @@ test('launch grant/authentication fail closed: exact fields/path, extra grant, s
       if (['generation', 'scope', 'version', 'schema', 'auth-timeout'].includes(mode))
         assert.equal(await readFile(`${root}/stage`, 'utf8'), 'handshake');
       console.log(await readFile(`${root}/runtime.json`, 'utf8'));
+      const failedPid = Number(await readFile(`${root}/pid`, 'utf8'));
+      assert.throws(() => process.kill(failedPid, 0), { code: 'ESRCH' });
     } finally {
       // Explicit teardown of this test-owned peer, never normal disconnect policy.
       const pid = Number(await readFile(`${root}/pid`, 'utf8'));
@@ -230,5 +252,128 @@ test('launch grant/authentication fail closed: exact fields/path, extra grant, s
       } catch {}
       await rm(root, { recursive: true, force: true });
     }
+  }
+});
+
+test('maximum-size fragmented frame uses one bounded payload allocation; close is idempotent', () => {
+  const stream = new PassThrough();
+  const values = [];
+  const reader = new FrameReader(
+    stream,
+    (value) => values.push(value),
+    () => assert.fail(),
+  );
+  const value = 'x'.repeat(1048574);
+  const encoded = frame(value);
+  stream.write(encoded.subarray(0, 4));
+  const allocation = reader.buffer;
+  assert.equal(allocation.length, 1048576);
+  for (let at = 4; at < encoded.length; at += 17) {
+    stream.write(encoded.subarray(at, Math.min(at + 17, encoded.length)));
+    if (at + 17 < encoded.length) assert.equal(reader.buffer, allocation);
+  }
+  assert.deepEqual(values, [value]);
+  reader.close();
+  const listeners = stream.listenerCount('error');
+  for (let n = 0; n < 100; n++) reader.close();
+  assert.equal(stream.listenerCount('error'), listeners);
+  assert.equal(stream.listenerCount('data'), 0);
+  stream.destroy();
+});
+
+test('stdin write and asynchronous end errors reject safely', async () => {
+  const { Writable } = await import('node:stream');
+  for (const operation of ['write', 'end']) {
+    const stream = new Writable({
+      write(_bytes, _encoding, done) {
+        done(operation === 'write' ? new Error('fixture pipe failure') : undefined);
+      },
+      final(done) {
+        done(new Error('fixture end failure'));
+      },
+    });
+    await assert.rejects(
+      operation === 'write' ? writeFrame(stream, { safe: true }) : endStream(stream),
+      /Supervisor unavailable/,
+    );
+  }
+});
+
+test('valid server rejection is distinguished from transport failure', async () => {
+  const { client, stream } = clientPair();
+  const msg = request('describe_capabilities', {}, id(1));
+  const rejected = assert.rejects(client.send(msg), (error) => error instanceof RejectedError);
+  client.reply({
+    message_kind: 'rpc_response',
+    schema_version: '1.0',
+    payload: {
+      frame_kind: 'response',
+      request_id: msg.payload.request_id,
+      operation: 'describe_capabilities',
+      ok: false,
+      error: { code: 'UNSUPPORTED', message: 'untrusted text', evidence_refs: [] },
+    },
+  });
+  await rejected;
+  assert.equal(client.failed, false);
+  client.disconnect();
+  stream.destroy();
+});
+
+test('schema-valid command receipts must bind the submitted command and run', async () => {
+  const body = {
+    kind: 'stop',
+    command_id: id(400),
+    run_id: id(300),
+    idempotency_key: 'receipt-binding',
+    payload: { reason: 'stop' },
+  };
+  const receipt = {
+    kind: 'accepted',
+    command_id: body.command_id,
+    run_id: body.run_id,
+    authority: 'local',
+    accepted_seq: '1',
+    event_seq: '1',
+    row_version: '1',
+    disposition_ref: null,
+    task_id: id(100),
+    task_revision_id: id(103),
+  };
+  for (const wrong of [
+    { ...receipt, command_id: id(401) },
+    { ...receipt, run_id: id(301) },
+  ]) {
+    const { client, stream } = clientPair();
+    client.send = async () => wrong;
+    await assert.rejects(client.command(body), /Supervisor unavailable/);
+    assert.equal(client.failed, true);
+    stream.destroy();
+  }
+  const { client, stream } = clientPair();
+  client.send = async () => receipt;
+  assert.equal(await client.command(body), receipt);
+  client.disconnect();
+  stream.destroy();
+});
+
+test('immediate child exit is a rejected launch, with no uncaught stdin error', async () => {
+  const { mkdtemp, writeFile, rm, realpath } = await import('node:fs/promises');
+  const root = await realpath(await mkdtemp('/tmp/av-early-'));
+  try {
+    const executable = `${root}/exit`;
+    await writeFile(executable, '#!/bin/sh\nexit 1\n', { mode: 0o700 });
+    await assert.rejects(
+      SupervisorClient.launch({
+        executable,
+        dataRoot: root,
+        workspaceId: id(1),
+        actorId: id(2),
+        buildDigest: 'a'.repeat(64),
+      }),
+      /Supervisor unavailable/,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
   }
 });

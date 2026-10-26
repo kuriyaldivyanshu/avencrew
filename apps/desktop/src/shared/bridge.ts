@@ -28,3 +28,6 @@ export const CHANNELS = Object.freeze({
   pause: 'avencrew:pause',
   stop: 'avencrew:stop',
 });
+
+// Internal preload authorization only; never exposed as a page method.
+export const PRELOAD_AUTHORIZE = 'avencrew:authorize-preload';
