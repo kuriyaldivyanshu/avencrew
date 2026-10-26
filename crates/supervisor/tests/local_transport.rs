@@ -598,3 +598,59 @@ fn startup_restores_committed_control_and_denies_corrupt_history_before_grant() 
         store.close().await.unwrap();
     });
 }
+
+// Explicit test-only cross-process fixture seam. The production CLI has no
+// seeding/admission option. A coordinator supplies only a throwaway /tmp root.
+#[test]
+#[ignore = "requires explicit synthetic desktop fixture root and action"]
+fn desktop_native_fixture() {
+    let path =
+        std::env::var("AVENCREW_DESKTOP_FIXTURE_ROOT").expect("explicit fixture root required");
+    println!(
+        "desktop fixture runtime: executable={} os={} arch={}",
+        std::env::current_exe().unwrap().display(),
+        std::env::consts::OS,
+        std::env::consts::ARCH
+    );
+    let path = PathBuf::from(path);
+    assert!(path.starts_with("/private/tmp") || path.starts_with("/tmp"));
+    assert!(path
+        .file_name()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .starts_with("av-desktop-"));
+    let root = Root(path.canonicalize().unwrap());
+    run(async {
+        match std::env::var("AVENCREW_DESKTOP_FIXTURE_ACTION").as_deref() {
+            Ok("seed") => seed_run(&root).await,
+            Ok("verify") => {
+                let expected: Value =
+                    serde_json::from_slice(&fs::read(root.0.join("receipts.json")).unwrap())
+                        .unwrap();
+                let supervisor = Supervisor::open(&root.0, context()).await.unwrap();
+                let restored = &supervisor.startup_recovery().runs[0];
+                assert_eq!(restored.accepted.value(), 3);
+                assert_eq!(restored.applied.value(), 0);
+                assert_eq!(restored.pending_controls.len(), 3);
+                for (control, expected) in restored
+                    .pending_controls
+                    .iter()
+                    .zip(expected.as_array().unwrap())
+                {
+                    assert_eq!(
+                        serde_json::to_value(&control.original_receipt).unwrap(),
+                        *expected
+                    );
+                }
+                let (stop, shutdown) = tokio::sync::oneshot::channel();
+                stop.send(()).unwrap();
+                supervisor.serve(shutdown).await.unwrap();
+                println!("desktop durable receipts reopened: accepted=3 applied=0");
+            }
+            _ => panic!("explicit seed or verify action required"),
+        }
+    });
+    // The separate native process and verifier still need this owned fixture.
+    std::mem::forget(root);
+}

@@ -12,7 +12,13 @@ After the [managed setup](../bootstrap/README.md), native SQLite build and
 bash tools/verification/check.sh all
 ```
 
-Individual lanes: `rust`, `proof-history`, `desktop`, `contracts`, `fixtures`, `licenses`. Rust includes the
+The `desktop` lane (also consumed by `all`) includes portable transport unit
+regressions. `desktop-native` requires macOS ARM64 and the pinned Electron binary;
+it checks hidden sandboxed windows, a real supervisor, moved bundles and durable
+receipts. CI gates that native lane only on macOS. Linux native Electron remains
+unverified.
+
+Individual lanes: `rust`, `proof-history`, `desktop`, `desktop-unit`, `desktop-native`, `contracts`, `fixtures`, `licenses`. Rust includes the
 real native SQLite engine diagnostic. Contract checking includes regeneration
 comparison and the existing Rust/TS conformance runner. Fixture checking creates
 a fresh temporary seed root, prints its safely quoted cleanup command and does

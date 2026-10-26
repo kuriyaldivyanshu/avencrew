@@ -64,8 +64,11 @@ jobs:
         run: bash tools/bootstrap/fetch-electron.sh
       - name: Rust checks and native engine diagnostic
         run: bash tools/verification/check.sh rust
-      - name: Desktop typecheck and build
+      - name: Desktop typecheck, build and unit transport tests
         run: bash tools/verification/check.sh desktop
+      - name: Native Electron privilege boundary
+        if: runner.os == 'macOS'
+        run: bash tools/verification/check.sh desktop-native
       - name: Contract conformance and generated artifact freshness
         run: bash tools/verification/check.sh contracts
       - name: Fixture development without model credentials
@@ -86,7 +89,7 @@ jobs:
             printf '| Rust/desktop/contracts/fixtures | See actual step outcomes above |\n'
             printf '| SQLite diagnostic | Native engine only; no journal or migrations |\n'
             printf '| Linux ARM64 | Portable Rust/contracts/native engine only; see Linux job result |\n'
-            printf '| Electron launch | UNVERIFIED: this workflow builds bundles only |\n'
+            printf '| Electron launch | macOS native boundary lane above; Linux runtime UNVERIFIED |\n'
             printf '| Process/VM containment and recovery | UNVERIFIED: P2/P4 runtime work |\n'
             printf '| PostgreSQL/cloud/model execution | DEFERRED-DISABLED: no account or credential used |\n'
           } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.main.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "rootDir": ".."
+  },
+  "include": [
+    "../src/main/**/*.ts",
+    "../src/preload/**/*.ts",
+    "../src/shared/**/*.ts",
+    "./*.ts"
+  ]
+}
